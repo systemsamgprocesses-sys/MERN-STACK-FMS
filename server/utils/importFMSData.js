@@ -139,6 +139,12 @@ export async function importFMSFromCSV(csvFilePath) {
           triggersFMSId: triggersFMSId
         };
         fmsMap[fmsId].steps.push(step);
+      } else {
+        // If the step already exists, add WHO value if it's not already in the list
+        const whoValue = row.WHO.trim();
+        if (whoValue && !step.who.includes(whoValue)) {
+          step.who.push(whoValue);
+        }
       }
     }
 

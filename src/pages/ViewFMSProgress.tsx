@@ -159,7 +159,7 @@ const ViewFMSProgress: React.FC = () => {
                   <h3 className="font-bold text-[var(--color-text)] mb-2">{project.projectName}</h3>
                   <p className="text-sm text-[var(--color-textSecondary)] mb-2">{project.projectId}</p>
                   <p className="text-xs text-[var(--color-textSecondary)] mb-3">
-                    {project.fmsId.fmsName}
+                    {project.fmsId?.fmsName || 'No FMS Assigned'}
                   </p>
                   <div className="w-full bg-gray-200 rounded-full h-2 mb-2">
                     <div

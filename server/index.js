@@ -14,6 +14,8 @@ import taskRoutes from './routes/tasks.js';
 import userRoutes from './routes/users.js';
 import dashboardRoutes from './routes/dashboard.js';
 import settingsRoutes from './routes/settings.js';
+import fmsRoutes from './routes/fms.js';
+import projectRoutes from './routes/projects.js';
 
 dotenv.config();
 
@@ -85,6 +87,8 @@ app.use('/api/tasks', taskRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/settings', settingsRoutes);
+app.use('/api/fms', fmsRoutes);
+app.use('/api/projects', projectRoutes);
 
 // Serve frontend in production
 if (config.nodeEnv === 'production') {

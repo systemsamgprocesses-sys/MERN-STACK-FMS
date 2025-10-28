@@ -15,8 +15,8 @@ import {
   Zap,
 } from 'lucide-react';
 
-// Clean and Professional Finamite Logo Component
-const FinamiteLogo = ({ isCollapsed }: { isCollapsed: boolean }) => (
+// Clean and Professional AMG Logo Component
+const AMGLogo = ({ isCollapsed }: { isCollapsed: boolean }) => (
   <div className="flex items-center">
     <div className="relative mr-3">
       {/* Simple, clean icon container */}
@@ -27,7 +27,7 @@ const FinamiteLogo = ({ isCollapsed }: { isCollapsed: boolean }) => (
           boxShadow: '0 2px 8px rgba(37, 99, 235, 0.25)'
         }}
       >
-        {/* Clean 'F' letter */}
+        {/* Clean 'A' letter */}
         <div 
           className="text-white font-bold text-xl leading-none select-none"
           style={{ 
@@ -35,19 +35,19 @@ const FinamiteLogo = ({ isCollapsed }: { isCollapsed: boolean }) => (
             fontWeight: '700'
           }}
         >
-          F
+          A
         </div>
       </div>
     </div>
     {!isCollapsed && (
       <span 
-        className="text-xl font-bold tracking-tight transition-opacity duration-200"
+        className="text-sm font-bold tracking-tight transition-opacity duration-200"
         style={{ 
           color: '#277ef8ff',
           fontFamily: 'system-ui, -apple-system, sans-serif'
         }}
       >
-        Finamite
+        Ashok Malhotra Group
       </span>
     )}
   </div>
@@ -106,6 +106,9 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
     { icon: RotateCcw, label: 'Master Recurring', path: '/master-recurring' },
     { icon: UserPlus, label: 'Assign Task', path: '/assign-task', permission: 'canAssignTasks' },
     { icon: Zap, label: 'Performance', path: '/performance' },
+    { icon: Settings, label: 'FMS Templates', path: '/fms-templates', permission: 'canAssignTasks' },
+    { icon: Settings, label: 'Start Project', path: '/start-project', permission: 'canAssignTasks' },
+    { icon: Settings, label: 'FMS Progress', path: '/fms-progress' },
     { icon: Settings, label: 'Admin Panel', path: '/admin', requireAdmin: true }
   ];
 
@@ -133,18 +136,21 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
 
       {/* Sidebar */}
       <div
-        className={`fixed inset-y-0 left-0 z-30 overflow-y-auto transition-all duration-300 transform lg:translate-x-0 lg:static lg:inset-0 ${
+        className={`fixed inset-y-0 left-0 z-30 overflow-y-auto transition-all duration-200 transform lg:translate-x-0 lg:static lg:inset-0 ${
           isOpen ? 'translate-x-0 ease-out' : '-translate-x-full ease-in lg:translate-x-0'
         } border-r shadow-sm`}
         style={{ 
           backgroundColor: 'var(--color-surface)', 
           borderColor: 'var(--color-border)',
-          width: isCollapsed ? '5rem' : '12rem'
+          width: isCollapsed ? '5rem' : '12rem',
+          willChange: 'width',
+          backfaceVisibility: 'hidden',
+          perspective: 1000
         }}
       >
         {/* Header */}
         <div className="flex items-center justify-between flex-shrink-0 p-4 border-b" style={{ borderColor: 'var(--color-border)' }}>
-          <FinamiteLogo isCollapsed={isCollapsed} />
+          <AMGLogo isCollapsed={isCollapsed} />
           
           {/* Desktop toggle button */}
           <button

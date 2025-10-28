@@ -12,6 +12,10 @@ import AssignTask from './pages/AssignTask';
 import AdminPanel from './pages/AdminPanel';
 import ProtectedRoute from './components/ProtectedRoute';
 import Performance from './pages/Performance';
+import CreateFMS from './pages/CreateFMS';
+import ViewAllFMS from './pages/ViewAllFMS';
+import StartProject from './pages/StartProject';
+import ViewFMSProgress from './pages/ViewFMSProgress';
 
 function App() {
   return (
@@ -30,6 +34,10 @@ function App() {
                 <Route path="master-tasks" element={<MasterTasks />} />
                 <Route path="master-recurring" element={<MasterRecurringTasks />} />
                 <Route path="assign-task" element={<AssignTask />} />
+                <Route path="fms-templates" element={<ProtectedRoute><ViewAllFMS /></ProtectedRoute>} />
+                <Route path="create-fms" element={<ProtectedRoute><CreateFMS /></ProtectedRoute>} />
+                <Route path="start-project" element={<ProtectedRoute><StartProject /></ProtectedRoute>} />
+                <Route path="fms-progress" element={<ProtectedRoute><ViewFMSProgress /></ProtectedRoute>} />
                 <Route path="admin" element={<ProtectedRoute requireAdmin><AdminPanel /></ProtectedRoute>} />
               </Route>
             </Routes>

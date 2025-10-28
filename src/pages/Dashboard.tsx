@@ -723,42 +723,50 @@ const Dashboard: React.FC = () => {
         </div>
       </div>
 
-      {/* Main Metrics Grid with Real Trends */}
+      {/* Main Metrics Grid with Real Trends - Now Clickable */}
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6 lg:gap-8 p-4 sm:p-6 lg:p-8">
-        <MetricCard
-          icon={<CheckSquare size={24} className="text-blue-600" />}
-          title="Total Tasks"
-          value={displayData?.totalTasks || 0}
-          subtitle={
-            viewMode === 'current' && isSameMonth(selectedMonth, new Date()) && isSameYear(selectedMonth, new Date())
-              ? 'Current Month'
-              : viewMode === 'current'
-                ? format(selectedMonth, 'MMMM yyyy')
-                : 'All time'
-          }
-          percentage={100}
-        />
-        <MetricCard
-          icon={<Clock size={24} className="text-yellow-500" />}
-          title="Pending"
-          value={displayData?.pendingTasks || 0}
-          subtitle="Awaiting completion"
-          percentage={((displayData?.pendingTasks || 0) / (displayData?.totalTasks || 1)) * 100}
-        />
-        <MetricCard
-          icon={<CheckCircle size={24} className="text-green-500" />}
-          title="Completed"
-          value={displayData?.completedTasks || 0}
-          subtitle="Successfully finished"
-          percentage={((displayData?.completedTasks || 0) / (displayData?.totalTasks || 1)) * 100}
-        />
-        <MetricCard
-          icon={<AlertTriangle size={24} className="text-red-500" />}
-          title="Overdue"
-          value={displayData?.overdueTasks || 0}
-          subtitle={`${displayData?.overduePercentage?.toFixed(1)}% of total`}
-          percentage={displayData?.overduePercentage || 0}
-        />
+        <div onClick={() => window.location.href = '/master-tasks'} className="cursor-pointer">
+          <MetricCard
+            icon={<CheckSquare size={24} className="text-blue-600" />}
+            title="Total Tasks"
+            value={displayData?.totalTasks || 0}
+            subtitle={
+              viewMode === 'current' && isSameMonth(selectedMonth, new Date()) && isSameYear(selectedMonth, new Date())
+                ? 'Current Month'
+                : viewMode === 'current'
+                  ? format(selectedMonth, 'MMMM yyyy')
+                  : 'All time'
+            }
+            percentage={100}
+          />
+        </div>
+        <div onClick={() => window.location.href = '/pending-tasks'} className="cursor-pointer">
+          <MetricCard
+            icon={<Clock size={24} className="text-yellow-500" />}
+            title="Pending"
+            value={displayData?.pendingTasks || 0}
+            subtitle="Awaiting completion"
+            percentage={((displayData?.pendingTasks || 0) / (displayData?.totalTasks || 1)) * 100}
+          />
+        </div>
+        <div onClick={() => window.location.href = '/master-tasks'} className="cursor-pointer">
+          <MetricCard
+            icon={<CheckCircle size={24} className="text-green-500" />}
+            title="Completed"
+            value={displayData?.completedTasks || 0}
+            subtitle="Successfully finished"
+            percentage={((displayData?.completedTasks || 0) / (displayData?.totalTasks || 1)) * 100}
+          />
+        </div>
+        <div onClick={() => window.location.href = '/pending-tasks'} className="cursor-pointer">
+          <MetricCard
+            icon={<AlertTriangle size={24} className="text-red-500" />}
+            title="Overdue"
+            value={displayData?.overdueTasks || 0}
+            subtitle={`${displayData?.overduePercentage?.toFixed(1)}% of total`}
+            percentage={displayData?.overduePercentage || 0}
+          />
+        </div>
       </div>
       {/* Task Type Distribution - Now includes quarterly and updated to 6 columns */}
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 xl:grid-cols-6 gap-4 sm:gap-5 lg:gap-6 p-4 sm:p-6 lg:p-8">
@@ -782,6 +790,54 @@ const Dashboard: React.FC = () => {
           />
         ))}
       </div>
+
+      {/* FMS Project Metrics */}
+      {(user?.role === 'admin' || user?.role === 'manager') && (
+        <div className="p-4 sm:p-6 lg:p-8">
+          <div className="mb-6">
+            <h2 className="text-2xl font-bold text-[var(--color-text)] mb-2">FMS Project Metrics</h2>
+            <p className="text-sm text-[var(--color-textSecondary)]">Overview of ongoing FMS projects</p>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+            <div onClick={() => window.location.href = '/fms-progress'} className="cursor-pointer">
+              <MetricCard
+                icon={<Activity size={24} className="text-indigo-600" />}
+                title="Active Projects"
+                value={dashboardData?.fmsMetrics?.activeProjects || 0}
+                subtitle="Currently running"
+                percentage={100}
+              />
+            </div>
+            <div onClick={() => window.location.href = '/fms-progress'} className="cursor-pointer">
+              <MetricCard
+                icon={<CheckCircle size={24} className="text-green-600" />}
+                title="Completed Projects"
+                value={dashboardData?.fmsMetrics?.completedProjects || 0}
+                subtitle="Successfully finished"
+                percentage={((dashboardData?.fmsMetrics?.completedProjects || 0) / ((dashboardData?.fmsMetrics?.totalProjects || 1))) * 100}
+              />
+            </div>
+            <div onClick={() => window.location.href = '/fms-progress'} className="cursor-pointer">
+              <MetricCard
+                icon={<Clock size={24} className="text-amber-600" />}
+                title="Pending Tasks"
+                value={dashboardData?.fmsMetrics?.pendingFMSTasks || 0}
+                subtitle="Across all projects"
+                percentage={((dashboardData?.fmsMetrics?.pendingFMSTasks || 0) / (dashboardData?.fmsMetrics?.totalFMSTasks || 1)) * 100}
+              />
+            </div>
+            <div onClick={() => window.location.href = '/fms-progress'} className="cursor-pointer">
+              <MetricCard
+                icon={<Target size={24} className="text-purple-600" />}
+                title="Avg Progress"
+                value={`${(dashboardData?.fmsMetrics?.avgProgress || 0).toFixed(1)}%`}
+                subtitle="Overall completion"
+                percentage={dashboardData?.fmsMetrics?.avgProgress || 0}
+              />
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Enhanced Charts Section */}
       <div className="grid grid-cols-1 lg:grid-cols-10 gap-8">

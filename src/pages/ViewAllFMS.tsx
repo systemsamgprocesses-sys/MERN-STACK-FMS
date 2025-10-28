@@ -161,9 +161,17 @@ const ViewAllFMS: React.FC = () => {
                 {showMermaid === fms.fmsId && (
                   <div className="px-6 pb-4 border-t border-[var(--color-border)]">
                     <h4 className="text-lg font-bold text-[var(--color-text)] mb-3 mt-4">Workflow Preview</h4>
-                    <div className="bg-white p-4 rounded-lg overflow-auto">
-                      <pre className="text-sm text-gray-800">{generateMermaidDiagram(fms.steps)}</pre>
+                    <div className="bg-white p-6 rounded-lg overflow-auto">
+                      <div className="mermaid">
+                        {generateMermaidDiagram(fms.steps)}
+                      </div>
                     </div>
+                    <script type="module">
+                      {`
+                        import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
+                        mermaid.initialize({ startOnLoad: true, theme: 'default' });
+                      `}
+                    </script>
                   </div>
                 )}
 

@@ -2,6 +2,8 @@ import express from 'express';
 import Task from '../models/Task.js';
 import User from '../models/User.js';
 import mongoose from 'mongoose';
+// Import Project model for FMS metrics
+import Project from '../models/Project.js';
 
 const router = express.Router();
 
@@ -62,7 +64,7 @@ router.get('/analytics', async (req, res) => {
         $match: {
           ...baseQuery,
           status: 'completed',
-          completedAt: { 
+          completedAt: {
             $ne: null,
             $gte: sixMonthsAgo,
             $lte: endOfCurrentMonth
@@ -307,7 +309,7 @@ router.get('/analytics', async (req, res) => {
               ]
             };
           }
-          
+
           const userBaseQuery = {
             isActive: true,
             assignedTo: userObjectId,
@@ -680,6 +682,51 @@ router.get('/analytics', async (req, res) => {
       recurringOnTimeRate: Math.round(recurringOnTimeRateOverall * 10) / 10
     };
 
+    // FMS Metrics (for admin/manager only)
+    let fmsMetrics = null;
+    // Define dateFilter for Project.find
+    let dateFilter = {};
+    if (startDate && endDate) {
+      dateFilter = {
+        $or: [
+          { createdAt: { $gte: new Date(startDate), $lte: new Date(endDate) } },
+          { updatedAt: { $gte: new Date(startDate), $lte: new Date(endDate) } }
+        ]
+      };
+    }
+
+    if (isAdmin === 'true') {
+      const allProjects = await Project.find(dateFilter);
+      const activeProjects = allProjects.filter(p => p.status === 'In Progress').length;
+      const completedProjects = allProjects.filter(p => p.status === 'Completed').length;
+
+      let totalFMSTasks = 0;
+      let pendingFMSTasks = 0;
+      let completedFMSTasks = 0;
+      let totalProgress = 0;
+
+      allProjects.forEach(project => {
+        if (project.tasks && project.tasks.length > 0) {
+          totalFMSTasks += project.tasks.length;
+          pendingFMSTasks += project.tasks.filter(t => t.status === 'Pending' || t.status === 'In Progress').length;
+          completedFMSTasks += project.tasks.filter(t => t.status === 'Done').length;
+
+          const projectProgress = (project.tasks.filter(t => t.status === 'Done').length / project.tasks.length) * 100;
+          totalProgress += projectProgress;
+        }
+      });
+
+      fmsMetrics = {
+        activeProjects,
+        completedProjects,
+        totalProjects: allProjects.length,
+        totalFMSTasks,
+        pendingFMSTasks,
+        completedFMSTasks,
+        avgProgress: allProjects.length > 0 ? totalProgress / allProjects.length : 0
+      };
+    }
+
     res.json({
       statusStats,
       typeStats,
@@ -687,9 +734,10 @@ router.get('/analytics', async (req, res) => {
       completionTrend,
       plannedTrend,
       teamPerformance,
-      userPerformance,
       recentActivity,
-      performanceMetrics
+      performanceMetrics,
+      userPerformance: isAdmin ? null : userPerformance,
+      fmsMetrics
     });
   } catch (error) {
     console.error('Dashboard analytics error:', error);
@@ -712,14 +760,14 @@ router.get('/member-trend', async (req, res) => {
 
     // Find the user by username
     const user = await User.findOne({ username: memberUsername, isActive: true }).select('_id username');
-    
+
     if (!user) {
       return res.status(404).json({ message: 'User not found' });
     }
 
-    const baseQuery = { 
-      isActive: true, 
-      assignedTo: user._id 
+    const baseQuery = {
+      isActive: true,
+      assignedTo: user._id
     };
 
     // Set up date range for trend calculation
@@ -733,7 +781,7 @@ router.get('/member-trend', async (req, res) => {
         $match: {
           ...baseQuery,
           status: 'completed',
-          completedAt: { 
+          completedAt: {
             $ne: null,
             $gte: sixMonthsAgo,
             $lte: endOfCurrentMonth

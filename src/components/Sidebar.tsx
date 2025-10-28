@@ -99,6 +99,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
     { icon: Settings, label: 'FMS Templates', path: '/fms-templates', permission: 'canAssignTasks' },
     { icon: Settings, label: 'Start Project', path: '/start-project', permission: 'canAssignTasks' },
     { icon: Settings, label: 'FMS Progress', path: '/fms-progress' },
+    { icon: User, label: 'My Tasks', path: '/admin-tasks', requireAdmin: true },
     { icon: Settings, label: 'Admin Panel', path: '/admin', requireAdmin: true }
   ];
 

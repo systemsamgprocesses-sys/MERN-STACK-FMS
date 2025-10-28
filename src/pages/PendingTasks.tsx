@@ -471,22 +471,24 @@ const PendingTasks: React.FC = () => {
                 <h3 className="text-lg font-semibold line-clamp-2 text-[--color-text] transition-colors group-hover:text-[--color-primary]">
                   {task.title}
                 </h3>
-                <div className="flex space-x-1 ml-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                  <button
-                    onClick={() => setShowCompleteModal(task._id)}
-                    className="p-2 rounded-lg transition-all transform hover:scale-110 hover:bg-[--color-success] hover:text-[--color-background] text-[--color-success]"
-                    title="Complete task"
-                  >
-                    <CheckSquare size={16} />
-                  </button>
-                  <button
-                    onClick={() => setShowReviseModal(task._id)}
-                    className="p-2 rounded-lg transition-all transform hover:scale-110 hover:bg-[--color-warning] hover:text-[--color-background] text-[--color-warning]"
-                    title="Revise task"
-                  >
-                    <RefreshCcw size={16} />
-                  </button>
-                </div>
+                {user?.role !== 'admin' && (
+                  <div className="flex space-x-1 ml-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <button
+                      onClick={() => setShowCompleteModal(task._id)}
+                      className="p-2 rounded-lg transition-all transform hover:scale-110 hover:bg-[--color-success] hover:text-[--color-background] text-[--color-success]"
+                      title="Complete task"
+                    >
+                      <CheckSquare size={16} />
+                    </button>
+                    <button
+                      onClick={() => setShowReviseModal(task._id)}
+                      className="p-2 rounded-lg transition-all transform hover:scale-110 hover:bg-[--color-warning] hover:text-[--color-background] text-[--color-warning]"
+                      title="Revise task"
+                    >
+                      <RefreshCcw size={16} />
+                    </button>
+                  </div>
+                )}
               </div>
 
               <div className="flex flex-wrap gap-2 mb-4">
@@ -608,9 +610,11 @@ const PendingTasks: React.FC = () => {
                     {getSortIcon()}
                   </button>
                 </th>
-                <th className="px-6 py-4 text-left text-xs font-medium text-[--color-textSecondary] uppercase tracking-wider">
-                  Actions
-                </th>
+                {user?.role !== 'admin' && (
+                  <th className="px-6 py-4 text-left text-xs font-medium text-[--color-textSecondary] uppercase tracking-wider">
+                    Actions
+                  </th>
+                )}
               </tr>
             </thead>
             <tbody className="divide-y divide-[--color-border]">
@@ -699,24 +703,26 @@ const PendingTasks: React.FC = () => {
                       })}
                     </div>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                    <div className="flex space-x-2">
-                      <button
-                        onClick={() => setShowReviseModal(task._id)}
-                        className="transition-all transform hover:scale-110 text-[--color-warning]"
-                        title="Revise task"
-                      >
-                        <RefreshCcw size={16} />
-                      </button>
-                      <button
-                        onClick={() => setShowCompleteModal(task._id)}
-                        className="transition-all transform hover:scale-110 text-[--color-success]"
-                        title="Complete task"
-                      >
-                        <CheckSquare size={16} />
-                      </button>
-                    </div>
-                  </td>
+                  {user?.role !== 'admin' && (
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                      <div className="flex space-x-2">
+                        <button
+                          onClick={() => setShowReviseModal(task._id)}
+                          className="transition-all transform hover:scale-110 text-[--color-warning]"
+                          title="Revise task"
+                        >
+                          <RefreshCcw size={16} />
+                        </button>
+                        <button
+                          onClick={() => setShowCompleteModal(task._id)}
+                          className="transition-all transform hover:scale-110 text-[--color-success]"
+                          title="Complete task"
+                        >
+                          <CheckSquare size={16} />
+                        </button>
+                      </div>
+                    </td>
+                  )}
                 </tr>
               ))}
             </tbody>

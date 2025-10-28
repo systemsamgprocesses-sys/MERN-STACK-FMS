@@ -18,38 +18,32 @@ export const useTheme = () => {
 
 const themes = {
   light: {
-    name: 'Light',
-    colors: {
-      primary: '#0070F3',
-      secondary: '#00A3FF',
-      accent: '#FF6B35',
-      success: '#00C851',
-      warning: '#FFB900',
-      error: '#FF4444',
-      info: '#33B5E5',
-      background: '#FFFFFF',
-      surface: '#FFFFFF',
-      text: '#2D3748',
-      textSecondary: '#718096',
-      border: '#E2E8F0'
-    }
+    'color-background': '#F7F9FC',
+    'color-surface': '#FFFFFF',
+    'color-primary': '#6366F1',
+    'color-secondary': '#8B5CF6',
+    'color-accent': '#EC4899',
+    'color-text': '#1E293B',
+    'color-textSecondary': '#64748B',
+    'color-border': '#E2E8F0',
+    'color-success': '#10B981',
+    'color-warning': '#F59E0B',
+    'color-error': '#EF4444',
+    'color-info': '#3B82F6',
   },
   dark: {
-    name: 'Dark',
-    colors: {
-      primary: '#4A9EFF',
-      secondary: '#66B3FF',
-      accent: '#FF8A65',
-      success: '#4CAF50',
-      warning: '#FFC107',
-      error: '#F44336',
-      info: '#2196F3',
-      background: '#1A202C',
-      surface: '#2D3748',
-      text: '#F7FAFC',
-      textSecondary: '#A0AEC0',
-      border: '#4A5568'
-    }
+    'color-background': '#0F172A',
+    'color-surface': '#1E293B',
+    'color-primary': '#818CF8',
+    'color-secondary': '#A78BFA',
+    'color-accent': '#F472B6',
+    'color-text': '#F1F5F9',
+    'color-textSecondary': '#94A3B8',
+    'color-border': '#334155',
+    'color-success': '#34D399',
+    'color-warning': '#FBBF24',
+    'color-error': '#F87171',
+    'color-info': '#60A5FA',
   },
 };
 
@@ -72,8 +66,9 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     const themeConfig = themes[themeName as keyof typeof themes] || themes.light;
     const root = document.documentElement;
 
-    Object.entries(themeConfig.colors).forEach(([key, value]) => {
-      root.style.setProperty(`--color-${key}`, value);
+    Object.entries(themeConfig).forEach(([key, value]) => {
+      if (key === 'name') return; // Skip the name property
+      root.style.setProperty(`--color-${key.replace('color-', '')}`, value);
     });
 
     // Apply dark class for better Tailwind integration

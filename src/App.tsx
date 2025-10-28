@@ -16,6 +16,7 @@ import CreateFMS from './pages/CreateFMS';
 import ViewAllFMS from './pages/ViewAllFMS';
 import StartProject from './pages/StartProject';
 import ViewFMSProgress from './pages/ViewFMSProgress';
+import AdminTasks from './pages/AdminTasks';
 
 function App() {
   return (
@@ -38,6 +39,7 @@ function App() {
                 <Route path="create-fms" element={<ProtectedRoute><CreateFMS /></ProtectedRoute>} />
                 <Route path="start-project" element={<ProtectedRoute><StartProject /></ProtectedRoute>} />
                 <Route path="fms-progress" element={<ProtectedRoute><ViewFMSProgress /></ProtectedRoute>} />
+                <Route path="admin-tasks" element={<ProtectedRoute requireAdmin><AdminTasks /></ProtectedRoute>} />
                 <Route path="admin" element={<ProtectedRoute requireAdmin><AdminPanel /></ProtectedRoute>} />
               </Route>
             </Routes>

@@ -26,22 +26,25 @@ const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
   };
 
   return (
-    <header className="flex items-center justify-between px-2 py-2 border-b" style={{ backgroundColor: 'var(--color-background)', borderColor: 'var(--color-border)' }}>
+    <header className="flex items-center justify-between px-6 py-4 border-b backdrop-blur-xl" style={{ backgroundColor: 'rgba(var(--color-background-rgb, 247, 249, 252), 0.8)', borderColor: 'var(--color-border)' }}>
       <div className="flex items-center">
         <button
           onClick={onMenuClick}
-          className="p-2 rounded-md lg:hidden hover:bg-opacity-10"
+          className="p-2.5 rounded-xl lg:hidden hover:bg-opacity-10 transition-all duration-200 hover:scale-105"
           style={{ backgroundColor: 'var(--color-primary)', color: 'var(--color-background)' }}
         >
           <Menu size={20} />
         </button>
-        <div className="ml-4 lg:ml-0 flex items-center space-x-2">
-          <img 
-            src="/assets/AMG LOGO.webp" 
-            alt="AMG Logo" 
-            className="h-8 w-8 object-contain"
-          />
-          <h2 className="text-xl font-semibold" style={{ color: 'var(--color-text)' }}>
+        <div className="ml-4 lg:ml-0 flex items-center space-x-3">
+          <div className="relative">
+            <img 
+              src="/assets/AMG LOGO.webp" 
+              alt="AMG Logo" 
+              className="h-10 w-10 object-contain rounded-xl"
+            />
+            <div className="absolute inset-0 rounded-xl bg-gradient-to-br from-blue-500/20 to-purple-500/20 blur-sm -z-10"></div>
+          </div>
+          <h2 className="text-xl font-bold tracking-tight" style={{ color: 'var(--color-text)' }}>
             AMG TMS
           </h2>
         </div>
@@ -60,8 +63,8 @@ const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
           </button>
 
           {showThemeMenu && (
-            <div className="absolute right-0 mt-2 w-36 rounded-lg shadow-lg border z-50" style={{ backgroundColor: 'var(--color-surface)', borderColor: 'var(--color-border)' }}>
-              <div className="py-1">
+            <div className="absolute right-0 mt-3 w-40 rounded-2xl shadow-2xl border backdrop-blur-xl z-50 animate-in overflow-hidden" style={{ backgroundColor: 'rgba(var(--color-surface-rgb, 255, 255, 255), 0.95)', borderColor: 'var(--color-border)' }}>
+              <div className="py-2 px-1">
                 {availableThemes.map((themeName) => (
                   <button
                     key={themeName}
@@ -69,8 +72,8 @@ const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
                       setTheme(themeName);
                       setShowThemeMenu(false);
                     }}
-                    className={`w-full text-left px-4 py-2 text-sm hover:bg-opacity-10 transition-colors ${
-                      theme === themeName ? 'font-medium' : ''
+                    className={`w-full text-left px-4 py-2.5 text-sm rounded-xl transition-all duration-200 ${
+                      theme === themeName ? 'font-semibold shadow-sm' : 'hover:bg-opacity-50'
                     }`}
                     style={{
                       backgroundColor: theme === themeName ? 'var(--color-primary)' : 'transparent',
@@ -86,22 +89,22 @@ const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
         </div>
 
         {/* User Menu */}
-        <div className="flex items-center space-x-3">
-          <div className="text-right">
-            <p className="text-sm font-medium" style={{ color: 'var(--color-text)' }}>
+        <div className="flex items-center space-x-4">
+          <div className="text-right hidden sm:block">
+            <p className="text-sm font-semibold" style={{ color: 'var(--color-text)' }}>
               {user?.username}
             </p>
-            <p className="text-xs capitalize" style={{ color: 'var(--color-textSecondary)' }}>
+            <p className="text-xs capitalize font-medium" style={{ color: 'var(--color-textSecondary)' }}>
               {user?.role}
             </p>
           </div>
           <button
             onClick={handleLogout}
-            className="p-2 rounded-lg hover:bg-opacity-10 transition-colors"
-            style={{ color: 'var(--color-error)' }}
+            className="p-2.5 rounded-xl hover:bg-opacity-10 transition-all duration-200 hover:scale-105"
+            style={{ color: 'var(--color-error)', backgroundColor: 'rgba(239, 68, 68, 0.1)' }}
             title="Logout"
           >
-            <LogOut size={20} />
+            <LogOut size={18} />
           </button>
         </div>
       </div>

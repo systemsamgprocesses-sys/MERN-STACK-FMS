@@ -19,7 +19,9 @@ export const useTheme = () => {
 const themes = {
   light: {
     'color-background': '#F7F9FC',
+    'color-background-rgb': '247, 249, 252',
     'color-surface': '#FFFFFF',
+    'color-surface-rgb': '255, 255, 255',
     'color-primary': '#6366F1',
     'color-secondary': '#8B5CF6',
     'color-accent': '#EC4899',
@@ -33,7 +35,9 @@ const themes = {
   },
   dark: {
     'color-background': '#0F172A',
+    'color-background-rgb': '15, 23, 42',
     'color-surface': '#1E293B',
+    'color-surface-rgb': '30, 41, 59',
     'color-primary': '#818CF8',
     'color-secondary': '#A78BFA',
     'color-accent': '#F472B6',

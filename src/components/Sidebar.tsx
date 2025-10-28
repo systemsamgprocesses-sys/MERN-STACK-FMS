@@ -130,16 +130,17 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
 
       {/* Sidebar */}
       <div
-        className={`fixed inset-y-0 left-0 z-30 overflow-y-auto transition-all duration-200 transform lg:translate-x-0 lg:static lg:inset-0 ${
+        className={`fixed inset-y-0 left-0 z-30 overflow-y-auto transition-all duration-300 transform lg:translate-x-0 lg:static lg:inset-0 ${
           isOpen ? 'translate-x-0 ease-out' : '-translate-x-full ease-in lg:translate-x-0'
-        } border-r shadow-sm`}
+        } border-r backdrop-blur-xl`}
         style={{
-          backgroundColor: 'var(--color-surface)',
+          backgroundColor: 'rgba(var(--color-surface-rgb, 255, 255, 255), 0.95)',
           borderColor: 'var(--color-border)',
-          width: isCollapsed ? '5rem' : '12rem',
+          width: isCollapsed ? '5rem' : '14rem',
           willChange: 'width',
           backfaceVisibility: 'hidden',
-          perspective: 1000
+          perspective: 1000,
+          boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03)'
         }}
       >
         {/* Header */}
@@ -178,10 +179,10 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
                   to={item.path}
                   onClick={onClose}
                   className={({ isActive }) =>
-                    `flex items-center px-2 py-2 text-sm font-medium rounded-lg transition-colors duration-200 ${
+                    `flex items-center px-3 py-3 text-sm font-semibold rounded-xl transition-all duration-300 ${
                       isActive
-                        ? 'text-white'
-                        : ''
+                        ? 'text-white shadow-lg'
+                        : 'hover:scale-105'
                     } ${isCollapsed ? 'justify-center' : ''}`
                   }
                   style={({ isActive }) => ({
@@ -191,13 +192,13 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
                     color: isActive ? 'white' : 'var(--color-text)',
                     ':hover': !isActive ? {
                       backgroundColor: 'var(--color-surface)',
-                      transform: 'translateX(2px)'
+                      transform: 'translateX(4px)'
                     } : {}
                   })}
                   onMouseEnter={(e) => {
                     if (!e.currentTarget.classList.contains('text-white')) {
-                      e.currentTarget.style.backgroundColor = 'rgba(0, 112, 243, 0.05)';
-                      e.currentTarget.style.transform = 'translateX(2px)';
+                      e.currentTarget.style.backgroundColor = 'rgba(99, 102, 241, 0.08)';
+                      e.currentTarget.style.transform = 'translateX(4px)';
                     }
                   }}
                   onMouseLeave={(e) => {
@@ -220,25 +221,27 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
         </nav>
 
         {/* User Profile */}
-        <div className="absolute bottom-0 left-0 right-0 p-4 border-t" style={{ borderColor: 'var(--color-border)' }}>
+        <div className="absolute bottom-0 left-0 right-0 p-4 border-t backdrop-blur-sm" style={{ borderColor: 'var(--color-border)', backgroundColor: 'rgba(var(--color-surface-rgb, 255, 255, 255), 0.5)' }}>
           {isCollapsed ? (
             <Tooltip content={`${user?.username} (${user?.role})`} show={true}>
               <div className="flex justify-center">
-                <div className="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-medium" style={{ backgroundColor: 'var(--color-primary)' }}>
+                <div className="relative w-10 h-10 rounded-xl flex items-center justify-center text-white text-sm font-bold shadow-lg" style={{ background: 'linear-gradient(135deg, var(--color-primary), var(--color-accent))' }}>
                   {user?.username?.charAt(0).toUpperCase()}
+                  <div className="absolute inset-0 rounded-xl bg-gradient-to-br from-white/20 to-transparent"></div>
                 </div>
               </div>
             </Tooltip>
           ) : (
             <div className="flex items-center transition-opacity duration-200">
-              <div className="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-medium" style={{ backgroundColor: 'var(--color-primary)' }}>
+              <div className="relative w-10 h-10 rounded-xl flex items-center justify-center text-white text-sm font-bold shadow-lg" style={{ background: 'linear-gradient(135deg, var(--color-primary), var(--color-accent))' }}>
                 {user?.username?.charAt(0).toUpperCase()}
+                <div className="absolute inset-0 rounded-xl bg-gradient-to-br from-white/20 to-transparent"></div>
               </div>
               <div className="ml-3">
-                <p className="text-xs font-medium" style={{ color: 'var(--color-text)' }}>
+                <p className="text-sm font-semibold" style={{ color: 'var(--color-text)' }}>
                   {user?.username}
                 </p>
-                <p className="text-xs" style={{ color: 'var(--color-textSecondary)' }}>
+                <p className="text-xs font-medium capitalize" style={{ color: 'var(--color-textSecondary)' }}>
                   {user?.role}
                 </p>
               </div>

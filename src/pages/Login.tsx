@@ -29,26 +29,33 @@ const Login: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: 'var(--color-background)' }}>
-      <div className="max-w-md w-full mx-4">
-        <div className="rounded-2xl shadow-xl border p-8" style={{ backgroundColor: 'var(--color-surface)', borderColor: 'var(--color-border)' }}>
-          <div className="text-center mb-8">
+    <div className="min-h-screen flex items-center justify-center relative overflow-hidden" style={{ backgroundColor: 'var(--color-background)' }}>
+      <div className="absolute inset-0 overflow-hidden">
+        <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-gradient-to-br from-blue-500/20 to-purple-500/20 rounded-full blur-3xl"></div>
+        <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-gradient-to-br from-purple-500/20 to-pink-500/20 rounded-full blur-3xl"></div>
+      </div>
+      <div className="max-w-md w-full mx-4 relative z-10">
+        <div className="rounded-3xl shadow-2xl border backdrop-blur-xl p-10 animate-in" style={{ backgroundColor: 'rgba(var(--color-surface-rgb, 255, 255, 255), 0.9)', borderColor: 'var(--color-border)' }}>
+          <div className="text-center mb-10">
             {/* Logo and Branding */}
-            <div className="mb-6 flex flex-col items-center">
-              <img 
-                src="/assets/AMG LOGO.webp" 
-                alt="AMG Logo" 
-                className="h-16 w-16 object-contain mb-3"
-              />
-              <h1 className="text-2xl font-bold" style={{ color: 'var(--color-text)' }}>
+            <div className="mb-8 flex flex-col items-center">
+              <div className="relative mb-4">
+                <img 
+                  src="/assets/AMG LOGO.webp" 
+                  alt="AMG Logo" 
+                  className="h-20 w-20 object-contain rounded-2xl"
+                />
+                <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-blue-500/20 to-purple-500/20 blur-xl -z-10"></div>
+              </div>
+              <h1 className="text-3xl font-bold tracking-tight" style={{ color: 'var(--color-text)' }}>
                 Ashok Malhotra Group
               </h1>
-              <p className="text-sm mt-1" style={{ color: 'var(--color-textSecondary)' }}>
+              <p className="text-sm mt-2 font-medium" style={{ color: 'var(--color-textSecondary)' }}>
                 Task & FMS Management System
               </p>
             </div>
 
-            <p className="text-lg" style={{ color: 'var(--color-textSecondary)' }}>
+            <p className="text-lg font-semibold" style={{ color: 'var(--color-textSecondary)' }}>
               Sign in to your account
             </p>
           </div>

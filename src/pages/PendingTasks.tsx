@@ -98,8 +98,10 @@ const PendingTasks: React.FC = () => {
   });
   const [showCompleteModal, setShowCompleteModal] = useState<string | null>(null);
   const [showReviseModal, setShowReviseModal] = useState<string | null>(null);
+  const [showObjectionModal, setShowObjectionModal] = useState<string | null>(null); // Added for objection modal
   const [revisionDate, setRevisionDate] = useState('');
   const [revisionRemarks, setRevisionRemarks] = useState('');
+  const [objectionRemarks, setObjectionRemarks] = useState(''); // Added for objection remarks
   const [showFullDescription, setShowFullDescription] = useState<{ [key: string]: boolean }>({});
 
   const [showFilters, setShowFilters] = useState(false);
@@ -236,6 +238,21 @@ const PendingTasks: React.FC = () => {
       fetchTasks();
     } catch (error) {
       console.error('Error revising task:', error);
+    }
+  };
+
+  // New handler for raising objection
+  const handleRaiseObjection = async (taskId: string) => {
+    try {
+      await axios.post(`${address}/api/tasks/${taskId}/objection`, {
+        remarks: objectionRemarks,
+        raisedBy: user?.id
+      });
+      setShowObjectionModal(null);
+      setObjectionRemarks('');
+      fetchTasks();
+    } catch (error) {
+      console.error('Error raising objection:', error);
     }
   };
 
@@ -481,9 +498,9 @@ const PendingTasks: React.FC = () => {
                       <CheckSquare size={16} />
                     </button>
                     <button
-                      onClick={() => setShowReviseModal(task._id)}
+                      onClick={() => setShowObjectionModal(task._id)}
                       className="p-2 rounded-lg transition-all transform hover:scale-110 hover:bg-[--color-warning] hover:text-[--color-background] text-[--color-warning]"
-                      title="Revise task"
+                      title="Raise objection"
                     >
                       <RefreshCcw size={16} />
                     </button>
@@ -707,9 +724,9 @@ const PendingTasks: React.FC = () => {
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                       <div className="flex space-x-2">
                         <button
-                          onClick={() => setShowReviseModal(task._id)}
+                          onClick={() => setShowObjectionModal(task._id)}
                           className="transition-all transform hover:scale-110 text-[--color-warning]"
-                          title="Revise task"
+                          title="Raise objection"
                         >
                           <RefreshCcw size={16} />
                         </button>
@@ -976,6 +993,52 @@ const PendingTasks: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* Objection Task Modal */}
+      {showObjectionModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
+          <div className="rounded-xl max-w-md w-full shadow-2xl transform transition-all bg-[--color-surface]">
+            <div className="p-6">
+              <h3 className="text-lg font-semibold mb-4 flex items-center text-[--color-text]">
+                <RefreshCcw size={20} className="text-[--color-warning] mr-2" />
+                Raise Objection
+              </h3>
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium mb-2 text-[--color-textSecondary]">
+                    Objection Remarks
+                  </label>
+                  <textarea
+                    value={objectionRemarks}
+                    onChange={(e) => setObjectionRemarks(e.target.value)}
+                    rows={3}
+                    className="w-full px-3 py-2 border border-[--color-border] rounded-lg focus:ring-2 focus:ring-[--color-primary] focus:border-[--color-primary] transition-colors bg-[--color-background] text-[--color-text]"
+                    placeholder="Reason for objection..."
+                  />
+                </div>
+              </div>
+              <div className="flex space-x-3 mt-6">
+                <button
+                  onClick={() => handleRaiseObjection(showObjectionModal)}
+                  className="flex-1 py-2 px-4 rounded-lg font-medium transition-all transform hover:scale-105 text-white bg-gradient-to-r from-[--color-warning] to-[--color-accent]"
+                >
+                  Raise Objection
+                </button>
+                <button
+                  onClick={() => {
+                    setShowObjectionModal(null);
+                    setObjectionRemarks('');
+                  }}
+                  className="flex-1 py-2 px-4 rounded-lg font-medium transition-colors hover:bg-[--color-background] bg-[--color-surface] border border-[--color-border] text-[--color-text]"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
 
       {/* Attachments Modal */}
       {showAttachmentsModal && (

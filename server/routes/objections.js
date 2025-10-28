@@ -2,6 +2,115 @@
 import express from 'express';
 import Task from '../models/Task.js';
 import Project from '../models/Project.js';
+
+const router = express.Router();
+
+// Raise objection for regular task
+router.post('/task/:taskId', async (req, res) => {
+  try {
+    const { taskId } = req.params;
+    const { type, requestedDate, remarks, requestedBy } = req.body;
+
+    const task = await Task.findById(taskId);
+    if (!task) {
+      return res.status(404).json({ message: 'Task not found' });
+    }
+
+    // Calculate extra days if type is date_change
+    let extraDaysRequested = 0;
+    if (type === 'date_change' && requestedDate) {
+      const originalDate = new Date(task.dueDate);
+      const newDate = new Date(requestedDate);
+      extraDaysRequested = Math.ceil((newDate - originalDate) / (1000 * 60 * 60 * 24));
+    }
+
+    if (!task.objections) {
+      task.objections = [];
+    }
+
+    task.objections.push({
+      type,
+      requestedDate: type === 'date_change' ? requestedDate : undefined,
+      extraDaysRequested,
+      remarks,
+      requestedBy,
+      status: 'pending'
+    });
+
+    await task.save();
+
+    const populatedTask = await Task.findById(taskId)
+      .populate('assignedTo', 'username email')
+      .populate('assignedBy', 'username email')
+      .populate('objections.requestedBy', 'username email');
+
+    res.json({ 
+      success: true, 
+      message: 'Objection raised successfully',
+      task: populatedTask 
+    });
+  } catch (error) {
+    console.error('Error raising objection:', error);
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
+// Approve/reject objection for regular task
+router.post('/task/:taskId/objection/:objectionIndex/respond', async (req, res) => {
+  try {
+    const { taskId, objectionIndex } = req.params;
+    const { status, approvalRemarks, impactScore, approvedBy } = req.body;
+
+    const task = await Task.findById(taskId);
+    if (!task) {
+      return res.status(404).json({ message: 'Task not found' });
+    }
+
+    const objection = task.objections[parseInt(objectionIndex)];
+    objection.status = status;
+    objection.approvedBy = approvedBy;
+    objection.approvedAt = new Date();
+    objection.approvalRemarks = approvalRemarks;
+    objection.impactScore = impactScore !== undefined ? impactScore : true;
+
+    if (status === 'approved') {
+      if (objection.type === 'date_change') {
+        task.dueDate = objection.requestedDate;
+        if (!task.originalDueDate) {
+          task.originalDueDate = task.dueDate;
+        }
+        task.scoreImpacted = impactScore;
+      } else if (objection.type === 'hold') {
+        task.isOnHold = true;
+      } else if (objection.type === 'terminate') {
+        task.isTerminated = true;
+        task.status = 'completed';
+      }
+    }
+
+    await task.save();
+
+    const populatedTask = await Task.findById(taskId)
+      .populate('assignedTo', 'username email')
+      .populate('assignedBy', 'username email')
+      .populate('objections.requestedBy', 'username email')
+      .populate('objections.approvedBy', 'username email');
+
+    res.json({ 
+      success: true, 
+      message: `Objection ${status}`,
+      task: populatedTask 
+    });
+  } catch (error) {
+    console.error('Error responding to objection:', error);
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
+
+import express from 'express';
+import Task from '../models/Task.js';
+import Project from '../models/Project.js';
 import User from '../models/User.js';
 
 const router = express.Router();

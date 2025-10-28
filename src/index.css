@@ -56,3 +56,77 @@
   }
 }
 
+/* Print Styles */
+@media print {
+  @page {
+    size: A4;
+    margin: 1cm;
+  }
+
+  body {
+    background: white !important;
+    color: black !important;
+  }
+
+  /* Hide navigation and interactive elements */
+  header, nav, button, .no-print {
+    display: none !important;
+  }
+
+  /* Ensure cards and tables are visible */
+  .bg-\[--color-surface\], .bg-\[--color-background\] {
+    background: white !important;
+    border: 1px solid #e5e7eb !important;
+  }
+
+  /* Ensure text is readable */
+  * {
+    color: black !important;
+  }
+
+  /* Page breaks */
+  .page-break {
+    page-break-after: always;
+  }
+
+  /* Avoid breaking inside cards */
+  .card, .rounded-xl {
+    page-break-inside: avoid;
+  }
+
+  /* Table styles for print */
+  table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+
+  th, td {
+    border: 1px solid #ddd;
+    padding: 8px;
+    text-align: left;
+  }
+
+  th {
+    background-color: #f3f4f6 !important;
+    font-weight: bold;
+  }
+
+  /* Logo and branding */
+  .print-logo {
+    max-width: 150px;
+    margin-bottom: 20px;
+  }
+
+  /* Headers */
+  h1, h2, h3 {
+    color: #1f2937 !important;
+    margin-top: 10px;
+    margin-bottom: 5px;
+  }
+
+  /* Ensure charts are visible if possible */
+  svg {
+    max-width: 100%;
+  }
+}
+

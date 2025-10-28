@@ -106,6 +106,8 @@ const PendingTasks: React.FC = () => {
   const [objectionRequestedDate, setObjectionRequestedDate] = useState('');
   const [showFullDescription, setShowFullDescription] = useState<{ [key: string]: boolean }>({});
   const [fmsTasks, setFmsTasks] = useState<any[]>([]);
+  const [showFMSCompleteModal, setShowFMSCompleteModal] = useState<{ projectId: string; taskIndex: number } | null>(null);
+  const [showFMSObjectionModal, setShowFMSObjectionModal] = useState<{ projectId: string; taskIndex: number } | null>(null);
 
   const [showFilters, setShowFilters] = useState(false);
   const [showAttachmentsModal, setShowAttachmentsModal] = useState<Attachment[] | null>(null);
@@ -278,6 +280,69 @@ const PendingTasks: React.FC = () => {
     } catch (error) {
       console.error('Error raising objection:', error);
       alert('Failed to raise objection');
+    }
+  };
+
+  const handleCompleteFMSTask = (projectId: string, taskIndex: number) => {
+    setShowFMSCompleteModal({ projectId, taskIndex });
+  };
+
+  const handleFMSObjection = (projectId: string, taskIndex: number) => {
+    setShowFMSObjectionModal({ projectId, taskIndex });
+  };
+
+  const handleFMSTaskCompletion = async (projectId: string, taskIndex: number, remarks: string, attachments: File[]) => {
+    try {
+      const formData = new FormData();
+      formData.append('remarks', remarks);
+      formData.append('completedBy', user?.id || '');
+      attachments.forEach((file) => {
+        formData.append('files', file);
+      });
+
+      await axios.post(`${address}/api/projects/${projectId}/complete-task/${taskIndex}`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+
+      setShowFMSCompleteModal(null);
+      fetchTasks();
+      alert('FMS task completed successfully!');
+    } catch (error) {
+      console.error('Error completing FMS task:', error);
+      alert('Failed to complete FMS task');
+    }
+  };
+
+  const handleRaiseFMSObjection = async () => {
+    if (!showFMSObjectionModal) return;
+
+    try {
+      if (!objectionRemarks.trim()) {
+        alert('Please provide remarks for the objection');
+        return;
+      }
+
+      if (objectionType === 'date_change' && !objectionRequestedDate) {
+        alert('Please select a new requested date');
+        return;
+      }
+
+      await axios.post(`${address}/api/objections/fms/${showFMSObjectionModal.projectId}/task/${showFMSObjectionModal.taskIndex}`, {
+        type: objectionType,
+        requestedDate: objectionType === 'date_change' ? objectionRequestedDate : undefined,
+        remarks: objectionRemarks,
+        requestedBy: user?.id
+      });
+
+      setShowFMSObjectionModal(null);
+      setObjectionRemarks('');
+      setObjectionRequestedDate('');
+      setObjectionType('date_change');
+      fetchTasks();
+      alert('FMS objection raised successfully. Waiting for approval.');
+    } catch (error) {
+      console.error('Error raising FMS objection:', error);
+      alert('Failed to raise FMS objection');
     }
   };
 
@@ -960,6 +1025,24 @@ const PendingTasks: React.FC = () => {
                 {!fmsTask.canComplete && (
                   <p className="text-xs text-[--color-warning] mt-2">⚠️ Complete previous step first</p>
                 )}
+                {fmsTask.canComplete && user?.role !== 'admin' && (
+                  <div className="flex space-x-2 mt-3">
+                    <button
+                      onClick={() => handleCompleteFMSTask(fmsTask.projectId, fmsTask.taskIndex)}
+                      className="flex-1 py-2 px-3 bg-[--color-success] text-white rounded-lg hover:opacity-90 flex items-center justify-center text-sm"
+                    >
+                      <CheckSquare size={16} className="mr-1" />
+                      Complete
+                    </button>
+                    <button
+                      onClick={() => handleFMSObjection(fmsTask.projectId, fmsTask.taskIndex)}
+                      className="flex-1 py-2 px-3 bg-[--color-warning] text-white rounded-lg hover:opacity-90 flex items-center justify-center text-sm"
+                    >
+                      <RefreshCcw size={16} className="mr-1" />
+                      Objection
+                    </button>
+                  </div>
+                )}
               </div>
             ))}
           </div>
@@ -1258,6 +1341,97 @@ const PendingTasks: React.FC = () => {
             >
               &times;
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* FMS Task Completion Modal */}
+      {showFMSCompleteModal && (
+        <TaskCompletionModal
+          taskId={`${showFMSCompleteModal.projectId}-${showFMSCompleteModal.taskIndex}`}
+          taskTitle={fmsTasks.find(t => t.projectId === showFMSCompleteModal.projectId && t.taskIndex === showFMSCompleteModal.taskIndex)?.task.what || 'FMS Task'}
+          isRecurring={false}
+          allowAttachments={taskSettings.pendingTasks.allowAttachments}
+          mandatoryAttachments={taskSettings.pendingTasks.mandatoryAttachments}
+          mandatoryRemarks={taskSettings.pendingTasks.mandatoryRemarks}
+          onClose={() => setShowFMSCompleteModal(null)}
+          onComplete={async (remarks, attachments) => {
+            await handleFMSTaskCompletion(showFMSCompleteModal.projectId, showFMSCompleteModal.taskIndex, remarks, attachments);
+          }}
+        />
+      )}
+
+      {/* FMS Objection Modal */}
+      {showFMSObjectionModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
+          <div className="rounded-xl max-w-md w-full shadow-2xl transform transition-all bg-[--color-surface]">
+            <div className="p-6">
+              <h3 className="text-lg font-semibold mb-4 flex items-center text-[--color-text]">
+                <RefreshCcw size={20} className="text-[--color-warning] mr-2" />
+                Raise FMS Objection
+              </h3>
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium mb-2 text-[--color-textSecondary]">
+                    Objection Type
+                  </label>
+                  <select
+                    value={objectionType}
+                    onChange={(e) => setObjectionType(e.target.value as 'date_change' | 'terminate' | 'hold')}
+                    className="w-full px-3 py-2 border border-[--color-border] rounded-lg focus:ring-2 focus:ring-[--color-primary] focus:border-[--color-primary] transition-colors bg-[--color-background] text-[--color-text]"
+                  >
+                    <option value="date_change">Request Date Change</option>
+                    <option value="terminate">Terminate Task</option>
+                    <option value="hold">Hold Task</option>
+                  </select>
+                </div>
+                {objectionType === 'date_change' && (
+                  <div>
+                    <label className="block text-sm font-medium mb-2 text-[--color-textSecondary]">
+                      Requested New Date
+                    </label>
+                    <input
+                      type="date"
+                      value={objectionRequestedDate}
+                      onChange={(e) => setObjectionRequestedDate(e.target.value)}
+                      className="w-full px-3 py-2 border border-[--color-border] rounded-lg focus:ring-2 focus:ring-[--color-primary] focus:border-[--color-primary] transition-colors bg-[--color-background] text-[--color-text]"
+                    />
+                  </div>
+                )}
+                <div>
+                  <label className="block text-sm font-medium mb-2 text-[--color-textSecondary]">
+                    Remarks (Mandatory)
+                  </label>
+                  <textarea
+                    value={objectionRemarks}
+                    onChange={(e) => setObjectionRemarks(e.target.value)}
+                    rows={3}
+                    className="w-full px-3 py-2 border border-[--color-border] rounded-lg focus:ring-2 focus:ring-[--color-primary] focus:border-[--color-primary] transition-colors bg-[--color-background] text-[--color-text]"
+                    placeholder="Reason for objection..."
+                    required
+                  />
+                </div>
+              </div>
+              <div className="flex space-x-3 mt-6">
+                <button
+                  onClick={handleRaiseFMSObjection}
+                  className="flex-1 py-2 px-4 rounded-lg font-medium transition-all transform hover:scale-105 text-white bg-gradient-to-r from-[--color-warning] to-[--color-accent]"
+                >
+                  Raise Objection
+                </button>
+                <button
+                  onClick={() => {
+                    setShowFMSObjectionModal(null);
+                    setObjectionRemarks('');
+                    setObjectionRequestedDate('');
+                    setObjectionType('date_change');
+                  }}
+                  className="flex-1 py-2 px-4 rounded-lg font-medium transition-colors hover:bg-[--color-background] bg-[--color-surface] border border-[--color-border] text-[--color-text]"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}

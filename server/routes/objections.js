@@ -79,6 +79,109 @@ router.post('/task/:taskId/objection/:objectionIndex/respond', async (req, res) 
         if (!task.originalDueDate) {
           task.originalDueDate = task.dueDate;
         }
+
+// Raise objection for FMS task
+router.post('/fms/:projectId/task/:taskIndex', async (req, res) => {
+  try {
+    const { projectId, taskIndex } = req.params;
+    const { type, requestedDate, remarks, requestedBy } = req.body;
+
+    const project = await Project.findById(projectId);
+    if (!project) {
+      return res.status(404).json({ message: 'Project not found' });
+    }
+
+    const taskIdx = parseInt(taskIndex);
+    if (taskIdx < 0 || taskIdx >= project.tasks.length) {
+      return res.status(404).json({ message: 'Task not found' });
+    }
+
+    const task = project.tasks[taskIdx];
+    
+    // Calculate extra days if date change
+    let extraDaysRequested = 0;
+    if (type === 'date_change' && requestedDate && task.plannedDueDate) {
+      const currentDue = new Date(task.plannedDueDate);
+      const newDue = new Date(requestedDate);
+      extraDaysRequested = Math.ceil((newDue - currentDue) / (1000 * 60 * 60 * 24));
+    }
+
+    const objection = {
+      type,
+      requestedDate: type === 'date_change' ? requestedDate : undefined,
+      extraDaysRequested,
+      remarks,
+      requestedBy,
+      requestedAt: new Date(),
+      status: 'pending'
+    };
+
+    if (!task.objections) {
+      task.objections = [];
+    }
+    task.objections.push(objection);
+
+    await project.save();
+
+    res.json({ message: 'FMS objection raised successfully', objection });
+  } catch (error) {
+    console.error('Error raising FMS objection:', error);
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
+// Respond to FMS objection
+router.post('/fms/:projectId/task/:taskIndex/objection/:objectionIndex/respond', async (req, res) => {
+  try {
+    const { projectId, taskIndex, objectionIndex } = req.params;
+    const { status, approvalRemarks, impactScore, approvedBy } = req.body;
+
+    const project = await Project.findById(projectId);
+    if (!project) {
+      return res.status(404).json({ message: 'Project not found' });
+    }
+
+    const taskIdx = parseInt(taskIndex);
+    const objIdx = parseInt(objectionIndex);
+
+    if (taskIdx < 0 || taskIdx >= project.tasks.length) {
+      return res.status(404).json({ message: 'Task not found' });
+    }
+
+    const task = project.tasks[taskIdx];
+    if (!task.objections || objIdx < 0 || objIdx >= task.objections.length) {
+      return res.status(404).json({ message: 'Objection not found' });
+    }
+
+    const objection = task.objections[objIdx];
+    objection.status = status;
+    objection.approvalRemarks = approvalRemarks;
+    objection.approvedBy = approvedBy;
+    objection.approvedAt = new Date();
+
+    if (status === 'approved') {
+      if (objection.type === 'date_change' && objection.requestedDate) {
+        task.plannedDueDate = objection.requestedDate;
+        task.impactScore = impactScore !== false;
+      } else if (objection.type === 'terminate') {
+        task.status = 'terminated';
+        task.impactScore = false;
+      } else if (objection.type === 'hold') {
+        task.status = 'on_hold';
+        task.impactScore = false;
+      }
+    }
+
+    await project.save();
+
+    res.json({ message: 'FMS objection responded successfully', objection });
+  } catch (error) {
+    console.error('Error responding to FMS objection:', error);
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
+
         task.scoreImpacted = impactScore;
       } else if (objection.type === 'hold') {
         task.isOnHold = true;

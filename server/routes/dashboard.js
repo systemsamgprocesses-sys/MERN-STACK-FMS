@@ -122,7 +122,7 @@ router.get('/analytics', async (req, res) => {
     ]);
 
     let teamPerformance = [];
-    let userPerformance = null;
+    let userPerformanceData = null; // Renamed from userPerformance to userPerformanceData for clarity
 
     if (isAdmin === 'true') {
       // Admin: Get team performance
@@ -220,41 +220,6 @@ router.get('/analytics', async (req, res) => {
         };
         const onTimeRecurringTasks = await Task.find(recurringOnTimeQuery).select('_id title taskType completedAt nextDueDate dueDate');
         const onTimeCompletedRecurringTasks = onTimeRecurringTasks.length;
-
-        // Debug recurring on-time query with task details
-        console.log(`User ${user.username} recurring on-time query:`, {
-          query: recurringOnTimeQuery,
-          count: onTimeCompletedRecurringTasks,
-          tasks: onTimeRecurringTasks.map(task => ({
-            id: task._id,
-            title: task.title,
-            taskType: task.taskType,
-            completedAt: task.completedAt,
-            nextDueDate: task.nextDueDate,
-            dueDate: task.dueDate
-          }))
-        });
-
-        // Debug all completed recurring tasks for the user
-        const allCompletedRecurringTasks = await Task.find({
-          isActive: true,
-          assignedTo: user._id,
-          status: 'completed',
-          completedAt: { $ne: null },
-          ...dateQueryForTeam,
-          taskType: { $in: ['daily', 'weekly', 'monthly', 'quarterly', 'yearly'] }
-        }).select('_id title taskType completedAt nextDueDate dueDate');
-        console.log(`User ${user.username} all completed recurring tasks:`, {
-          count: allCompletedRecurringTasks.length,
-          tasks: allCompletedRecurringTasks.map(task => ({
-            id: task._id,
-            title: task.title,
-            taskType: task.taskType,
-            completedAt: task.completedAt,
-            nextDueDate: task.nextDueDate,
-            dueDate: task.dueDate
-          }))
-        });
 
         const completionRate = totalTasks > 0 ? (completedTasks / totalTasks) * 100 : 0;
         const onTimeRate = completedTasksForRate > 0 ? Math.min((onTimeCompletedTasks + onTimeCompletedRecurringTasks) / completedTasksForRate * 100, 100) : 0;
@@ -394,45 +359,10 @@ router.get('/analytics', async (req, res) => {
           const onTimeRecurringTasks = await Task.find(recurringOnTimeQuery).select('_id title taskType completedAt nextDueDate dueDate');
           const onTimeCompletedRecurringTasks = onTimeRecurringTasks.length;
 
-          // Debug recurring on-time query with task details
-          console.log(`User ${userData.username} recurring on-time query:`, {
-            query: recurringOnTimeQuery,
-            count: onTimeCompletedRecurringTasks,
-            tasks: onTimeRecurringTasks.map(task => ({
-              id: task._id,
-              title: task.title,
-              taskType: task.taskType,
-              completedAt: task.completedAt,
-              nextDueDate: task.nextDueDate,
-              dueDate: task.dueDate
-            }))
-          });
-
-          // Debug all completed recurring tasks for the user
-          const allCompletedRecurringTasks = await Task.find({
-            isActive: true,
-            assignedTo: userObjectId,
-            status: 'completed',
-            completedAt: { $ne: null },
-            ...dateQueryForUser,
-            taskType: { $in: ['daily', 'weekly', 'monthly', 'quarterly', 'yearly'] }
-          }).select('_id title taskType completedAt nextDueDate dueDate');
-          console.log(`User ${userData.username} all completed recurring tasks:`, {
-            count: allCompletedRecurringTasks.length,
-            tasks: allCompletedRecurringTasks.map(task => ({
-              id: task._id,
-              title: task.title,
-              taskType: task.taskType,
-              completedAt: task.completedAt,
-              nextDueDate: task.nextDueDate,
-              dueDate: task.dueDate
-            }))
-          });
-
           const completionRate = totalTasks > 0 ? (completedTasks / totalTasks) * 100 : 0;
           const onTimeRate = completedTasksForRate > 0 ? Math.min((onTimeCompletedTasks + onTimeCompletedRecurringTasks) / completedTasksForRate * 100, 100) : 0;
 
-          userPerformance = {
+          userPerformanceData = {
             username: userData.username,
             totalTasks,
             completedTasks,
@@ -599,40 +529,6 @@ router.get('/analytics', async (req, res) => {
     const onTimeRecurringTasksOverall = await Task.find(recurringOnTimeQueryOverall).select('_id title taskType completedAt nextDueDate dueDate');
     const onTimeCompletedRecurringOverall = onTimeRecurringTasksOverall.length;
 
-    // Debug overall recurring on-time query with task details
-    console.log('Overall recurring on-time query:', {
-      query: recurringOnTimeQueryOverall,
-      count: onTimeCompletedRecurringOverall,
-      tasks: onTimeRecurringTasksOverall.map(task => ({
-        id: task._id,
-        title: task.title,
-        taskType: task.taskType,
-        completedAt: task.completedAt,
-        nextDueDate: task.nextDueDate,
-        dueDate: task.dueDate
-      }))
-    });
-
-    // Debug all completed recurring tasks overall
-    const allCompletedRecurringTasksOverall = await Task.find({
-      ...baseQuery,
-      status: 'completed',
-      completedAt: { $ne: null },
-      taskType: { $in: ['daily', 'weekly', 'monthly', 'quarterly', 'yearly'] },
-      ...(startDate && endDate ? dateRangeQueryForStats : {})
-    }).select('_id title taskType completedAt nextDueDate dueDate');
-    console.log('All completed recurring tasks overall:', {
-      count: allCompletedRecurringTasksOverall.length,
-      tasks: allCompletedRecurringTasksOverall.map(task => ({
-        id: task._id,
-        title: task.title,
-        taskType: task.taskType,
-        completedAt: task.completedAt,
-        nextDueDate: task.nextDueDate,
-        dueDate: task.dueDate
-      }))
-    });
-
     const completedRecurringTasksOverallForRate = await Task.countDocuments({
       ...baseQuery,
       taskType: { $in: ['daily', 'weekly', 'monthly', 'quarterly', 'yearly'] },
@@ -736,7 +632,7 @@ router.get('/analytics', async (req, res) => {
       teamPerformance,
       recentActivity,
       performanceMetrics,
-      userPerformance: isAdmin ? null : userPerformance,
+      userPerformance: isAdmin ? null : userPerformanceData,
       fmsMetrics
     });
   } catch (error) {

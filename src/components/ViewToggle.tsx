@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Grid, List } from 'lucide-react';
 
@@ -8,13 +9,13 @@ interface ViewToggleProps {
 
 const ViewToggle: React.FC<ViewToggleProps> = ({ view, onViewChange }) => {
   return (
-    <div className="flex items-center space-x-1 bg-gray-100 rounded-lg p-1">
+    <div className="flex items-center space-x-1 bg-[var(--color-background)] rounded-lg p-1 border border-[var(--color-border)]">
       <button
         onClick={() => onViewChange('card')}
         className={`flex items-center space-x-2 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
           view === 'card'
-            ? 'bg-white text-gray-900 shadow-sm'
-            : 'text-gray-600 hover:text-gray-900'
+            ? 'bg-[var(--color-primary)] text-white shadow-sm'
+            : 'text-[var(--color-textSecondary)] hover:text-[var(--color-text)] hover:bg-[var(--color-surface)]'
         }`}
       >
         <Grid size={12} />
@@ -23,8 +24,8 @@ const ViewToggle: React.FC<ViewToggleProps> = ({ view, onViewChange }) => {
         onClick={() => onViewChange('table')}
         className={`flex items-center space-x-2 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
           view === 'table'
-            ? 'bg-white text-gray-900 shadow-sm'
-            : 'text-gray-600 hover:text-gray-900'
+            ? 'bg-[var(--color-primary)] text-white shadow-sm'
+            : 'text-[var(--color-textSecondary)] hover:text-[var(--color-text)] hover:bg-[var(--color-surface)]'
         }`}
       >
         <List size={12} />

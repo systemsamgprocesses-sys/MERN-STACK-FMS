@@ -23,6 +23,15 @@ interface DashboardData {
   priorityStats: Array<{ _id: string; count: number }>;
   completionTrend: Array<{ _id: { month: number; year: number }; count: number }>;
   plannedTrend: Array<{ _id: { month: number; year: number }; count: number }>;
+  fmsMetrics?: {
+    activeProjects: number;
+    completedProjects: number;
+    totalProjects: number;
+    totalFMSTasks: number;
+    pendingFMSTasks: number;
+    completedFMSTasks: number;
+    avgProgress: number;
+  };
   teamPerformance: Array<{
     username: string;
     totalTasks: number;
@@ -799,7 +808,7 @@ const Dashboard: React.FC = () => {
             <p className="text-sm text-[var(--color-textSecondary)]">Overview of ongoing FMS projects</p>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
-            <div onClick={() => window.location.href = '/fms-progress?status=active'} className="cursor-pointer">
+            <div onClick={() => window.location.href = '/view-fms-progress'} className="cursor-pointer">
               <MetricCard
                 icon={<Activity size={24} className="text-indigo-600" />}
                 title="Active Projects"
@@ -808,7 +817,7 @@ const Dashboard: React.FC = () => {
                 percentage={100}
               />
             </div>
-            <div onClick={() => window.location.href = '/fms-progress?status=completed'} className="cursor-pointer">
+            <div onClick={() => window.location.href = '/view-fms-progress'} className="cursor-pointer">
               <MetricCard
                 icon={<CheckCircle size={24} className="text-green-600" />}
                 title="Completed Projects"
@@ -817,7 +826,7 @@ const Dashboard: React.FC = () => {
                 percentage={((dashboardData?.fmsMetrics?.completedProjects || 0) / ((dashboardData?.fmsMetrics?.totalProjects || 1))) * 100}
               />
             </div>
-            <div onClick={() => window.location.href = '/fms-progress?filterBy=pending'} className="cursor-pointer">
+            <div onClick={() => window.location.href = '/view-fms-progress'} className="cursor-pointer">
               <MetricCard
                 icon={<Clock size={24} className="text-amber-600" />}
                 title="Pending Tasks"
@@ -826,7 +835,7 @@ const Dashboard: React.FC = () => {
                 percentage={((dashboardData?.fmsMetrics?.pendingFMSTasks || 0) / (dashboardData?.fmsMetrics?.totalFMSTasks || 1)) * 100}
               />
             </div>
-            <div onClick={() => window.location.href = '/fms-progress'} className="cursor-pointer">
+            <div onClick={() => window.location.href = '/view-fms-progress'} className="cursor-pointer">
               <MetricCard
                 icon={<Target size={24} className="text-purple-600" />}
                 title="Avg Progress"

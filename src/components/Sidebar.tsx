@@ -13,6 +13,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Zap,
+  User,
 } from 'lucide-react';
 
 // Clean and Professional AMG Logo Component

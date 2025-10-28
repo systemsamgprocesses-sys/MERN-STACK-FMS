@@ -146,6 +146,23 @@ router.put('/:projectId/tasks/:taskIndex', async (req, res) => {
       const nextTask = project.tasks[parseInt(taskIndex) + 1];
       if (nextTask.whenType === 'dependent' && nextTask.status === 'Awaiting Date') {
         nextTask.status = 'Pending';
+        
+        // Calculate plannedDueDate based on completion time
+        const fms = await FMS.findById(project.fmsId);
+        if (fms) {
+          const nextFMSStep = fms.steps.find(s => s.stepNo === nextTask.stepNo);
+          if (nextFMSStep) {
+            let totalHours = 0;
+            if (nextFMSStep.whenUnit === 'days') {
+              totalHours = nextFMSStep.when * 24;
+            } else if (nextFMSStep.whenUnit === 'hours') {
+              totalHours = nextFMSStep.when;
+            } else if (nextFMSStep.whenUnit === 'days+hours') {
+              totalHours = (nextFMSStep.whenDays || 0) * 24 + (nextFMSStep.whenHours || 0);
+            }
+            nextTask.plannedDueDate = new Date(Date.now() + totalHours * 60 * 60 * 1000);
+          }
+        }
       }
     }
     

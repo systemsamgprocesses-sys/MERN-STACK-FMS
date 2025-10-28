@@ -46,15 +46,40 @@ const ViewFMSProgress: React.FC = () => {
   const handleTaskUpdate = async () => {
     if (!selectedTask || !selectedProject) return;
 
+    // Validation: If task requires checklist, ensure all items are completed
+    if (selectedTask.requiresChecklist && selectedTask.checklistItems) {
+      const allCompleted = selectedTask.checklistItems.every((item: any) => item.completed);
+      if (!allCompleted && taskStatus === 'Done') {
+        alert('Please complete all checklist items before marking task as Done');
+        return;
+      }
+    }
+
     try {
-      const formData = new FormData();
-      formData.append('status', taskStatus);
-      formData.append('completedBy', user?.id || '');
-      formData.append('notes', taskNotes);
+      let uploadedFiles: any[] = [];
       
-      files.forEach(file => {
-        formData.append('files', file);
-      });
+      // Upload files first if any
+      if (files.length > 0) {
+        const formData = new FormData();
+        files.forEach(file => {
+          formData.append('files', file);
+        });
+
+        const uploadResponse = await axios.post(`${address}/api/upload`, formData, {
+          headers: { 'Content-Type': 'multipart/form-data' }
+        });
+
+        if (uploadResponse.data.files) {
+          uploadedFiles = uploadResponse.data.files.map((f: any) => ({
+            filename: f.filename,
+            originalName: f.originalName,
+            path: f.path,
+            size: f.size,
+            uploadedBy: user?.id,
+            uploadedAt: new Date()
+          }));
+        }
+      }
 
       const response = await axios.put(
         `${address}/api/projects/${selectedProject.projectId}/tasks/${selectedTask.index}`,
@@ -62,7 +87,8 @@ const ViewFMSProgress: React.FC = () => {
           status: taskStatus,
           completedBy: user?.id,
           notes: taskNotes,
-          attachments: [] // Files would be uploaded separately
+          attachments: uploadedFiles,
+          checklistItems: selectedTask.checklistItems
         }
       );
 
@@ -251,12 +277,42 @@ const ViewFMSProgress: React.FC = () => {
         {/* Task Update Modal */}
         {selectedTask && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-[var(--color-surface)] rounded-lg p-6 max-w-lg w-full mx-4">
+            <div className="bg-[var(--color-surface)] rounded-lg p-6 max-w-lg w-full mx-4 max-h-[90vh] overflow-y-auto">
               <h3 className="text-xl font-bold text-[var(--color-text)] mb-4">
                 Update Task: {selectedTask.what}
               </h3>
               
               <div className="space-y-4">
+                {selectedTask.requiresChecklist && selectedTask.checklistItems?.length > 0 && (
+                  <div>
+                    <label className="block text-sm font-medium text-[var(--color-text)] mb-2">
+                      Checklist (Required) *
+                    </label>
+                    <div className="space-y-2 p-3 rounded-lg bg-[var(--color-background)]">
+                      {selectedTask.checklistItems.map((item: any, idx: number) => (
+                        <div key={idx} className="flex items-center space-x-2">
+                          <input
+                            type="checkbox"
+                            checked={item.completed}
+                            onChange={(e) => {
+                              const updatedItems = [...selectedTask.checklistItems];
+                              updatedItems[idx].completed = e.target.checked;
+                              setSelectedTask({
+                                ...selectedTask,
+                                checklistItems: updatedItems
+                              });
+                            }}
+                            className="w-4 h-4"
+                          />
+                          <span className={`text-sm ${item.completed ? 'line-through text-[var(--color-textSecondary)]' : 'text-[var(--color-text)]'}`}>
+                            {item.text}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
                 <div>
                   <label className="block text-sm font-medium text-[var(--color-text)] mb-2">Status</label>
                   <select
@@ -282,13 +338,33 @@ const ViewFMSProgress: React.FC = () => {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-[var(--color-text)] mb-2">Attachments</label>
+                  <label className="block text-sm font-medium text-[var(--color-text)] mb-2">
+                    Attachments (Max 3 files, 2MB each)
+                  </label>
                   <input
                     type="file"
                     multiple
-                    onChange={(e) => setFiles(e.target.files ? Array.from(e.target.files) : [])}
+                    accept=".jpg,.jpeg,.png,.pdf,.docx,.xlsx"
+                    onChange={(e) => {
+                      const selectedFiles = e.target.files ? Array.from(e.target.files) : [];
+                      if (selectedFiles.length > 3) {
+                        alert('Maximum 3 files allowed');
+                        return;
+                      }
+                      const oversized = selectedFiles.find(f => f.size > 2 * 1024 * 1024);
+                      if (oversized) {
+                        alert('Each file must be under 2MB');
+                        return;
+                      }
+                      setFiles(selectedFiles);
+                    }}
                     className="w-full"
                   />
+                  {files.length > 0 && (
+                    <div className="mt-2 text-xs text-[var(--color-textSecondary)]">
+                      {files.length} file(s) selected
+                    </div>
+                  )}
                 </div>
               </div>
 

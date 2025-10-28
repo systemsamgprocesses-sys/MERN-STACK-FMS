@@ -17,6 +17,7 @@ import ViewAllFMS from './pages/ViewAllFMS';
 import StartProject from './pages/StartProject';
 import ViewFMSProgress from './pages/ViewFMSProgress';
 import AdminTasks from './pages/AdminTasks';
+import ObjectionApprovals from './pages/ObjectionApprovals';
 import ErrorBoundary from './components/ErrorBoundary';
 
 function App() {
@@ -31,7 +32,7 @@ function App() {
                 <Route path="/" element={<ProtectedRoute><Layout /></ProtectedRoute>}>
                   <Route index element={<Navigate to="/dashboard" replace />} />
                   <Route path="dashboard" element={<Dashboard />} />
-                  <Route path="performance" element={<Performance />} />
+                  <Route path="performance" element={<ProtectedRoute><Performance /></ProtectedRoute>} />
                   <Route path="pending-tasks" element={<PendingTasks />} />
                   <Route path="pending-recurring" element={<PendingRecurringTasks />} />
                   <Route path="master-tasks" element={<MasterTasks />} />
@@ -41,6 +42,7 @@ function App() {
                   <Route path="create-fms" element={<ProtectedRoute><CreateFMS /></ProtectedRoute>} />
                   <Route path="start-project" element={<ProtectedRoute><StartProject /></ProtectedRoute>} />
                   <Route path="fms-progress" element={<ProtectedRoute><ViewFMSProgress /></ProtectedRoute>} />
+                  <Route path="objection-approvals" element={<ProtectedRoute><ObjectionApprovals /></ProtectedRoute>} />
                   <Route path="admin-tasks" element={<ProtectedRoute requireAdmin><AdminTasks /></ProtectedRoute>} />
                   <Route path="admin" element={<ProtectedRoute requireAdmin><AdminPanel /></ProtectedRoute>} />
                 </Route>

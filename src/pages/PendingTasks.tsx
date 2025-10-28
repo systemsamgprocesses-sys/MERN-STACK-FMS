@@ -98,11 +98,14 @@ const PendingTasks: React.FC = () => {
   });
   const [showCompleteModal, setShowCompleteModal] = useState<string | null>(null);
   const [showReviseModal, setShowReviseModal] = useState<string | null>(null);
-  const [showObjectionModal, setShowObjectionModal] = useState<string | null>(null); // Added for objection modal
+  const [showObjectionModal, setShowObjectionModal] = useState<string | null>(null);
+  const [objectionType, setObjectionType] = useState<'date_change' | 'terminate' | 'hold'>('date_change');
   const [revisionDate, setRevisionDate] = useState('');
   const [revisionRemarks, setRevisionRemarks] = useState('');
-  const [objectionRemarks, setObjectionRemarks] = useState(''); // Added for objection remarks
+  const [objectionRemarks, setObjectionRemarks] = useState('');
+  const [objectionRequestedDate, setObjectionRequestedDate] = useState('');
   const [showFullDescription, setShowFullDescription] = useState<{ [key: string]: boolean }>({});
+  const [fmsTasks, setFmsTasks] = useState<any[]>([]);
 
   const [showFilters, setShowFilters] = useState(false);
   const [showAttachmentsModal, setShowAttachmentsModal] = useState<Attachment[] | null>(null);
@@ -151,6 +154,12 @@ const PendingTasks: React.FC = () => {
 
       const response = await axios.get(`${address}/api/tasks/pending?${params}`);
       setAllTasks(response.data);
+
+      // Fetch FMS pending tasks
+      if (user?.id) {
+        const fmsResponse = await axios.get(`${address}/api/projects/pending-fms-tasks/${user.id}`);
+        setFmsTasks(fmsResponse.data.tasks || []);
+      }
     } catch (error) {
       console.error('Error fetching tasks:', error);
     } finally {
@@ -244,15 +253,31 @@ const PendingTasks: React.FC = () => {
   // New handler for raising objection
   const handleRaiseObjection = async (taskId: string) => {
     try {
-      await axios.post(`${address}/api/tasks/${taskId}/objection`, {
+      if (!objectionRemarks.trim()) {
+        alert('Please provide remarks for the objection');
+        return;
+      }
+
+      if (objectionType === 'date_change' && !objectionRequestedDate) {
+        alert('Please select a new requested date');
+        return;
+      }
+
+      await axios.post(`${address}/api/objections/task/${taskId}`, {
+        type: objectionType,
+        requestedDate: objectionType === 'date_change' ? objectionRequestedDate : undefined,
         remarks: objectionRemarks,
-        raisedBy: user?.id
+        requestedBy: user?.id
       });
       setShowObjectionModal(null);
       setObjectionRemarks('');
+      setObjectionRequestedDate('');
+      setObjectionType('date_change');
       fetchTasks();
+      alert('Objection raised successfully. Waiting for approval.');
     } catch (error) {
       console.error('Error raising objection:', error);
+      alert('Failed to raise objection');
     }
   };
 
@@ -771,7 +796,7 @@ const PendingTasks: React.FC = () => {
               Pending Tasks
             </h1>
             <p className="mt-0 text-xs text-[--color-textSecondary]">
-              {tasks.length} pending task(s) found
+              {tasks.length + fmsTasks.length} pending task(s) found ({tasks.length} regular + {fmsTasks.length} FMS)
               {sortOrder !== 'none' && (
                 <span className="ml-2 text-[--color-primary]">
                   • Sorted by due date ({sortOrder === 'asc' ? 'earliest first' : 'latest first'})
@@ -786,6 +811,17 @@ const PendingTasks: React.FC = () => {
             aria-controls="filters-panel"
           >
             <Filter size={20} />
+          </button>
+          <button
+            onClick={() => window.print()}
+            className="ml-2 p-2 rounded-full transition-colors hover:bg-[--color-background] bg-[--color-surface] text-[--color-textSecondary]"
+            title="Print"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="6 9 6 2 18 2 18 9"></polyline>
+              <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path>
+              <rect x="6" y="14" width="12" height="8"></rect>
+            </svg>
           </button>
         </div>
         {!isMobile && <ViewToggle view={view} onViewChange={setView} />}
@@ -908,8 +944,30 @@ const PendingTasks: React.FC = () => {
         </div>
       )}
 
+      {/* FMS Tasks Section */}
+      {fmsTasks.length > 0 && (
+        <div className="mb-6">
+          <h2 className="text-md font-semibold text-[--color-text] mb-3">FMS Pending Tasks</h2>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            {fmsTasks.map((fmsTask) => (
+              <div key={`${fmsTask.projectId}-${fmsTask.taskIndex}`} className="rounded-xl shadow-sm border border-[--color-border] p-4 bg-[--color-surface]">
+                <h3 className="font-semibold text-[--color-text] mb-2">{fmsTask.task.what}</h3>
+                <p className="text-sm text-[--color-textSecondary] mb-2">Project: {fmsTask.projectName}</p>
+                <p className="text-sm text-[--color-textSecondary] mb-2">FMS: {fmsTask.fmsName}</p>
+                <p className="text-sm text-[--color-textSecondary]">
+                  Due: {fmsTask.task.plannedDueDate ? new Date(fmsTask.task.plannedDueDate).toLocaleDateString('en-GB') : 'N/A'}
+                </p>
+                {!fmsTask.canComplete && (
+                  <p className="text-xs text-[--color-warning] mt-2">⚠️ Complete previous step first</p>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Content */}
-      {tasks.length === 0 ? (
+      {tasks.length === 0 && fmsTasks.length === 0 ? (
         <div className="text-center py-12">
           <div className="rounded-full w-24 h-24 flex items-center justify-center mx-auto mb-4 bg-gradient-to-r from-[--color-primary] to-[--color-accent]">
             <CheckSquare size={48} className="text-[--color-background]" />
@@ -917,11 +975,12 @@ const PendingTasks: React.FC = () => {
           <p className="text-lg text-[--color-textSecondary]">No pending tasks found</p>
           <p className="text-sm mt-2 text-[--color-textSecondary]">Try adjusting your filters or check back later</p>
         </div>
-      ) : (
+      ) : tasks.length > 0 ? (
         <>
+          <h2 className="text-md font-semibold text-[--color-text] mb-3">Regular Pending Tasks</h2>
           {isMobile || view === 'card' ? renderCardView() : renderTableView()}
         </>
-      )}
+      ) : null}
 
       {/* Task Completion Modal */}
       {showCompleteModal && completingTask && (
@@ -1006,7 +1065,34 @@ const PendingTasks: React.FC = () => {
               <div className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium mb-2 text-[--color-textSecondary]">
-                    Objection Remarks
+                    Objection Type
+                  </label>
+                  <select
+                    value={objectionType}
+                    onChange={(e) => setObjectionType(e.target.value as 'date_change' | 'terminate' | 'hold')}
+                    className="w-full px-3 py-2 border border-[--color-border] rounded-lg focus:ring-2 focus:ring-[--color-primary] focus:border-[--color-primary] transition-colors bg-[--color-background] text-[--color-text]"
+                  >
+                    <option value="date_change">Request Date Change</option>
+                    <option value="terminate">Terminate Task</option>
+                    <option value="hold">Hold Task</option>
+                  </select>
+                </div>
+                {objectionType === 'date_change' && (
+                  <div>
+                    <label className="block text-sm font-medium mb-2 text-[--color-textSecondary]">
+                      Requested New Date
+                    </label>
+                    <input
+                      type="date"
+                      value={objectionRequestedDate}
+                      onChange={(e) => setObjectionRequestedDate(e.target.value)}
+                      className="w-full px-3 py-2 border border-[--color-border] rounded-lg focus:ring-2 focus:ring-[--color-primary] focus:border-[--color-primary] transition-colors bg-[--color-background] text-[--color-text]"
+                    />
+                  </div>
+                )}
+                <div>
+                  <label className="block text-sm font-medium mb-2 text-[--color-textSecondary]">
+                    Remarks (Mandatory)
                   </label>
                   <textarea
                     value={objectionRemarks}
@@ -1014,6 +1100,7 @@ const PendingTasks: React.FC = () => {
                     rows={3}
                     className="w-full px-3 py-2 border border-[--color-border] rounded-lg focus:ring-2 focus:ring-[--color-primary] focus:border-[--color-primary] transition-colors bg-[--color-background] text-[--color-text]"
                     placeholder="Reason for objection..."
+                    required
                   />
                 </div>
               </div>
@@ -1028,6 +1115,8 @@ const PendingTasks: React.FC = () => {
                   onClick={() => {
                     setShowObjectionModal(null);
                     setObjectionRemarks('');
+                    setObjectionRequestedDate('');
+                    setObjectionType('date_change');
                   }}
                   className="flex-1 py-2 px-4 rounded-lg font-medium transition-colors hover:bg-[--color-background] bg-[--color-surface] border border-[--color-border] text-[--color-text]"
                 >

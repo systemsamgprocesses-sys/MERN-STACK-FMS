@@ -14,6 +14,7 @@ import {
   ChevronRight,
   Zap,
   User,
+  AlertCircle,
 } from 'lucide-react';
 
 // Clean and Professional AMG Logo Component
@@ -21,9 +22,9 @@ const AMGLogo = ({ isCollapsed }: { isCollapsed: boolean }) => (
   <div className="flex items-center">
     <div className="relative mr-3">
       {/* Logo Image Container */}
-      <img 
-        src="/assets/AMG LOGO.webp" 
-        alt="AMG Logo" 
+      <img
+        src="/assets/AMG LOGO.webp"
+        alt="AMG Logo"
         className="h-8 w-8 object-contain rounded-lg"
         style={{
           boxShadow: '0 2px 8px rgba(37, 99, 235, 0.25)'
@@ -31,9 +32,9 @@ const AMGLogo = ({ isCollapsed }: { isCollapsed: boolean }) => (
       />
     </div>
     {!isCollapsed && (
-      <span 
+      <span
         className="text-sm font-bold tracking-tight transition-opacity duration-200"
-        style={{ 
+        style={{
           color: '#277ef8ff',
           fontFamily: 'system-ui, -apple-system, sans-serif'
         }}
@@ -56,15 +57,15 @@ const Tooltip: React.FC<TooltipProps> = ({ children, content, show }) => (
     {children}
     {show && (
       <div className="absolute left-full ml-2 top-1/2 transform -translate-y-1/2 z-50 opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none">
-        <div 
+        <div
           className="px-3 py-2 text-sm rounded-lg shadow-lg whitespace-nowrap"
-          style={{ 
-            backgroundColor: 'var(--color-text)', 
-            color: 'var(--color-background)' 
+          style={{
+            backgroundColor: 'var(--color-text)',
+            color: 'var(--color-background)'
           }}
         >
           {content}
-          <div 
+          <div
             className="absolute top-1/2 left-0 transform -translate-y-1/2 -translate-x-1"
             style={{
               width: 0,
@@ -88,7 +89,7 @@ interface SidebarProps {
 const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
   const { user } = useAuth();
   const [isCollapsed, setIsCollapsed] = useState(true); // Default collapsed state
-  
+
   const menuItems = [
     { icon: LayoutDashboard, label: 'Dashboard', path: '/dashboard' },
     { icon: CheckSquare, label: 'Pending Tasks', path: '/pending-tasks' },
@@ -101,7 +102,8 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
     { icon: Settings, label: 'Start Project', path: '/start-project', permission: 'canAssignTasks' },
     { icon: Settings, label: 'FMS Progress', path: '/fms-progress' },
     { icon: User, label: 'My Tasks', path: '/admin-tasks', requireAdmin: true },
-    { icon: Settings, label: 'Admin Panel', path: '/admin', requireAdmin: true }
+    { icon: Settings, label: 'Admin Panel', path: '/admin', requireAdmin: true },
+    { icon: AlertCircle, label: 'Objection Approvals', path: '/objection-approvals' },
   ];
 
   const filteredMenuItems = menuItems.filter(item => {
@@ -131,8 +133,8 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
         className={`fixed inset-y-0 left-0 z-30 overflow-y-auto transition-all duration-200 transform lg:translate-x-0 lg:static lg:inset-0 ${
           isOpen ? 'translate-x-0 ease-out' : '-translate-x-full ease-in lg:translate-x-0'
         } border-r shadow-sm`}
-        style={{ 
-          backgroundColor: 'var(--color-surface)', 
+        style={{
+          backgroundColor: 'var(--color-surface)',
           borderColor: 'var(--color-border)',
           width: isCollapsed ? '5rem' : '12rem',
           willChange: 'width',
@@ -143,7 +145,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
         {/* Header */}
         <div className="flex items-center justify-between flex-shrink-0 p-4 border-b" style={{ borderColor: 'var(--color-border)' }}>
           <AMGLogo isCollapsed={isCollapsed} />
-          
+
           {/* Desktop toggle button */}
           <button
             onClick={toggleCollapse}
@@ -152,7 +154,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
           >
             {isCollapsed ? <ChevronRight size={18} /> : <ChevronLeft size={18} />}
           </button>
-          
+
           {/* Mobile close button */}
           <button
             onClick={onClose}
@@ -167,9 +169,9 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
         <nav className="mt-4">
           <div className="px-2 space-y-2">
             {filteredMenuItems.map((item) => (
-              <Tooltip 
-                key={item.path} 
-                content={item.label} 
+              <Tooltip
+                key={item.path}
+                content={item.label}
                 show={isCollapsed}
               >
                 <NavLink
@@ -183,8 +185,8 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
                     } ${isCollapsed ? 'justify-center' : ''}`
                   }
                   style={({ isActive }) => ({
-                    background: isActive 
-                      ? 'linear-gradient(135deg, var(--color-primary), var(--color-secondary))' 
+                    background: isActive
+                      ? 'linear-gradient(135deg, var(--color-primary), var(--color-secondary))'
                       : 'transparent',
                     color: isActive ? 'white' : 'var(--color-text)',
                     ':hover': !isActive ? {

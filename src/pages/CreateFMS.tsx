@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Plus, Trash2, Save, Eye, FileText, Check, X } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
@@ -45,11 +44,13 @@ const CreateFMS: React.FC = () => {
     attachments: []
   }]);
   const [users, setUsers] = useState<any[]>([]);
+  const [fmsList, setFmsList] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<any>({});
 
   useEffect(() => {
     fetchUsers();
+    fetchFmsList();
   }, []);
 
   const fetchUsers = async () => {
@@ -58,6 +59,15 @@ const CreateFMS: React.FC = () => {
       setUsers(response.data.filter((u: any) => u.isActive));
     } catch (error) {
       console.error('Error fetching users:', error);
+    }
+  };
+
+  const fetchFmsList = async () => {
+    try {
+      const response = await axios.get(`${address}/api/fms`);
+      setFmsList(response.data);
+    } catch (error) {
+      console.error('Error fetching FMS list:', error);
     }
   };
 
@@ -122,11 +132,11 @@ const CreateFMS: React.FC = () => {
 
   const validateForm = () => {
     const newErrors: any = {};
-    
+
     if (!fmsName.trim()) {
       newErrors.fmsName = 'FMS name is required';
     }
-    
+
     steps.forEach((step, index) => {
       if (!step.what.trim()) {
         newErrors[`step${index}_what`] = 'Task description is required';
@@ -141,7 +151,7 @@ const CreateFMS: React.FC = () => {
         newErrors[`step${index}_checklist`] = 'At least one checklist item is required';
       }
     });
-    
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -151,31 +161,31 @@ const CreateFMS: React.FC = () => {
       alert('Please fill all required fields');
       return;
     }
-    
+
     setLoading(true);
     try {
       const formData = new FormData();
       formData.append('fmsName', fmsName);
       formData.append('createdBy', user?.id || '');
-      
+
       // Prepare steps for submission
       const stepsData = steps.map(step => ({
         ...step,
         attachments: [] // Will be populated by backend
       }));
       formData.append('steps', JSON.stringify(stepsData));
-      
+
       // Append files with step index
       steps.forEach((step, index) => {
         step.attachments.forEach((file) => {
           formData.append(`files-${index}`, file);
         });
       });
-      
+
       const response = await axios.post(`${address}/api/fms`, formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
-      
+
       if (response.data.success) {
         alert('FMS template created successfully!');
         navigate('/fms-templates');
@@ -398,6 +408,27 @@ const CreateFMS: React.FC = () => {
                     {step.attachments.length} file(s) selected
                   </p>
                 )}
+              </div>
+
+              <div className="mt-4">
+                <label className="block text-sm font-medium text-[var(--color-text)] mb-2">
+                  Trigger FMS on Completion (Optional)
+                </label>
+                <select
+                  value={step.triggersFMSId || ''}
+                  onChange={(e) => updateStep(index, 'triggersFMSId', e.target.value || undefined)}
+                  className="w-full px-4 py-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] text-[var(--color-text)]"
+                >
+                  <option value="">None</option>
+                  {fmsList.map((fms) => (
+                    <option key={fms._id} value={fms._id}>
+                      {fms.fmsName} ({fms.fmsId})
+                    </option>
+                  ))}
+                </select>
+                <p className="text-xs text-[var(--color-textSecondary)] mt-1">
+                  Automatically start another FMS project when this step completes
+                </p>
               </div>
             </div>
           </div>

@@ -41,6 +41,10 @@ const projectSchema = new mongoose.Schema({
   tasks: [projectTaskSchema],
   status: { type: String, enum: ['Active', 'Completed', 'On Hold'], default: 'Active' },
   createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+  totalScore: { type: Number, default: 0 },
+  tasksOnTime: { type: Number, default: 0 },
+  tasksLate: { type: Number, default: 0 },
+  averageCompletionTime: { type: Number, default: 0 },
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now }
 });

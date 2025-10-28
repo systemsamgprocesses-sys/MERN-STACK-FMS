@@ -182,11 +182,27 @@ const ViewFMSProgress: React.FC = () => {
                     <h2 className="text-2xl font-bold text-[var(--color-text)] mb-2">
                       {selectedProject.projectName}
                     </h2>
-                    <div className="flex items-center space-x-4 text-sm text-[var(--color-textSecondary)]">
+                    <div className="flex items-center space-x-4 text-sm text-[var(--color-textSecondary)] mb-4">
                       <span>Started: {new Date(selectedProject.startDate).toLocaleDateString()}</span>
                       <span>•</span>
                       <span>Status: {selectedProject.status}</span>
                     </div>
+                    {selectedProject.totalScore > 0 && (
+                      <div className="grid grid-cols-3 gap-4 mt-4">
+                        <div className="p-3 rounded-lg bg-[var(--color-background)]">
+                          <p className="text-xs text-[var(--color-textSecondary)] mb-1">Performance Score</p>
+                          <p className="text-2xl font-bold text-[var(--color-primary)]">{selectedProject.totalScore}%</p>
+                        </div>
+                        <div className="p-3 rounded-lg bg-[var(--color-background)]">
+                          <p className="text-xs text-[var(--color-textSecondary)] mb-1">On-Time Tasks</p>
+                          <p className="text-2xl font-bold text-green-600">{selectedProject.tasksOnTime || 0}</p>
+                        </div>
+                        <div className="p-3 rounded-lg bg-[var(--color-background)]">
+                          <p className="text-xs text-[var(--color-textSecondary)] mb-1">Late Tasks</p>
+                          <p className="text-2xl font-bold text-red-600">{selectedProject.tasksLate || 0}</p>
+                        </div>
+                      </div>
+                    )}
                   </div>
 
                   <h3 className="text-xl font-bold text-[var(--color-text)] mb-4">Tasks</h3>

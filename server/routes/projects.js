@@ -135,6 +135,23 @@ router.put('/:projectId/tasks/:taskIndex', async (req, res) => {
     if (status === 'Done') {
       task.actualCompletedOn = new Date();
       task.completedBy = completedBy;
+      
+      // Calculate score
+      if (task.plannedDueDate) {
+        const completedDate = new Date();
+        const dueDate = new Date(task.plannedDueDate);
+        const isOnTime = completedDate <= dueDate;
+        
+        if (isOnTime) {
+          project.tasksOnTime = (project.tasksOnTime || 0) + 1;
+        } else {
+          project.tasksLate = (project.tasksLate || 0) + 1;
+        }
+        
+        // Recalculate total score
+        const completedTasks = project.tasks.filter(t => t.status === 'Done').length;
+        project.totalScore = Math.round((project.tasksOnTime / completedTasks) * 100);
+      }
     }
     if (attachments) task.attachments = attachments;
     if (checklistItems) task.checklistItems = checklistItems;
@@ -161,6 +178,81 @@ router.put('/:projectId/tasks/:taskIndex', async (req, res) => {
               totalHours = (nextFMSStep.whenDays || 0) * 24 + (nextFMSStep.whenHours || 0);
             }
             nextTask.plannedDueDate = new Date(Date.now() + totalHours * 60 * 60 * 1000);
+          }
+        }
+      }
+    }
+    
+    // Check if task has FMS trigger and auto-create project
+    if (status === 'Done') {
+      const fms = await FMS.findById(project.fmsId);
+      if (fms) {
+        const currentStep = fms.steps.find(s => s.stepNo === task.stepNo);
+        if (currentStep && currentStep.triggersFMSId) {
+          const triggeredFMS = await FMS.findById(currentStep.triggersFMSId);
+          if (triggeredFMS) {
+            // Auto-create new project from triggered FMS
+            const count = await Project.countDocuments();
+            const newProjectId = `PRJ-${(count + 1).toString().padStart(4, '0')}`;
+            
+            const triggerDate = new Date();
+            const newTasks = triggeredFMS.steps.map((step, idx) => {
+              let plannedDueDate = null;
+              let taskStatus = 'Not Started';
+              
+              if (idx === 0) {
+                taskStatus = 'Pending';
+                if (step.whenUnit === 'days') {
+                  plannedDueDate = new Date(triggerDate.getTime() + step.when * 24 * 60 * 60 * 1000);
+                } else if (step.whenUnit === 'hours') {
+                  plannedDueDate = new Date(triggerDate.getTime() + step.when * 60 * 60 * 1000);
+                } else if (step.whenUnit === 'days+hours') {
+                  const totalHours = (step.whenDays || 0) * 24 + (step.whenHours || 0);
+                  plannedDueDate = new Date(triggerDate.getTime() + totalHours * 60 * 60 * 1000);
+                }
+              } else if (step.whenType === 'fixed') {
+                let totalHours = 0;
+                if (step.whenUnit === 'days') {
+                  totalHours = step.when * 24;
+                } else if (step.whenUnit === 'hours') {
+                  totalHours = step.when;
+                } else if (step.whenUnit === 'days+hours') {
+                  totalHours = (step.whenDays || 0) * 24 + (step.whenHours || 0);
+                }
+                plannedDueDate = new Date(triggerDate.getTime() + totalHours * 60 * 60 * 1000);
+              } else {
+                taskStatus = 'Awaiting Date';
+              }
+              
+              return {
+                stepNo: step.stepNo,
+                what: step.what,
+                who: step.who,
+                how: step.how,
+                plannedDueDate,
+                status: taskStatus,
+                requiresChecklist: step.requiresChecklist,
+                checklistItems: step.checklistItems.map(item => ({
+                  id: item.id,
+                  text: item.text,
+                  completed: false
+                })),
+                attachments: [],
+                whenType: step.whenType
+              };
+            });
+            
+            const newProject = new Project({
+              projectId: newProjectId,
+              fmsId: triggeredFMS._id,
+              projectName: `Auto-triggered: ${triggeredFMS.fmsName} (from ${project.projectName})`,
+              startDate: triggerDate,
+              tasks: newTasks,
+              status: 'Active',
+              createdBy: completedBy
+            });
+            
+            await newProject.save();
           }
         }
       }

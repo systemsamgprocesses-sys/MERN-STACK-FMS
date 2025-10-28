@@ -140,6 +140,15 @@ const ViewAllFMS: React.FC = () => {
                         <Eye size={16} />
                         <span>Preview</span>
                       </button>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          navigate(`/start-project?fmsId=${fms._id}`);
+                        }}
+                        className="px-4 py-2 bg-[var(--color-primary)] text-white rounded-lg hover:opacity-90"
+                      >
+                        Start Project
+                      </button>
                       {expandedFMS === fms.fmsId ? (
                         <ChevronUp size={24} className="text-[var(--color-text)]" />
                       ) : (

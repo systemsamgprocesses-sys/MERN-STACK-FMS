@@ -42,12 +42,52 @@ router.post('/', upload.array('files', 10), async (req, res) => {
   try {
     const { fmsName, steps, createdBy } = req.body;
     
+    // Validate required fields
+    if (!fmsName || !fmsName.trim()) {
+      return res.status(400).json({ success: false, message: 'FMS name is required' });
+    }
+    if (!createdBy) {
+      return res.status(400).json({ success: false, message: 'Creator ID is required' });
+    }
+    
+    // Parse steps if sent as string
+    let parsedSteps = typeof steps === 'string' ? JSON.parse(steps) : steps;
+    
+    if (!Array.isArray(parsedSteps) || parsedSteps.length === 0) {
+      return res.status(400).json({ success: false, message: 'At least one step is required' });
+    }
+    
+    // Validate and convert step data
+    parsedSteps = parsedSteps.map((step, index) => {
+      // Validate required fields
+      if (!step.what || !step.how) {
+        throw new Error(`Step ${index + 1}: Missing required fields (what/how)`);
+      }
+      if (!step.who || !Array.isArray(step.who) || step.who.length === 0) {
+        throw new Error(`Step ${index + 1}: At least one assignee is required`);
+      }
+      
+      // Ensure who array contains valid ObjectIds
+      step.who = step.who.map(id => {
+        if (typeof id === 'string' && id.length === 24) {
+          return id; // MongoDB will handle string to ObjectId conversion
+        }
+        throw new Error(`Step ${index + 1}: Invalid user ID format`);
+      });
+      
+      // Handle triggersFMSId if provided
+      if (step.triggersFMSId && typeof step.triggersFMSId === 'string' && step.triggersFMSId.length === 24) {
+        // Keep as string, MongoDB will convert
+      } else if (step.triggersFMSId) {
+        delete step.triggersFMSId; // Remove invalid triggersFMSId
+      }
+      
+      return step;
+    });
+    
     // Generate unique FMS ID
     const count = await FMS.countDocuments();
     const fmsId = `FMS-${(count + 1).toString().padStart(4, '0')}`;
-    
-    // Parse steps if sent as string
-    const parsedSteps = typeof steps === 'string' ? JSON.parse(steps) : steps;
     
     // Process file uploads
     if (req.files && req.files.length > 0) {

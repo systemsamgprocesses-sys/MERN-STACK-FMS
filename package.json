@@ -8,7 +8,10 @@
     "client": "vite --host",
     "server": "nodemon ./server/index.js",
     "build": "vite build",
-    "start": "node ./server/index.js"
+    "start": "node ./server/index.js",
+    "import-fms": "node ./server/utils/importFMSData.js",
+    "import-tasks": "node ./server/utils/importTasksData.js",
+    "seed-users": "node ./server/utils/seedUsers.js"
   },
   "dependencies": {
     "axios": "^1.6.7",

@@ -81,6 +81,10 @@ app.post('/api/upload', upload.array('files', 10), (req, res) => {
 // Serve uploaded files statically
 app.use('/uploads', express.static(uploadsDir));
 
+// Serve assets folder for branding (logo, favicon)
+const assetsDir = path.join(__dirname, '..', 'assets');
+app.use('/assets', express.static(assetsDir));
+
 // API Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/tasks', taskRoutes);

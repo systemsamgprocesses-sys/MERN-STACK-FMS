@@ -19,25 +19,15 @@ import {
 const AMGLogo = ({ isCollapsed }: { isCollapsed: boolean }) => (
   <div className="flex items-center">
     <div className="relative mr-3">
-      {/* Simple, clean icon container */}
-      <div 
-        className="w-8 h-9 rounded-lg flex items-center justify-center relative"
+      {/* Logo Image Container */}
+      <img 
+        src="/assets/AMG LOGO.webp" 
+        alt="AMG Logo" 
+        className="h-8 w-8 object-contain rounded-lg"
         style={{
-          backgroundColor: '#2563eb',
           boxShadow: '0 2px 8px rgba(37, 99, 235, 0.25)'
         }}
-      >
-        {/* Clean 'A' letter */}
-        <div 
-          className="text-white font-bold text-xl leading-none select-none"
-          style={{ 
-            fontFamily: 'system-ui, -apple-system, sans-serif',
-            fontWeight: '700'
-          }}
-        >
-          A
-        </div>
-      </div>
+      />
     </div>
     {!isCollapsed && (
       <span 

@@ -65,9 +65,10 @@ const CreateFMS: React.FC = () => {
   const fetchFmsList = async () => {
     try {
       const response = await axios.get(`${address}/api/fms`);
-      setFmsList(response.data);
+      setFmsList(response.data.fmsList || []);
     } catch (error) {
       console.error('Error fetching FMS list:', error);
+      setFmsList([]);
     }
   };
 
@@ -189,10 +190,13 @@ const CreateFMS: React.FC = () => {
       if (response.data.success) {
         alert('FMS template created successfully!');
         navigate('/fms-templates');
+      } else {
+        alert(response.data.message || 'Failed to create FMS template');
       }
     } catch (error) {
       console.error('Error creating FMS:', error);
-      alert('Failed to create FMS template');
+      const errorMessage = error.response?.data?.message || error.response?.data?.error || 'Failed to create FMS template';
+      alert(errorMessage);
     } finally {
       setLoading(false);
     }

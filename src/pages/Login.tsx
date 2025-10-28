@@ -33,13 +33,22 @@ const Login: React.FC = () => {
       <div className="max-w-md w-full mx-4">
         <div className="rounded-2xl shadow-xl border p-8" style={{ backgroundColor: 'var(--color-surface)', borderColor: 'var(--color-border)' }}>
           <div className="text-center mb-8">
-            <div className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4" style={{ backgroundColor: 'var(--color-primary)' }}>
-              <LogIn size={32} color="white" />
+            {/* Logo and Branding */}
+            <div className="mb-6 flex flex-col items-center">
+              <img 
+                src="/assets/AMG LOGO.webp" 
+                alt="AMG Logo" 
+                className="h-16 w-16 object-contain mb-3"
+              />
+              <h1 className="text-2xl font-bold" style={{ color: 'var(--color-text)' }}>
+                Ashok Malhotra Group
+              </h1>
+              <p className="text-sm mt-1" style={{ color: 'var(--color-textSecondary)' }}>
+                Task & FMS Management System
+              </p>
             </div>
-            <h2 className="text-3xl font-bold" style={{ color: 'var(--color-text)' }}>
-              Welcome Back
-            </h2>
-            <p className="mt-2" style={{ color: 'var(--color-textSecondary)' }}>
+
+            <p className="text-lg" style={{ color: 'var(--color-textSecondary)' }}>
               Sign in to your account
             </p>
           </div>

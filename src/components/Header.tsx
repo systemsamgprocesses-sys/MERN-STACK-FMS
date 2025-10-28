@@ -35,9 +35,16 @@ const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
         >
           <Menu size={20} />
         </button>
-        <h2 className="ml-4 lg:ml-0 text-xl font-semibold" style={{ color: 'var(--color-text)' }}>
-          TMS
-        </h2>
+        <div className="ml-4 lg:ml-0 flex items-center space-x-2">
+          <img 
+            src="/assets/AMG LOGO.webp" 
+            alt="AMG Logo" 
+            className="h-8 w-8 object-contain"
+          />
+          <h2 className="text-xl font-semibold" style={{ color: 'var(--color-text)' }}>
+            AMG TMS
+          </h2>
+        </div>
       </div>
 
       <div className="flex items-center space-x-4">

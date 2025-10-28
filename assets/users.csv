@@ -1,0 +1,41 @@
+Username,Password,Name,Role,Department
+Ajay Kumar Jha,Ajay@123,Ajay Kumar Jha,user,ACCOUNTS
+Akanksha Jaggi,Akanksha@123,Akanksha Jaggi,user,LEASING
+Amardeep Singh Bains,Amardeep@123,Amardeep Singh Bains,user,LEASING
+Amit Kumar,Amit@123,Amit Kumar,user,MALL OPERATIONS
+Ashok Malhotra,Ashok@123,Ashok Malhotra,user,MANAGEMENT
+Avinash Kumar,Avinash@123,Avinash Kumar,user,MALL OPERATIONS
+Deepak Kumar,MIS@123,Deepak Kumar,Super Admin,MIS
+Deepak Kumar Ratra,Deepak@123,Deepak Kumar Ratra,user,LEGAL & LIAISONING
+Gaurav Sodhi,Gaurav@123,Gaurav Sodhi,user,MANAGEMENT
+Gurjeevan Singh,Gurjeevan@123,Gurjeevan Singh,user,ACCOUNTS
+Harbalihar Singh,Harbalihar@123,Harbalihar Singh,user,PROCUREMENT & OPERATIONS
+Jyoti Soni,JYOTI123,Jyoti Soni,user,ADMIN
+Karamjit Singh,Karamjit@123,Karamjit Singh,user,CIVIL & CONSTRUCTION
+Lalit Chander,Lalit@123,Lalit Chander,user,LEASING
+Lalita Devi,Lalita@123,Lalita Devi,user,ADMIN
+Lovepreet Singh,Lovepreet@123,Lovepreet Singh,user,ARCHITECT
+Mandeep Singh,Mandeep@123,Mandeep Singh,user,LEGAL & LIAISONING
+Manik Gill,Manik@123,Manik Gill,user,MARKETING
+Maninder Kaur,Maninder@123,Maninder Kaur,user,MD'S OFFICE
+Manu Sharma,Manu@123,Manu Sharma,user,CIVIL & CONSTRUCTION
+Pardeep Kaushal,Pardeep@123,Pardeep Kaushal,user,ADMIN
+Pratibha Bedi,Pratibha@123,Pratibha Bedi,user,ACCOUNTS
+Raghav Malhotra,Raghav@123,Raghav Malhotra,user,LEASING
+Rajeev Sachdeva,Rajeev@123,Rajeev Sachdeva,user,CIVIL & CONSTRUCTION
+Rajneet Ghuman,Rajneet@123,Rajneet Ghuman,user,MARKETING
+Ravandeep Kaur,Ravandeep@123,Ravandeep Kaur,user,ADMIN
+Ritesh Chaudhary,Ritesh@123,Ritesh Chaudhary,user,ARCHITECT
+Samdeesh Arora,Samdeesh@123,Samdeesh Arora,user,LEGAL & LIAISONING
+Sanjiv Mittal,Sanjiv@123,Sanjiv Mittal,user,ACCOUNTS
+Satnam Electrical,Satnam@123,Satnam Electrical,user,ELECTRICAL
+Satnam Jandu,Satnam@123,Satnam Jandu,user,MARKETING
+Satnam Singh,Satnam@123,Satnam Singh,user,ACCOUNTS
+Sohalpreet Kaur,Sohalpreet@123,Sohalpreet Kaur,user,GENERAL ADMINISTRATION
+Sunaina Awasthi,Sunaina@123,Sunaina Awasthi,user,HUMAN RESOURCE DEPARTMENT
+Suresh Kumar Panjabi,Suresh@123,Suresh Kumar Panjabi,user,PROCUREMENT & OPERATIONS
+Vijay Kumar,Vijay@123,Vijay Kumar,user,SALES
+Vishal Khanna,Vishal@123,Vishal Khanna,user,LEGAL & LIAISONING
+Karan Malhotra,Karan@123,Karan Malhotra,Super Admin,MD
+MD,111111,DOER,Super Admin,MD
+Amrinder Singh,Amrinder@123,Amrinder Singh,user,MALL OPERATIONS

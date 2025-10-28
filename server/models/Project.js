@@ -1,5 +1,42 @@
-
 import mongoose from 'mongoose';
+
+const objectionSchema = new mongoose.Schema({
+  type: {
+    type: String,
+    enum: ['date_change', 'terminate', 'hold'],
+    required: true
+  },
+  requestedDate: Date,
+  extraDaysRequested: Number,
+  remarks: {
+    type: String,
+    required: true
+  },
+  requestedBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    required: true
+  },
+  requestedAt: {
+    type: Date,
+    default: Date.now
+  },
+  status: {
+    type: String,
+    enum: ['pending', 'approved', 'rejected'],
+    default: 'pending'
+  },
+  approvedBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User'
+  },
+  approvedAt: Date,
+  approvalRemarks: String,
+  impactScore: {
+    type: Boolean,
+    default: true
+  }
+});
 
 const projectTaskSchema = new mongoose.Schema({
   stepNo: { type: Number, required: true },
@@ -7,13 +44,15 @@ const projectTaskSchema = new mongoose.Schema({
   who: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true }],
   how: { type: String, required: true },
   plannedDueDate: { type: Date },
-  actualCompletedOn: { type: Date },
+  actualDueDate: { type: Date },
   status: { 
     type: String, 
-    enum: ['Pending', 'In Progress', 'Done', 'Awaiting Date', 'Not Started'], 
-    default: 'Not Started' 
+    enum: ['Not Started', 'Pending', 'In Progress', 'Done', 'Awaiting Date'],
+    default: 'Not Started'
   },
+  notes: { type: String },
   completedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+  completedAt: { type: Date },
   requiresChecklist: { type: Boolean, default: false },
   checklistItems: [{
     id: String,
@@ -30,7 +69,15 @@ const projectTaskSchema = new mongoose.Schema({
     uploadedAt: { type: Date, default: Date.now }
   }],
   whenType: { type: String, enum: ['fixed', 'dependent'] },
-  notes: { type: String }
+  objections: [objectionSchema],
+  creationDate: { type: Date, default: Date.now },
+  originalPlannedDate: Date,
+  plannedDaysCount: Number,
+  actualCompletionDays: Number,
+  completionScore: Number,
+  scoreImpacted: { type: Boolean, default: false },
+  isOnHold: { type: Boolean, default: false },
+  isTerminated: { type: Boolean, default: false }
 });
 
 const projectSchema = new mongoose.Schema({

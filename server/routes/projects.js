@@ -267,4 +267,47 @@ router.put('/:projectId/tasks/:taskIndex', async (req, res) => {
   }
 });
 
+// Get FMS pending tasks for a user
+router.get('/pending-fms-tasks/:userId', async (req, res) => {
+  try {
+    const { userId } = req.params;
+    
+    const projects = await Project.find({ status: { $in: ['Active', 'In Progress'] } })
+      .populate('tasks.who', 'username email')
+      .populate('fmsId', 'fmsName');
+    
+    const userPendingTasks = [];
+    
+    projects.forEach(project => {
+      project.tasks.forEach((task, index) => {
+        // Check if user is assigned to this task
+        const isAssigned = task.who.some(person => person._id.toString() === userId);
+        
+        if (isAssigned && (task.status === 'Pending' || task.status === 'In Progress')) {
+          // Check if previous task is completed (for step visibility)
+          let canComplete = true;
+          if (index > 0) {
+            const previousTask = project.tasks[index - 1];
+            canComplete = previousTask.status === 'Done';
+          }
+          
+          userPendingTasks.push({
+            projectId: project._id,
+            projectName: project.projectName,
+            fmsName: project.fmsId?.fmsName,
+            taskIndex: index,
+            task: task,
+            canComplete: canComplete
+          });
+        }
+      });
+    });
+    
+    res.json({ success: true, tasks: userPendingTasks });
+  } catch (error) {
+    console.error('Error fetching FMS pending tasks:', error);
+    res.status(500).json({ success: false, message: 'Server error', error: error.message });
+  }
+});
+
 export default router;

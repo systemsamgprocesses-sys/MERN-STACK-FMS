@@ -473,7 +473,7 @@ router.put('/:id', async (req, res) => {
   }
 });
 
-// Complete task - UPDATED TO HANDLE COMPLETION ATTACHMENTS
+// Complete task - UPDATED TO HANDLE COMPLETION ATTACHMENTS AND SCORING
 router.post('/:id/complete', async (req, res) => {
   try {
     const { completionRemarks, completionAttachments } = req.body;
@@ -481,6 +481,14 @@ router.post('/:id/complete', async (req, res) => {
 
     if (!task) {
       return res.status(404).json({ message: 'Task not found' });
+    }
+
+    // Don't complete if on hold or terminated
+    if (task.isOnHold) {
+      return res.status(400).json({ message: 'Cannot complete task that is on hold' });
+    }
+    if (task.isTerminated) {
+      return res.status(400).json({ message: 'Task is already terminated' });
     }
 
     // 1. Mark the current task instance as completed
@@ -495,20 +503,55 @@ router.post('/:id/complete', async (req, res) => {
       task.completionAttachments = completionAttachments;
     }
     
-    task.lastCompletedDate = new Date(); // Record when this instance was completed
+    task.lastCompletedDate = new Date();
 
-    // 2. REMOVED: Automatic creation of new recurring task instances
-    // The original code automatically created new instances here, but we're removing that behavior
+    // 2. Calculate scoring
+    const creationDate = new Date(task.creationDate || task.createdAt);
+    const completionDate = new Date(task.completedAt);
+    const actualDays = Math.ceil((completionDate - creationDate) / (1000 * 60 * 60 * 24));
+    task.actualCompletionDays = actualDays;
+
+    // Calculate score based on planned days
+    if (task.dueDate) {
+      let plannedDate = new Date(task.originalPlannedDate || task.dueDate);
+      let plannedDays = Math.ceil((plannedDate - creationDate) / (1000 * 60 * 60 * 24));
+      
+      // Check if there are approved objections that don't impact score
+      const approvedObjections = task.objections?.filter(obj => 
+        obj.status === 'approved' && obj.type === 'date_change'
+      ) || [];
+      
+      const scoreImpactingObjection = approvedObjections.find(obj => obj.impactScore);
+      
+      if (scoreImpactingObjection) {
+        // Use extended date for scoring
+        const extendedDate = new Date(task.dueDate);
+        const extendedDays = Math.ceil((extendedDate - creationDate) / (1000 * 60 * 60 * 24));
+        task.completionScore = plannedDays / extendedDays;
+        task.scoreImpacted = true;
+      } else {
+        // Full marks if completed within any approved extension that doesn't impact score
+        // or within original planned date
+        if (actualDays <= Math.ceil((new Date(task.dueDate) - creationDate) / (1000 * 60 * 60 * 24))) {
+          task.completionScore = 1.0;
+        } else {
+          task.completionScore = plannedDays / actualDays;
+        }
+        task.scoreImpacted = false;
+      }
+    } else {
+      task.completionScore = 1.0; // Default full score if no due date
+    }
     
-    console.log(`Task ${task._id} completed - no new recurring instance created`);
+    console.log(`Task ${task._id} completed with score: ${task.completionScore}`);
 
-    await task.save(); // Save the current task with its updated status and completion info
+    await task.save();
 
     const populatedTask = await Task.findById(task._id)
       .populate('assignedBy', 'username email')
       .populate('assignedTo', 'username email');
 
-    res.json(populatedTask); // Respond with the completed task
+    res.json(populatedTask);
   } catch (error) {
     console.error('Error completing task:', error);
     res.status(500).json({ message: 'Server error', error: error.message });

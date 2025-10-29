@@ -22,20 +22,28 @@ const StartProject: React.FC = () => {
   const [projectName, setProjectName] = useState('');
   const [startDate, setStartDate] = useState(new Date().toISOString().split('T')[0]);
   const [loading, setLoading] = useState(false);
+  const [fetchingTemplates, setFetchingTemplates] = useState(true);
   const [errors, setErrors] = useState<any>({});
 
   useEffect(() => {
     fetchFMSTemplates();
-  }, []);
+  }, [user]);
 
   const fetchFMSTemplates = async () => {
     try {
-      const response = await axios.get(`${address}/api/fms`);
+      setFetchingTemplates(true);
+      const params = {
+        userId: user?.id,
+        isAdmin: (user?.role === 'admin' || user?.role === 'manager') ? 'true' : 'false'
+      };
+      const response = await axios.get(`${address}/api/fms`, { params });
       if (response.data.success) {
         setFmsList(response.data.fmsList);
       }
     } catch (error) {
       console.error('Error fetching FMS templates:', error);
+    } finally {
+      setFetchingTemplates(false);
     }
   };
 
@@ -50,6 +58,14 @@ const StartProject: React.FC = () => {
     }
     if (!startDate) {
       newErrors.startDate = 'Start date is required';
+    } else {
+      const selectedDate = new Date(startDate);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      
+      if (selectedDate < today) {
+        newErrors.startDate = 'Start date cannot be in the past';
+      }
     }
     
     setErrors(newErrors);
@@ -76,15 +92,26 @@ const StartProject: React.FC = () => {
         alert(`Project created successfully! Project ID: ${response.data.projectId}`);
         navigate('/fms-progress');
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error creating project:', error);
-      alert('Failed to create project');
+      alert(error.response?.data?.message || 'Failed to create project');
     } finally {
       setLoading(false);
     }
   };
 
   const selectedTemplate = fmsList.find(fms => fms._id === selectedFMS);
+
+  if (fetchingTemplates) {
+    return (
+      <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: 'var(--color-background)' }}>
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 mx-auto mb-4" style={{ borderColor: 'var(--color-primary)' }}></div>
+          <p style={{ color: 'var(--color-textSecondary)' }}>Loading FMS templates...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen p-4 sm:p-6 lg:p-8" style={{ backgroundColor: 'var(--color-background)' }}>
@@ -104,14 +131,19 @@ const StartProject: React.FC = () => {
                 <select
                   value={selectedFMS}
                   onChange={(e) => setSelectedFMS(e.target.value)}
-                  className="w-full px-4 py-3 rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] text-[var(--color-text)]"
+                  disabled={loading}
+                  className="w-full px-4 py-3 rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] text-[var(--color-text)] disabled:opacity-50"
                 >
                   <option value="">Choose an FMS template</option>
-                  {fmsList.map((fms) => (
-                    <option key={fms._id} value={fms._id}>
-                      {fms.fmsName} ({fms.fmsId}) - {fms.stepCount} steps
-                    </option>
-                  ))}
+                  {fmsList.length === 0 ? (
+                    <option disabled>No FMS templates available</option>
+                  ) : (
+                    fmsList.map((fms) => (
+                      <option key={fms._id} value={fms._id}>
+                        {fms.fmsName} ({fms.fmsId}) - {fms.stepCount} steps
+                      </option>
+                    ))
+                  )}
                 </select>
                 {errors.fms && <p className="text-[var(--color-error)] text-sm mt-1">{errors.fms}</p>}
               </div>
@@ -140,7 +172,8 @@ const StartProject: React.FC = () => {
                   type="text"
                   value={projectName}
                   onChange={(e) => setProjectName(e.target.value)}
-                  className="w-full px-4 py-3 rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] text-[var(--color-text)]"
+                  disabled={loading}
+                  className="w-full px-4 py-3 rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] text-[var(--color-text)] disabled:opacity-50"
                   placeholder="Enter project name"
                 />
                 {errors.projectName && <p className="text-[var(--color-error)] text-sm mt-1">{errors.projectName}</p>}
@@ -155,9 +188,11 @@ const StartProject: React.FC = () => {
                     type="date"
                     value={startDate}
                     onChange={(e) => setStartDate(e.target.value)}
-                    className="w-full px-4 py-3 rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] text-[var(--color-text)]"
+                    disabled={loading}
+                    min={new Date().toISOString().split('T')[0]}
+                    className="w-full px-4 py-3 rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] text-[var(--color-text)] disabled:opacity-50"
                   />
-                  <Calendar className="absolute right-3 top-1/2 transform -translate-y-1/2 text-[var(--color-textSecondary)]" size={20} />
+                  <Calendar className="absolute right-3 top-1/2 transform -translate-y-1/2 text-[var(--color-textSecondary)] pointer-events-none" size={20} />
                 </div>
                 {errors.startDate && <p className="text-[var(--color-error)] text-sm mt-1">{errors.startDate}</p>}
               </div>
@@ -168,14 +203,15 @@ const StartProject: React.FC = () => {
             <button
               type="button"
               onClick={() => navigate('/fms-templates')}
-              className="px-6 py-3 border border-[var(--color-border)] text-[var(--color-text)] rounded-lg hover:bg-[var(--color-background)]"
+              disabled={loading}
+              className="px-6 py-3 border border-[var(--color-border)] text-[var(--color-text)] rounded-lg hover:bg-[var(--color-background)] disabled:opacity-50"
             >
               Cancel
             </button>
             <button
               type="submit"
-              disabled={loading}
-              className="px-6 py-3 bg-[var(--color-primary)] text-white rounded-lg hover:opacity-90 flex items-center space-x-2 disabled:opacity-50"
+              disabled={loading || fmsList.length === 0}
+              className="px-6 py-3 bg-[var(--color-primary)] text-white rounded-lg hover:opacity-90 flex items-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <Play size={20} />
               <span>{loading ? 'Creating Project...' : 'Start Project'}</span>

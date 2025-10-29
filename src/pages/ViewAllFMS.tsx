@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { Plus, ChevronDown, ChevronUp, Eye } from 'lucide-react';
 import axios from 'axios';
 import { address } from '../../utils/ipAddress';
+import { useAuth } from '../contexts/AuthContext';
 import MermaidDiagram from '../components/MermaidDiagram';
 
 interface FMSTemplate {
@@ -19,6 +20,7 @@ interface FMSTemplate {
 
 const ViewAllFMS: React.FC = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [fmsList, setFmsList] = useState<FMSTemplate[]>([]);
   const [expandedFMS, setExpandedFMS] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -26,11 +28,15 @@ const ViewAllFMS: React.FC = () => {
 
   useEffect(() => {
     fetchFMSTemplates();
-  }, []);
+  }, [user]);
 
   const fetchFMSTemplates = async () => {
     try {
-      const response = await axios.get(`${address}/api/fms`);
+      const params = {
+        userId: user?.id,
+        isAdmin: (user?.role === 'admin' || user?.role === 'manager') ? 'true' : 'false'
+      };
+      const response = await axios.get(`${address}/api/fms`, { params });
       if (response.data.success) {
         setFmsList(response.data.fmsList);
       }

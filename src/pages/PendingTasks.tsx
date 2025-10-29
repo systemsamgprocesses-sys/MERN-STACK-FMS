@@ -456,6 +456,106 @@ const PendingTasks: React.FC = () => {
     return allTasks.find(task => task._id === showCompleteModal);
   };
 
+  // Add print function - prints ALL tasks, not just current page
+  const handlePrint = () => {
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) return;
+
+    // Use allTasks to print everything, not just filtered/paginated tasks
+    const tasksToprint = tasks.length > 0 ? tasks : allTasks;
+
+    const printContent = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>Tasks Report</title>
+        <style>
+          * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+          body { margin: 20px; font-family: Arial, sans-serif; color: #1E293B; }
+          .header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 30px; border-bottom: 3px solid #6366F1; padding-bottom: 15px; }
+          .logo { width: 60px; height: 60px; object-fit: contain; }
+          .company-info { flex: 1; margin-left: 20px; }
+          .title { font-size: 24px; font-weight: bold; color: #1E293B; margin: 0; }
+          .subtitle { font-size: 12px; color: #64748B; margin: 5px 0 0 0; }
+          .filter-info { font-size: 11px; color: #64748B; margin: 10px 0; padding: 10px; background-color: #F7F9FC; border-left: 3px solid #6366F1; }
+          .table { width: 100%; border-collapse: collapse; margin: 20px 0; font-size: 11px; }
+          .table th { background-color: #6366F1; color: white; padding: 12px; text-align: left; font-weight: bold; border: 1px solid #6366F1; }
+          .table td { padding: 10px 12px; border: 1px solid #E2E8F0; }
+          .table tr:nth-child(even) { background-color: #F7F9FC; }
+          .badge { display: inline-block; padding: 4px 8px; border-radius: 4px; font-size: 10px; font-weight: bold; }
+          .badge-high { background-color: #FEE2E2; color: #991B1B; }
+          .badge-normal { background-color: #DBEAFE; color: #1E40AF; }
+          .badge-pending { background-color: #FEF3C7; color: #92400E; }
+          .badge-completed { background-color: #D1FAE5; color: #065F46; }
+          .footer { margin-top: 40px; padding-top: 20px; border-top: 1px solid #E2E8F0; font-size: 10px; color: #64748B; text-align: center; }
+          .summary { margin: 10px 0; font-size: 12px; color: #64748B; }
+          @media print { body { margin: 0; padding: 20px; } }
+        </style>
+      </head>
+      <body>
+        <div class="header">
+          <img src="/assets/AMG LOGO.webp" alt="Logo" class="logo" />
+          <div class="company-info">
+            <p class="title">Tasks Report</p>
+            <p class="subtitle">Ashok Malhotra Group - Task & FMS Management System</p>
+          </div>
+        </div>
+
+        <div class="summary">
+          <strong>Report Generated:</strong> ${new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+          <br><strong>Total Tasks:</strong> ${tasksToprint.length}
+        </div>
+
+        ${filter.search || filter.priority || filter.dateFrom || filter.dateTo ? `
+          <div class="filter-info">
+            <strong>⚠️ Filters Applied:</strong> Showing results matching: 
+            ${filter.search ? `Search: "${filter.search}" ` : ''}
+            ${filter.priority ? `Priority: ${filter.priority} ` : ''}
+            ${filter.dateFrom ? `From: ${filter.dateFrom} ` : ''}
+            ${filter.dateTo ? `To: ${filter.dateTo}` : ''}
+          </div>
+        ` : ''}
+
+        <table class="table">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Task Title</th>
+              <th>Description</th>
+              <th>Assigned To</th>
+              <th>Priority</th>
+              <th>Status</th>
+              <th>Due Date</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${tasksToprint.map((task, idx) => `
+              <tr>
+                <td>${idx + 1}</td>
+                <td>${task.title}</td>
+                <td>${task.description.substring(0, 40)}...</td>
+                <td>${task.assignedTo.username}</td>
+                <td><span class="badge badge-${task.priority}">${task.priority.toUpperCase()}</span></td>
+                <td><span class="badge badge-${task.status}">${task.status.toUpperCase()}</span></td>
+                <td>${task.dueDate ? new Date(task.dueDate).toLocaleDateString('en-GB') : 'N/A'}</td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+
+        <div class="footer">
+          <p>Printed on ${new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</p>
+          <p>© 2024 Ashok Malhotra Group. All rights reserved.</p>
+        </div>
+      </body>
+      </html>
+    `;
+
+    printWindow.document.write(printContent);
+    printWindow.document.close();
+    setTimeout(() => printWindow.print(), 250);
+  };
+
   // Enhanced Pagination Component
   const renderEnhancedPagination = () => (
     <div className="bg-[--color-background] rounded-xl shadow-sm border border-[--color-border] p-4">
@@ -633,6 +733,13 @@ const PendingTasks: React.FC = () => {
                 <div className={`flex items-center justify-between p-2 rounded-lg ${theme === 'light' ? 'bg-gray-50' : 'bg-[--color-background]'}`}>
                   <span className="flex items-center text-[--color-textSecondary]">
                     <Users size={14} className="mr-1" />
+                    Assigned By:
+                  </span>
+                  <span className="font-medium text-[--color-text]">{task.assignedBy.username}</span>
+                </div>
+                <div className={`flex items-center justify-between p-2 rounded-lg ${theme === 'light' ? 'bg-gray-50' : 'bg-[--color-background]'}`}>
+                  <span className="flex items-center text-[--color-textSecondary]">
+                    <Users size={14} className="mr-1" />
                     Assigned To:
                   </span>
                   <span className="font-medium text-[--color-text]">{task.assignedTo.username}</span>
@@ -700,6 +807,9 @@ const PendingTasks: React.FC = () => {
                 </th>
                 <th className="px-6 py-4 text-left text-xs font-medium text-[--color-textSecondary] uppercase tracking-wider">
                   Priority
+                </th>
+                <th className="px-6 py-4 text-left text-xs font-medium text-[--color-textSecondary] uppercase tracking-wider">
+                  Assigned By
                 </th>
                 <th className="px-6 py-4 text-left text-xs font-medium text-[--color-textSecondary] uppercase tracking-wider">
                   Assigned To
@@ -770,6 +880,16 @@ const PendingTasks: React.FC = () => {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <PriorityBadge priority={task.priority} />
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="flex items-center">
+                      <div className="w-8 h-8 rounded-full flex items-center justify-center text-white text-sm font-medium mr-3 bg-[--color-secondary] text-[--color-background]">
+                        {task.assignedBy.username.charAt(0).toUpperCase()}
+                      </div>
+                      <div>
+                        <div className="text-sm text-[--color-text]">{task.assignedBy.username}</div>
+                      </div>
+                    </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center">
@@ -878,7 +998,7 @@ const PendingTasks: React.FC = () => {
             <Filter size={20} />
           </button>
           <button
-            onClick={() => window.print()}
+            onClick={handlePrint}
             className="ml-2 p-2 rounded-full transition-colors hover:bg-[--color-background] bg-[--color-surface] text-[--color-textSecondary]"
             title="Print"
           >

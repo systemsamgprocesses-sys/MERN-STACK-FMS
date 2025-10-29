@@ -129,13 +129,26 @@ router.post('/', upload.array('files', 10), async (req, res) => {
   }
 });
 
-// Get all FMS templates
+// Get all FMS templates with access control
 router.get('/', async (req, res) => {
   try {
-    const fmsList = await FMS.find({ status: 'Active' })
-      .populate('createdBy', 'username')
-      .populate('steps.who', 'username')
-      .sort({ createdAt: -1 });
+    const { userId, isAdmin } = req.query;
+    
+    let query = {};
+    
+    // If not admin, only show FMS where user is part of at least one step
+    if (!isAdmin || isAdmin === 'false') {
+      if (userId) {
+        query = {
+          'steps.who': userId
+        };
+      } else {
+        return res.json({ success: true, fmsList: [] });
+      }
+    }
+    
+    const fmsList = await FMS.find(query)
+      .populate('createdBy', 'username');
     
     const formattedList = fmsList.map(fms => {
       let totalHours = 0;

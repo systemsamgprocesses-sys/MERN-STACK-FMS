@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useTheme } from '../contexts/ThemeContext';
+import { useNavigate } from 'react-router-dom';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell, AreaChart, Area
@@ -150,6 +151,8 @@ interface TaskCounts {
 
 const Dashboard: React.FC = () => {
   const { user } = useAuth();
+  const { theme } = useTheme();
+  const navigate = useNavigate();
   useTheme();
   const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
   const [taskCounts, setTaskCounts] = useState<TaskCounts | null>(null);
@@ -630,706 +633,753 @@ const Dashboard: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-[var(--color-background)] p-4 space-y-8">
-      {/* Professional Header */}
-      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between space-y-6 lg:space-y-0">
-        <div className="flex items-center space-x-6">
-          <div className="p-3 rounded-xl shadow-xl" style={{ background: `linear-gradient(135deg, var(--color-primary), var(--color-accent))` }}>
-            <BarChart3 size={20} className="text-white" />
-          </div>
-          <div>
-            <h1 className="text-xl font-bold text-[var(--color-text)] mb-2">
-              Analytics Dashboard
-            </h1>
-            <p className="text-xs text-[var(--color-textSecondary)]">
-              Welcome back, <span className="font-bold text-[var(--color-text)]">{user?.username}</span>!
-              {(user?.role === 'admin' || user?.role === 'manager') ? ' Team performance overview' : ' Here\'s your performance overview'}
-            </p>
-          </div>
-        </div>
-
-        <div className="flex flex-col sm:flex-row items-center space-y-4 sm:space-y-0 sm:space-x-4 w-full sm:w-auto"> {/* Adjusted for mobile stacking */}
-          {/* View Mode Toggle */}
-          <ThemeCard className="p-1 w-full sm:w-auto" variant="bordered" hover={false}> {/* Full width on mobile */}
-            <div className="flex items-center justify-center"> {/* Centered buttons on mobile */}
-              <button
-                onClick={() => {
-                  setViewMode('current');
-                  setSelectedMonth(new Date());
-                }}
-                className={`px-2 py-2 rounded-xl text-xs font-semibold transition-all duration-200 w-1/2 sm:w-auto ${ /* Half width on mobile */
-                  viewMode === 'current'
-                    ? 'bg-[var(--color-primary)] text-white shadow-md'
-                    : 'text-[var(--color-textSecondary)] hover:text-[var(--color-text)]'
-                  }`}
-              >
-                Current Month
-              </button>
-              <button
-                onClick={() => setViewMode('all-time')}
-                className={`px-4 py-2 rounded-xl text-xs font-semibold transition-all duration-200 w-1/2 sm:w-auto ${ /* Half width on mobile */
-                  viewMode === 'all-time'
-                    ? 'bg-[var(--color-primary)] text-white shadow-md'
-                    : 'text-[var(--color-textSecondary)] hover:text-[var(--color-text)]'
-                  }`}
-              >
-                All Time
-              </button>
-            </div>
-          </ThemeCard>
-
-          {/* Month Filter - Visible only in 'current' view mode */}
-          {viewMode === 'current' && (
-            <div className="relative z-10 w-full sm:w-auto"> {/* Full width on mobile */}
-              <button
-                onClick={() => setShowMonthFilter(!showMonthFilter)}
-                className="flex items-center justify-center px-2 py-2 bg-[var(--color-surface)] rounded-2xl border border-[var(--color-border)] shadow-lg hover:shadow-xl transition-all duration-200 text-[var(--color-text)] font-md w-full" /* Full width on mobile, centered content */
-              >
-                <Calendar size={16} className="mr-3" />
-                <span>
-                  {isSameMonth(selectedMonth, new Date()) && isSameYear(selectedMonth, new Date())
-                    ? 'Current Month'
-                    : format(selectedMonth, 'MMMM yyyy')}
-                </span>
-                <ChevronDown size={16} className="ml-3" />
-              </button>
-              {showMonthFilter && (
-                <div className="absolute left-0 right-0 top-full mt-2 w-full sm:w-52 z-20"> {/* Adjusted for full width on mobile, right-0 added for better positioning */}
-                  <ThemeCard className="p-3 max-h-80 overflow-y-auto" variant="elevated" hover={false}>
-                    <div className="space-y-2">
-                      {monthOptions.map((date, index) => {
-                        const isSelected = format(date, 'yyyy-MM') === format(selectedMonth, 'yyyy-MM');
-                        const isCurrent = isThisMonth(date);
-                        return (
-                          <button
-                            key={index}
-                            onClick={() => {
-                              setSelectedMonth(date);
-                              setShowMonthFilter(false);
-                            }}
-                            className={`w-full text-left px-2 py-3 rounded-xl transition-all duration-200 ${isSelected
-                              ? 'bg-[var(--color-primary)] text-white shadow-lg'
-                              : 'hover:bg-[var(--color-border)] text-[var(--color-text)]'
-                              }`}
-                          >
-                            <div className="flex items-center justify-between">
-                              <span className="font-semibold">{format(date, 'MMMM yyyy')}</span>
-                              <div className="flex items-center space-x-0">
-                                {isCurrent && (
-                                  <div className="w-2 h-2 bg-[var(--color-success)] rounded-full"></div>
-                                )}
-                              </div>
-                            </div>
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </ThemeCard>
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* Main Metrics Grid with Real Trends - Now Clickable */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6 lg:gap-8 p-4 sm:p-6 lg:p-8">
-        <div onClick={() => window.location.href = '/master-tasks'} className="cursor-pointer hover:opacity-90 transition-opacity">
-          <MetricCard
-            icon={<CheckSquare size={24} className="text-blue-600" />}
-            title="Total Tasks"
-            value={displayData?.totalTasks || 0}
-            subtitle={
-              viewMode === 'current' && isSameMonth(selectedMonth, new Date()) && isSameYear(selectedMonth, new Date())
-                ? 'Current Month'
-                : viewMode === 'current'
-                  ? format(selectedMonth, 'MMMM yyyy')
-                  : 'All time'
-            }
-            percentage={100}
-          />
-        </div>
-        <div onClick={() => window.location.href = '/pending-tasks'} className="cursor-pointer hover:opacity-90 transition-opacity">
-          <MetricCard
-            icon={<Clock size={24} className="text-yellow-500" />}
-            title="Pending"
-            value={displayData?.pendingTasks || 0}
-            subtitle="Awaiting completion"
-            percentage={((displayData?.pendingTasks || 0) / (displayData?.totalTasks || 1)) * 100}
-          />
-        </div>
-        <div onClick={() => window.location.href = '/master-tasks?status=completed'} className="cursor-pointer hover:opacity-90 transition-opacity">
-          <MetricCard
-            icon={<CheckCircle size={24} className="text-green-500" />}
-            title="Completed"
-            value={displayData?.completedTasks || 0}
-            subtitle="Successfully finished"
-            percentage={((displayData?.completedTasks || 0) / (displayData?.totalTasks || 1)) * 100}
-          />
-        </div>
-        <div onClick={() => window.location.href = '/pending-tasks'} className="cursor-pointer hover:opacity-90 transition-opacity">
-          <MetricCard
-            icon={<AlertTriangle size={24} className="text-red-500" />}
-            title="Overdue"
-            value={displayData?.overdueTasks || 0}
-            subtitle={`${displayData?.overduePercentage?.toFixed(1)}% of total`}
-            percentage={displayData?.overduePercentage || 0}
-          />
-        </div>
-      </div>
-      {/* Task Type Distribution - Now includes quarterly and updated to 6 columns */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 xl:grid-cols-6 gap-4 sm:gap-5 lg:gap-6 p-4 sm:p-6 lg:p-8">
-        {taskTypeData.map((type) => (
-          <MetricCard
-            key={type.name}
-            icon={
-              type.name === 'One-time' ? <Target size={18} className="text-blue-600" /> :
-                type.name === 'Daily' ? <Zap size={18} className="text-yellow-500" /> :
-                  type.name === 'Weekly' ? <Calendar size={18} className="text-green-500" /> :
-                    type.name === 'Monthly' ? <Timer size={18} className="text-purple-500" /> :
-                      type.name === 'Quarterly' ? <RotateCcw size={18} className="text-orange-500" /> :
-                        <Star size={18} className="text-gray-500" />
-            }
-            title={type.name}
-            value={type.value}
-            subtitle={`${((type.value / (displayData?.totalTasks || 1)) * 100).toFixed(1)}% of total`}
-            percentage={(type.value / (displayData?.totalTasks || 1)) * 100}
-            pendingValue={type.pending}
-            completedValue={type.completed}
-          />
-        ))}
-      </div>
-
-      {/* FMS Project Metrics */}
-      {(user?.role === 'admin' || user?.role === 'manager') && (
-        <div className="p-4 sm:p-6 lg:p-8">
-          <div className="mb-6">
-            <h2 className="text-2xl font-bold text-[var(--color-text)] mb-2">FMS Project Metrics</h2>
-            <p className="text-sm text-[var(--color-textSecondary)]">Overview of ongoing FMS projects</p>
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
-            <div onClick={() => window.location.href = '/view-fms-progress'} className="cursor-pointer">
-              <MetricCard
-                icon={<Activity size={24} className="text-indigo-600" />}
-                title="Active Projects"
-                value={dashboardData?.fmsMetrics?.activeProjects || 0}
-                subtitle="Currently running"
-                percentage={100}
-              />
-            </div>
-            <div onClick={() => window.location.href = '/view-fms-progress'} className="cursor-pointer">
-              <MetricCard
-                icon={<CheckCircle size={24} className="text-green-600" />}
-                title="Completed Projects"
-                value={dashboardData?.fmsMetrics?.completedProjects || 0}
-                subtitle="Successfully finished"
-                percentage={((dashboardData?.fmsMetrics?.completedProjects || 0) / ((dashboardData?.fmsMetrics?.totalProjects || 1))) * 100}
-              />
-            </div>
-            <div onClick={() => window.location.href = '/view-fms-progress'} className="cursor-pointer">
-              <MetricCard
-                icon={<Clock size={24} className="text-amber-600" />}
-                title="Pending Tasks"
-                value={dashboardData?.fmsMetrics?.pendingFMSTasks || 0}
-                subtitle="Across all projects"
-                percentage={((dashboardData?.fmsMetrics?.pendingFMSTasks || 0) / (dashboardData?.fmsMetrics?.totalFMSTasks || 1)) * 100}
-              />
-            </div>
-            <div onClick={() => window.location.href = '/view-fms-progress'} className="cursor-pointer">
-              <MetricCard
-                icon={<Target size={24} className="text-purple-600" />}
-                title="Avg Progress"
-                value={`${(dashboardData?.fmsMetrics?.avgProgress || 0).toFixed(1)}%`}
-                subtitle="Overall completion"
-                percentage={dashboardData?.fmsMetrics?.avgProgress || 0}
-              />
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Enhanced Charts Section */}
-      <div className="grid grid-cols-1 lg:grid-cols-10 gap-8">
-        {/* Task Status Distribution - Enhanced Pie Chart */}
-        <ThemeCard className="p-4 sm:p-8 lg:col-span-4" variant="glass">
-          <div> {/* Wrap children in a single div */}
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 gap-2">
-              <div className="flex items-center space-x-3">
-                <div className="p-3 rounded-2xl text-white" style={{ background: `linear-gradient(135deg, var(--color-primary), var(--color-secondary))` }}>
-                  <PieChartIcon size={20} />
+    <div className="min-h-screen" style={{ backgroundColor: 'var(--color-background)' }}>
+      {/* Main Content */}
+      <div className="px-4 sm:px-6 lg:px-8 py-12">
+        <div className="max-w-7xl mx-auto space-y-8">
+          {/* Page Header */}
+          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-8 mb-8">
+            {/* Welcome Section */}
+            <div>
+              <div className="flex items-center gap-4 mb-2">
+                <div className="p-3 rounded-2xl" style={{ backgroundColor: 'var(--color-primary)10' }}>
+                  <BarChart3 size={28} style={{ color: 'var(--color-primary)' }} />
                 </div>
                 <div>
-                  <h3 className="text-lg sm:text-xl font-bold text-[var(--color-text)]">
-                    {(user?.role === 'admin' || user?.role === 'manager') ? 'Team Task Status' : 'Your Task Status'}
-                  </h3>
-                  <p className="text-xs text-[var(--color-textSecondary)]">
-                    {(user?.role === 'admin' || user?.role === 'manager') ? 'Team distribution' : 'Your current distribution'}
-                  </p>
-                </div>
-              </div>
-              <div className="text-sm px-3 py-1.5 rounded-full font-bold whitespace-nowrap" style={{ backgroundColor: 'var(--color-primary)20', color: 'var(--color-primary)' }}>
-                {statusData.reduce((sum, item) => sum + item.value, 0)} Total
-              </div>
-            </div>
-
-            {/* Pie Chart */}
-            <ResponsiveContainer width="100%" height={300}>
-              <PieChart>
-                <defs>
-                  {statusData.map((entry, index) => (
-                    <linearGradient key={index} id={`statusGradient-${index}`} x1="0" y1="0" x2="1" y2="1">
-                      <stop offset="0%" stopColor={entry.color} stopOpacity={0.8} />
-                      <stop offset="100%" stopColor={entry.color} stopOpacity={1} />
-                    </linearGradient>
-                  ))}
-                </defs>
-                <Pie
-                  data={statusData}
-                  cx="50%"
-                  cy="50%"
-                  labelLine={false}
-                  outerRadius={window.innerWidth > 640 ? 120 : 90}
-                  innerRadius={window.innerWidth > 640 ? 50 : 40}
-                  fill="#8884d8"
-                  dataKey="value"
-                  stroke="var(--color-background)"
-                  strokeWidth={3}
-                >
-                  {statusData.map((_, index) => (
-                    <Cell key={`cell-${index}`} fill={`url(#statusGradient-${index})`} />
-                  ))}
-                </Pie>
-                <Tooltip content={<CustomTooltip />} />
-              </PieChart>
-            </ResponsiveContainer>
-
-            {/* Custom Legend */}
-            <div className="mt-6 flex flex-wrap justify-center gap-4 text-sm">
-              {statusData.map((entry, index) => (
-                <div key={index} className="flex items-center space-x-2">
-                  <div className="w-3 h-3 rounded-full" style={{ background: entry.color }}></div>
-                  <span className="text-[var(--color-text)] font-medium">{entry.name}</span>
-                  <span className="text-[var(--color-textSecondary)] ml-1">
-                    {entry.value}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </div>
-        </ThemeCard>
-
-        {/* Task Type Breakdown - Enhanced Bar Chart */}
-        <ThemeCard className="p-4 sm:p-8 lg:col-span-6" variant="glass">
-          <div> {/* Wrap children in a single div */}
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 gap-2">
-              <div className="flex items-center space-x-3">
-                <div className="p-3 rounded-2xl text-white" style={{ background: `linear-gradient(135deg, var(--color-success), var(--color-accent))` }}>
-                  <BarChart3 size={20} />
-                </div>
-                <div>
-                  <h3 className="text-lg sm:text-xl font-bold text-[var(--color-text)]">
-                    {(user?.role === 'admin' || user?.role === 'manager') ? 'Team Task Types' : 'Your Task Types'}
-                  </h3>
-                  <p className="text-xs text-[var(--color-textSecondary)]">
-                    {(user?.role === 'admin' || user?.role === 'manager') ? 'Team breakdown by category' : 'Your breakdown by category'}
+                  <h1 className="text-4xl font-bold tracking-tight" style={{ color: 'var(--color-text)' }}>Analytics Dashboard</h1>
+                  <p className="text-[var(--color-textSecondary)] text-sm mt-1">
+                    Welcome back, <span className="font-semibold">{user?.username}</span>! 
+                    {(user?.role === 'admin' || user?.role === 'manager') ? ' 👥 Team Overview' : ' 📊 Your Performance'}
                   </p>
                 </div>
               </div>
             </div>
-            <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={taskTypeData} margin={{ top: 20, right: 0, left: 0, bottom: 5 }}>
-                <defs>
-                  {taskTypeData.map((entry, index) => (
-                    <linearGradient key={index} id={`barGradient-${index}`} x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor={entry.color} stopOpacity={0.8} />
-                      <stop offset="95%" stopColor={entry.color} stopOpacity={0.6} />
-                    </linearGradient>
-                  ))}
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" />
-                <XAxis
-                  dataKey="name"
-                  stroke="var(--color-textSecondary)"
-                  fontSize={10}
-                  tickLine={false}
-                  axisLine={false}
-                />
-                <YAxis
-                  stroke="var(--color-textSecondary)"
-                  fontSize={10}
-                  tickLine={false}
-                  axisLine={false}
-                />
-                <Tooltip content={<CustomTooltip />} />
-                <Bar
-                  dataKey="value"
-                  radius={[8, 8, 0, 0]}
-                  stroke="none"
-                >
-                  {taskTypeData.map((_, index) => (
-                    <Cell key={`cell-${index}`} fill={`url(#barGradient-${index})`} />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        </ThemeCard>
-      </div>
-      {/* Enhanced Completion Trend and Recent Activity - Split 7:3 for non-admin users */}
-      <div className={`grid grid-cols-1 gap-8 xl:grid-cols-10`}>
-        {/* Completion Trend */}
-        <ThemeCard className="p-4 sm:p-8 xl:col-span-7" variant="glass">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 gap-4">
-            <div className="flex items-center space-x-4">
-              <div className="relative">
-                <div className="p-4 rounded-3xl text-white shadow-2xl" style={{ background: `linear-gradient(135deg, var(--color-accent), var(--color-secondary))` }}>
-                  <TrendingUp size={24} />
-                </div>
-                <div className="absolute -inset-1 rounded-3xl opacity-30 blur-lg" style={{ background: `linear-gradient(135deg, var(--color-accent), var(--color-secondary))` }}></div>
-              </div>
-              <div>
-                <h3 className="text-lg sm:text-xl font-bold text-[var(--color-text)] mb-1">
-                  {(user?.role === 'admin' || user?.role === 'manager') ? 'Team Completion Trend' : 'Your Completion Trend'}
-                </h3>
-                <p className="text-xs text-[var(--color-textSecondary)]">
-                  {(user?.role === 'admin' || user?.role === 'manager') ? 'Team performance insights over the last 6 months' : 'Your performance insights over the last 6 months'}
-                </p>
-              </div>
-            </div>
 
-            <div className="flex flex-col sm:flex-row items-center space-y-4 sm:space-y-0 sm:space-x-4 w-full sm:w-auto">
-              {(user?.role === 'admin' || user?.role === 'manager') && teamMembersList.length > 0 && (
-                <div className="relative z-10 w-full sm:w-auto">
+            {/* Controls Section */}
+            <div className="flex flex-col sm:flex-row gap-3 w-full lg:w-auto">
+              {/* View Mode Toggle */}
+              <div className="flex gap-2 p-1.5 rounded-2xl border" style={{ backgroundColor: 'var(--color-surface)', borderColor: 'var(--color-border)' }}>
+                <button
+                  onClick={() => {
+                    setViewMode('current');
+                    setSelectedMonth(new Date());
+                  }}
+                  className={`px-4 py-2.5 rounded-xl font-semibold transition-all duration-300 text-sm ${
+                    viewMode === 'current'
+                      ? 'text-white shadow-lg'
+                      : 'text-[var(--color-textSecondary)] hover:text-[var(--color-text)]'
+                  }`}
+                  style={{
+                    backgroundColor: viewMode === 'current' ? 'var(--color-primary)' : 'transparent'
+                  }}
+                >
+                  This Month
+                </button>
+                <button
+                  onClick={() => setViewMode('all-time')}
+                  className={`px-4 py-2.5 rounded-xl font-semibold transition-all duration-300 text-sm ${
+                    viewMode === 'all-time'
+                      ? 'text-white shadow-lg'
+                      : 'text-[var(--color-textSecondary)] hover:text-[var(--color-text)]'
+                  }`}
+                  style={{
+                    backgroundColor: viewMode === 'all-time' ? 'var(--color-primary)' : 'transparent'
+                  }}
+                >
+                  All Time
+                </button>
+              </div>
+
+              {/* Month Filter */}
+              {viewMode === 'current' && (
+                <div className="relative z-10">
                   <button
-                    onClick={() => setShowTeamMemberFilter(!showTeamMemberFilter)}
-                    className="flex items-center justify-center px-4 py-2 bg-[var(--color-surface)] rounded-2xl border border-[var(--color-border)] shadow-lg hover:shadow-xl transition-all duration-200 text-[var(--color-text)] font-semibold w-full"
+                    onClick={() => setShowMonthFilter(!showMonthFilter)}
+                    className="flex items-center gap-2 px-4 py-2.5 rounded-2xl border font-semibold transition-all duration-200 text-sm w-full sm:w-auto"
+                    style={{ 
+                      backgroundColor: 'var(--color-surface)',
+                      borderColor: 'var(--color-border)',
+                      color: 'var(--color-text)'
+                    }}
                   >
-                    <Users size={16} className="mr-2" />
-                    <span>
-                      {selectedTeamMember === 'all' ? 'All Team' : selectedTeamMember}
+                    <Calendar size={18} />
+                    <span className="hidden sm:inline">
+                      {isSameMonth(selectedMonth, new Date()) && isSameYear(selectedMonth, new Date())
+                        ? 'Current'
+                        : format(selectedMonth, 'MMM yyyy')}
                     </span>
-                    <ChevronDown size={16} className="ml-2" />
+                    <ChevronDown size={18} className={`transition-transform ${showMonthFilter ? 'rotate-180' : ''}`} />
                   </button>
-                  {showTeamMemberFilter && (
-                    <div className="absolute left-0 right-0 top-full mt-2 w-full sm:w-64 z-20">
-                      <ThemeCard className="p-3 max-h-80 overflow-y-auto" variant="elevated" hover={false}>
-                        <div className="space-y-2">
-                          <button
-                            onClick={() => {
-                              setSelectedTeamMember('all');
-                              setShowTeamMemberFilter(false);
-                            }}
-                            className={`w-full text-left px-3 py-3 rounded-xl transition-all duration-200 ${selectedTeamMember === 'all'
-                              ? 'bg-[var(--color-primary)] text-white shadow-lg'
-                              : 'hover:bg-[var(--color-border)] text-[var(--color-text)]'
-                              }`}
-                          >
-                            <div className="flex items-center justify-between">
-                              <div className="flex items-center space-x-3">
-                                <div className="w-8 h-8 rounded-xl bg-gradient-to-r from-blue-500 to-purple-600 flex items-center justify-center text-white font-bold text-sm">
-                                  <Users size={16} />
-                                </div>
-                                <div>
-                                  <span className="font-semibold">All Team</span>
-                                  <p className="text-xs opacity-75">Overall team data</p>
-                                </div>
-                              </div>
-                            </div>
-                          </button>
-                          {teamMembersList.map((member, index) => (
+                  
+                  {showMonthFilter && (
+                    <div className="absolute top-full mt-3 right-0 w-56 z-50 rounded-2xl shadow-2xl border overflow-hidden" style={{ backgroundColor: 'var(--color-surface)', borderColor: 'var(--color-border)' }}>
+                      <div className="p-3 max-h-72 overflow-y-auto">
+                        {monthOptions.map((date, index) => {
+                          const isSelected = format(date, 'yyyy-MM') === format(selectedMonth, 'yyyy-MM');
+                          return (
                             <button
-                              key={member.username}
+                              key={index}
                               onClick={() => {
-                                setSelectedTeamMember(member.username);
-                                setShowTeamMemberFilter(false);
+                                setSelectedMonth(date);
+                                setShowMonthFilter(false);
                               }}
-                              className={`w-full text-left px-3 py-3 rounded-xl transition-all duration-200 ${selectedTeamMember === member.username
-                                ? 'bg-[var(--color-primary)] text-white shadow-lg'
-                                : 'hover:bg-[var(--color-border)] text-[var(--color-text)]'
-                                }`}
+                              className={`w-full text-left px-4 py-2.5 rounded-lg transition-all duration-200 font-medium ${
+                                isSelected
+                                  ? 'text-white shadow-lg'
+                                  : 'hover:bg-[var(--color-background)] text-[var(--color-text)]'
+                              }`}
+                              style={{
+                                backgroundColor: isSelected ? 'var(--color-primary)' : 'transparent'
+                              }}
                             >
-                              <div className="flex items-center justify-between">
-                                <div className="flex items-center space-x-3">
-                                  <div className="w-8 h-8 rounded-xl bg-gradient-to-r from-blue-400 to-purple-600 flex items-center justify-center text-white font-bold text-sm">
-                                    {member.username.charAt(0).toUpperCase()}
-                                  </div>
-                                  <div>
-                                    <span className="font-semibold">{member.username}</span>
-                                    <p className="text-xs opacity-75">{member.totalTasks} tasks {member.completionRate.toFixed(1)}% completion</p>
-                                  </div>
-                                </div>
-                                <div className="text-right">
-                                  <div className="text-sm font-bold opacity-75">{index + 1}</div>
-                                </div>
-                              </div>
+                              {format(date, 'MMMM yyyy')}
                             </button>
-                          ))}
-                        </div>
-                      </ThemeCard>
+                          );
+                        })}
+                      </div>
                     </div>
                   )}
                 </div>
               )}
+            </div>
+          </div>
 
-              <div className="flex items-center justify-around sm:justify-between flex-wrap gap-2 sm:gap-6 bg-[var(--color-surface)]/50 backdrop-blur-sm rounded-2xl p-3 sm:p-4 border border-[var(--color-border)] w-full sm:w-auto">
-                <div className="flex items-center space-x-2 sm:space-x-3">
-                  <div className="relative">
-                    <div className="w-3 h-3 sm:w-4 sm:h-4 rounded-full shadow-lg" style={{ background: `linear-gradient(135deg, var(--color-success), var(--color-primary))` }}></div>
-                    <div className="absolute inset-0 w-3 h-3 sm:w-4 sm:h-4 rounded-full animate-pulse opacity-50" style={{ background: `linear-gradient(135deg, var(--color-success), var(--color-primary))` }}></div>
+          {/* Quick Stats Section */}
+          <div>
+            <h2 className="text-2xl font-bold text-[var(--color-text)] mb-6">Quick Stats</h2>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+              <div 
+                onClick={() => navigate('/master-tasks')} 
+                className="group cursor-pointer"
+              >
+                <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-blue-500 to-blue-600 dark:from-blue-950 dark:to-blue-900 p-6 border border-blue-300 dark:border-blue-800 hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
+                  <div className="flex items-start justify-between mb-4">
+                    <div className="p-3 rounded-xl bg-white/20">
+                      <CheckSquare size={24} className="text-white" />
+                    </div>
                   </div>
-                  <span className="text-xs sm:text-sm font-semibold text-[var(--color-text)]">Completed</span>
-                  <div className="text-base sm:text-lg font-bold" style={{ color: 'var(--color-success)' }}>
-                    {trendData.reduce((sum, item) => sum + item.completed, 0)}
+                  <p className="text-white/80 text-sm font-medium mb-2">Total Tasks</p>
+                  <p className="text-3xl font-bold text-white">{displayData?.totalTasks || 0}</p>
+                  <p className="text-xs text-white/70 mt-2 group-hover:text-white transition-colors">Click to view all →</p>
+                </div>
+              </div>
+
+              <div 
+                onClick={() => navigate('/pending-tasks')} 
+                className="group cursor-pointer"
+              >
+                <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-yellow-500 to-yellow-600 dark:from-yellow-950 dark:to-yellow-900 p-6 border border-yellow-300 dark:border-yellow-800 hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
+                  <div className="flex items-start justify-between mb-4">
+                    <div className="p-3 rounded-xl bg-white/20">
+                      <Clock size={24} className="text-white" />
+                    </div>
+                  </div>
+                  <p className="text-white/80 text-sm font-medium mb-2">Pending</p>
+                  <p className="text-3xl font-bold text-white">{displayData?.pendingTasks || 0}</p>
+                  <div className="w-full h-1.5 bg-white/30 rounded-full mt-4 overflow-hidden">
+                    <div 
+                      className="h-full bg-white transition-all duration-500"
+                      style={{ width: `${((displayData?.pendingTasks || 0) / (displayData?.totalTasks || 1)) * 100}%` }}
+                    ></div>
                   </div>
                 </div>
-                <div className="w-px h-6 sm:h-8 bg-[var(--color-border)]"></div>
-                <div className="flex items-center space-x-2 sm:space-x-3">
-                  <div className="relative">
-                    <div className="w-3 h-3 sm:w-4 sm:h-4 rounded-full shadow-lg" style={{ background: `linear-gradient(135deg, var(--color-warning), var(--color-secondary))` }}></div>
-                    <div className="absolute inset-0 w-3 h-3 sm:w-4 sm:h-4 rounded-full animate-pulse opacity-50" style={{ background: `linear-gradient(135deg, var(--color-warning), var(--color-secondary))` }}></div>
+              </div>
+
+              <div 
+                onClick={() => navigate('/master-tasks?status=completed')} 
+                className="group cursor-pointer"
+              >
+                <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-green-500 to-green-600 dark:from-green-950 dark:to-green-900 p-6 border border-green-300 dark:border-green-800 hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
+                  <div className="flex items-start justify-between mb-4">
+                    <div className="p-3 rounded-xl bg-white/20">
+                      <CheckCircle size={24} className="text-white" />
+                    </div>
                   </div>
-                  <span className="text-xs sm:text-sm font-semibold text-[var(--color-text)]">Planned</span>
-                  <div className="text-base sm:text-lg font-bold" style={{ color: 'var(--color-warning)' }}>
-                    {trendData.reduce((sum, item) => sum + item.planned, 0)}
+                  <p className="text-white/80 text-sm font-medium mb-2">Completed</p>
+                  <p className="text-3xl font-bold text-white">{displayData?.completedTasks || 0}</p>
+                  <div className="w-full h-1.5 bg-white/30 rounded-full mt-4 overflow-hidden">
+                    <div 
+                      className="h-full bg-white transition-all duration-500"
+                      style={{ width: `${((displayData?.completedTasks || 0) / (displayData?.totalTasks || 1)) * 100}%` }}
+                    ></div>
                   </div>
+                </div>
+              </div>
+
+              <div 
+                onClick={() => navigate('/pending-tasks')} 
+                className="group cursor-pointer"
+              >
+                <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-red-500 to-red-600 dark:from-red-950 dark:to-red-900 p-6 border border-red-300 dark:border-red-800 hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
+                  <div className="flex items-start justify-between mb-4">
+                    <div className="p-3 rounded-xl bg-white/20">
+                      <AlertTriangle size={24} className="text-white" />
+                    </div>
+                  </div>
+                  <p className="text-white/80 text-sm font-medium mb-2">Overdue</p>
+                  <p className="text-3xl font-bold text-white">{displayData?.overdueTasks || 0}</p>
+                  <p className="text-xs text-white/80 font-medium mt-2">⚠️ {displayData?.overduePercentage?.toFixed(1)}% of total</p>
                 </div>
               </div>
             </div>
           </div>
 
-          {(user?.role === 'admin' || user?.role === 'manager') && selectedTeamMember !== 'all' && (
-            <div className="mb-6 p-4 rounded-2xl border border-[var(--color-primary)]/30" style={{ backgroundColor: 'var(--color-primary)05' }}>
-              <div className="flex items-center space-x-3">
-                <div className="w-10 h-10 rounded-2xl bg-gradient-to-r from-blue-400 to-purple-600 flex items-center justify-center text-white font-bold">
-                  {selectedTeamMember.charAt(0).toUpperCase()}
+          {/* Task Type Distribution - Now includes quarterly and updated to 6 columns */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 xl:grid-cols-6 gap-4 sm:gap-5 lg:gap-6 p-4 sm:p-6 lg:p-8">
+            {taskTypeData.map((type) => (
+              <MetricCard
+                key={type.name}
+                icon={
+                  type.name === 'One-time' ? <Target size={18} className="text-blue-600" /> :
+                    type.name === 'Daily' ? <Zap size={18} className="text-yellow-500" /> :
+                      type.name === 'Weekly' ? <Calendar size={18} className="text-green-500" /> :
+                        type.name === 'Monthly' ? <Timer size={18} className="text-purple-500" /> :
+                          type.name === 'Quarterly' ? <RotateCcw size={18} className="text-orange-500" /> :
+                            <Star size={18} className="text-gray-500" />
+                }
+                title={type.name}
+                value={type.value}
+                subtitle={`${((type.value / (displayData?.totalTasks || 1)) * 100).toFixed(1)}% of total`}
+                percentage={(type.value / (displayData?.totalTasks || 1)) * 100}
+                pendingValue={type.pending}
+                completedValue={type.completed}
+              />
+            ))}
+          </div>
+
+          {/* FMS Project Metrics */}
+          {(user?.role === 'admin' || user?.role === 'manager') && (
+            <div className="p-4 sm:p-6 lg:p-8">
+              <div className="mb-6">
+                <h2 className="text-2xl font-bold text-[var(--color-text)] mb-2">FMS Project Metrics</h2>
+                <p className="text-sm text-[var(--color-textSecondary)]">Overview of ongoing FMS projects</p>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+                <div onClick={() => navigate('/view-fms-progress')} className="cursor-pointer">
+                  <MetricCard
+                    icon={<Activity size={24} className="text-indigo-600" />}
+                    title="Active Projects"
+                    value={dashboardData?.fmsMetrics?.activeProjects || 0}
+                    subtitle="Currently running"
+                    percentage={100}
+                  />
                 </div>
-                <div>
-                  <h4 className="text-lg font-bold text-[var(--color-text)]">
-                    {selectedTeamMember}'s Performance Trend
-                  </h4>
-                  <p className="text-sm text-[var(--color-textSecondary)]">
-                    Showing individual completion data for {selectedTeamMember}
-                  </p>
+                <div onClick={() => navigate('/view-fms-progress')} className="cursor-pointer">
+                  <MetricCard
+                    icon={<CheckCircle size={24} className="text-green-600" />}
+                    title="Completed Projects"
+                    value={dashboardData?.fmsMetrics?.completedProjects || 0}
+                    subtitle="Successfully finished"
+                    percentage={((dashboardData?.fmsMetrics?.completedProjects || 0) / ((dashboardData?.fmsMetrics?.totalProjects || 1))) * 100}
+                  />
+                </div>
+                <div onClick={() => navigate('/view-fms-progress')} className="cursor-pointer">
+                  <MetricCard
+                    icon={<Clock size={24} className="text-amber-600" />}
+                    title="Pending Tasks"
+                    value={dashboardData?.fmsMetrics?.pendingFMSTasks || 0}
+                    subtitle="Across all projects"
+                    percentage={((dashboardData?.fmsMetrics?.pendingFMSTasks || 0) / (dashboardData?.fmsMetrics?.totalFMSTasks || 1)) * 100}
+                  />
+                </div>
+                <div onClick={() => navigate('/view-fms-progress')} className="cursor-pointer">
+                  <MetricCard
+                    icon={<Target size={24} className="text-purple-600" />}
+                    title="Avg Progress"
+                    value={`${(dashboardData?.fmsMetrics?.avgProgress || 0).toFixed(1)}%`}
+                    subtitle="Overall completion"
+                    percentage={dashboardData?.fmsMetrics?.avgProgress || 0}
+                  />
                 </div>
               </div>
             </div>
           )}
 
-          <div className="relative">
-            <ResponsiveContainer width="100%" height={470}>
-              <AreaChart data={trendData} margin={{ top: 30, right: 10, left: 0, bottom: 20 }}>
-                <defs>
-                  <linearGradient id="completedAreaGradient" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="var(--color-success)" stopOpacity={0.8} />
-                    <stop offset="95%" stopColor="var(--color-success)" stopOpacity={0.1} />
-                  </linearGradient>
-                  <linearGradient id="completedStrokeGradient" x1="0" y1="0" x2="1" y2="0">
-                    <stop offset="0%" stopColor="var(--color-success)" />
-                    <stop offset="100%" stopColor="var(--color-primary)" />
-                  </linearGradient>
-                  <linearGradient id="plannedAreaGradient" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="var(--color-warning)" stopOpacity={0.6} />
-                    <stop offset="95%" stopColor="var(--color-warning)" stopOpacity={0.05} />
-                  </linearGradient>
-                  <linearGradient id="plannedStrokeGradient" x1="0" y1="0" x2="1" y2="0">
-                    <stop offset="0%" stopColor="var(--color-warning)" />
-                    <stop offset="100%" stopColor="var(--color-secondary)" />
-                  </linearGradient>
-                  <filter id="glow">
-                    <feGaussianBlur stdDeviation="5" result="coloredBlur" />
-                    <feMerge>
-                      <feMergeNode in="coloredBlur" />
-                      <feMergeNode in="SourceGraphic" />
-                    </feMerge>
-                  </filter>
-                  <filter id="dropshadow" x="-50%" y="-50%" width="200%" height="200%">
-                    <feDropShadow dx="0" dy="4" stdDeviation="5" floodOpacity="0.4" />
-                  </filter>
-                </defs>
-                <CartesianGrid
-                  strokeDasharray="4 4"
-                  stroke="var(--color-border)"
-                  strokeOpacity={0.4}
-                  vertical={false}
-                />
-                <XAxis
-                  dataKey="month"
-                  stroke="var(--color-textSecondary)"
-                  fontSize={11}
-                  fontWeight={500}
-                  tickLine={false}
-                  axisLine={false}
-                  dy={10}
-                  tick={{ fill: 'var(--color-textSecondary)' }}
-                />
-                <YAxis
-                  stroke="var(--color-textSecondary)"
-                  fontSize={11}
-                  fontWeight={500}
-                  tickLine={false}
-                  axisLine={false}
-                  dx={-5}
-                  tick={{ fill: 'var(--color-textSecondary)' }}
-                />
-                <Tooltip
-                  content={({ active, payload, label }) => {
-                    if (active && payload && payload.length) {
-                      return (
-                        <div className="bg-[var(--color-surface)]/95 backdrop-blur-xl border border-[var(--color-border)] rounded-2xl p-4 shadow-2xl">
-                          <p className="text-sm font-bold text-[var(--color-text)] mb-3">
-                            {label} {new Date().getFullYear()}
-                            {selectedTeamMember !== 'all' && (
-                              <span className="block text-xs opacity-75">
-                                {selectedTeamMember}'s Data
-                              </span>
-                            )}
-                          </p>
-                          <div className="space-y-2">
-                            {payload.map((entry: any, index: number) => (
-                              <div key={index} className="flex items-center justify-between space-x-4">
-                                <div className="flex items-center space-x-2">
-                                  <div
-                                    className="w-3 h-3 rounded-full shadow-sm"
-                                    style={{ backgroundColor: entry.color }}
-                                  ></div>
-                                  <span className="text-sm font-medium text-[var(--color-textSecondary)]">
-                                    {entry.name}:
-                                  </span>
-                                </div>
-                                <span className="text-sm font-bold" style={{ color: entry.color }}>
-                                  {entry.value}
-                                </span>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      );
-                    }
-                    return null;
-                  }}
-                />
-                <Area
-                  type="monotone"
-                  dataKey="planned"
-                  stroke="url(#plannedStrokeGradient)"
-                  strokeWidth={3}
-                  fillOpacity={1}
-                  fill="url(#plannedAreaGradient)"
-                  name="Planned Tasks"
-                  dot={{
-                    fill: 'var(--color-warning)',
-                    stroke: 'var(--color-background)',
-                    strokeWidth: 2,
-                    r: 5,
-                  }}
-                  activeDot={{
-                    r: 7,
-                    fill: 'var(--color-warning)',
-                    stroke: 'var(--color-background)',
-                    strokeWidth: 3,
-                  }}
-                />
-                <Area
-                  type="monotone"
-                  dataKey="completed"
-                  stroke="url(#completedStrokeGradient)"
-                  strokeWidth={3}
-                  fillOpacity={1}
-                  fill="url(#completedAreaGradient)"
-                  name="Completed Tasks"
-                  dot={{
-                    fill: 'var(--color-success)',
-                    stroke: 'var(--color-background)',
-                    strokeWidth: 2,
-                    r: 5,
-                  }}
-                  activeDot={{
-                    r: 7,
-                    fill: 'var(--color-success)',
-                    stroke: 'var(--color-background)',
-                    strokeWidth: 3,
-                  }}
-                />
-              </AreaChart>
-            </ResponsiveContainer>
-            <div className="absolute top-4 right-4 opacity-20">
-              <div className="w-2 h-2 rounded-full animate-pulse" style={{ backgroundColor: 'var(--color-primary)' }}></div>
-            </div>
-            <div className="absolute bottom-8 left-8 opacity-15">
-              <div className="w-3 h-3 rounded-full animate-pulse delay-1000" style={{ backgroundColor: 'var(--color-accent)' }}></div>
-            </div>
-          </div>
-        </ThemeCard>
-
-        {/* Recent Activity */}
-        <ThemeCard className="p-4 sm:p-8 xl:col-span-3" variant="glass">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 gap-2">
-            <div className="flex items-center space-x-3">
-              <div className="p-3 rounded-2xl text-white" style={{ background: `linear-gradient(135deg, var(--color-success), var(--color-primary))` }}>
-                <Activity size={20} />
-              </div>
-              <div>
-                <h3 className="text-lg sm:text-xl font-bold text-[var(--color-text)]">
-                  {(user?.role === 'admin' || user?.role === 'manager') ? 'Recent Activity' : 'Your Recent Activity'}
-                </h3>
-                <p className="text-xs text-[var(--color-textSecondary)]">
-                  {(user?.role === 'admin' || user?.role === 'manager') ? 'Latest team task updates' : 'Your latest task updates'}
-                </p>
-              </div>
-            </div>
-            <div className="text-sm px-3 py-1.5 rounded-full font-bold whitespace-nowrap" style={{ backgroundColor: 'var(--color-success)20', color: 'var(--color-success)' }}>
-              Last {dashboardData?.recentActivity?.slice(0, 10).length || 0}
-            </div>
-          </div>
-          <div className="space-y-3 max-h-[480px] sm:max-h-[480px] overflow-y-auto">
-            {dashboardData?.recentActivity?.slice(0, 10).map((activity) => (
-              <div
-                key={activity._id}
-                className="flex items-start space-x-4 p-3 sm:p-4 rounded-2xl border border-[var(--color-border)] hover:border-[var(--color-primary)]/30 transition-all duration-200"
-                style={{ backgroundColor: 'var(--color-surface)' }}
-              >
-                <div className="p-2 rounded-xl shadow-sm" style={{ backgroundColor: 'var(--color-background)' }}>
-                  {getActivityIcon(activity.type)}
+          {/* Enhanced Charts Section */}
+          <div className="grid grid-cols-1 lg:grid-cols-10 gap-8">
+            {/* Task Status Distribution - Enhanced Pie Chart */}
+            <ThemeCard className="p-4 sm:p-8 lg:col-span-4" variant="glass">
+              <div> {/* Wrap children in a single div */}
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 gap-2">
+                  <div className="flex items-center space-x-3">
+                    <div className="p-3 rounded-2xl text-white" style={{ background: `linear-gradient(135deg, var(--color-primary), var(--color-secondary))` }}>
+                      <PieChartIcon size={20} />
+                    </div>
+                    <div>
+                      <h3 className="text-lg sm:text-xl font-bold text-[var(--color-text)]">
+                        {(user?.role === 'admin' || user?.role === 'manager') ? 'Team Task Status' : 'Your Task Status'}
+                      </h3>
+                      <p className="text-xs text-[var(--color-textSecondary)]">
+                        {(user?.role === 'admin' || user?.role === 'manager') ? 'Team distribution' : 'Your current distribution'}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="text-sm px-3 py-1.5 rounded-full font-bold whitespace-nowrap" style={{ backgroundColor: 'var(--color-primary)20', color: 'var(--color-primary)' }}>
+                    {statusData.reduce((sum, item) => sum + item.value, 0)} Total
+                  </div>
                 </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold text-[var(--color-text)] mb-1">
-                    {(user?.role === 'admin' || user?.role === 'manager') ? (
-                      <>
-                        <span className="font-bold">{activity.username}</span>
-                        <span className="mx-1 text-[var(--color-textSecondary)]">
-                          {activity.type === 'assigned' && 'was assigned'}
-                          {activity.type === 'completed' && 'completed'}
-                          {activity.type === 'overdue' && 'has overdue'}
-                        </span>
-                      </>
-                    ) : (
-                      <span className="mx-1 text-[var(--color-textSecondary)]">
-                        {activity.type === 'assigned' && 'You were assigned'}
-                        {activity.type === 'completed' && 'You completed'}
-                        {activity.type === 'overdue' && 'You have overdue'}
+
+                {/* Pie Chart */}
+                <ResponsiveContainer width="100%" height={300}>
+                  <PieChart>
+                    <defs>
+                      {statusData.map((entry, index) => (
+                        <linearGradient key={index} id={`statusGradient-${index}`} x1="0" y1="0" x2="1" y2="1">
+                          <stop offset="0%" stopColor={entry.color} stopOpacity={0.8} />
+                          <stop offset="100%" stopColor={entry.color} stopOpacity={1} />
+                        </linearGradient>
+                      ))}
+                    </defs>
+                    <Pie
+                      data={statusData}
+                      cx="50%"
+                      cy="50%"
+                      labelLine={false}
+                      outerRadius={window.innerWidth > 640 ? 120 : 90}
+                      innerRadius={window.innerWidth > 640 ? 50 : 40}
+                      fill="#8884d8"
+                      dataKey="value"
+                      stroke="var(--color-background)"
+                      strokeWidth={3}
+                    >
+                      {statusData.map((_, index) => (
+                        <Cell key={`cell-${index}`} fill={`url(#statusGradient-${index})`} />
+                      ))}
+                    </Pie>
+                    <Tooltip content={<CustomTooltip />} />
+                  </PieChart>
+                </ResponsiveContainer>
+
+                {/* Custom Legend */}
+                <div className="mt-6 flex flex-wrap justify-center gap-4 text-sm">
+                  {statusData.map((entry, index) => (
+                    <div key={index} className="flex items-center space-x-2">
+                      <div className="w-3 h-3 rounded-full" style={{ background: entry.color }}></div>
+                      <span className="text-[var(--color-text)] font-medium">{entry.name}</span>
+                      <span className="text-[var(--color-textSecondary)] ml-1">
+                        {entry.value}
                       </span>
-                    )}
-                    <span className="font-bold">{activity.title}</span>
-                  </p>
-                  <div className="flex flex-col sm:flex-row items-start sm:items-center space-y-1 sm:space-y-0 sm:space-x-3">
-                    <span className="text-xs px-2 py-0.5 sm:px-3 sm:py-1 rounded-full font-semibold" style={{ backgroundColor: 'var(--color-primary)20', color: 'var(--color-primary)' }}>
-                      {activity.taskType}
-                    </span>
-                    <span className="text-xs text-[var(--color-textSecondary)]">
-                      {format(new Date(activity.date), 'MMM d, h:mm a')}
-                    </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </ThemeCard>
+
+            {/* Task Type Breakdown - Enhanced Bar Chart */}
+            <ThemeCard className="p-4 sm:p-8 lg:col-span-6" variant="glass">
+              <div> {/* Wrap children in a single div */}
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 gap-2">
+                  <div className="flex items-center space-x-3">
+                    <div className="p-3 rounded-2xl text-white" style={{ background: `linear-gradient(135deg, var(--color-success), var(--color-accent))` }}>
+                      <BarChart3 size={20} />
+                    </div>
+                    <div>
+                      <h3 className="text-lg sm:text-xl font-bold text-[var(--color-text)]">
+                        {(user?.role === 'admin' || user?.role === 'manager') ? 'Team Task Types' : 'Your Task Types'}
+                      </h3>
+                      <p className="text-xs text-[var(--color-textSecondary)]">
+                        {(user?.role === 'admin' || user?.role === 'manager') ? 'Team breakdown by category' : 'Your breakdown by category'}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+                <ResponsiveContainer width="100%" height={300}>
+                  <BarChart data={taskTypeData} margin={{ top: 20, right: 0, left: 0, bottom: 5 }}>
+                    <defs>
+                      {taskTypeData.map((entry, index) => (
+                        <linearGradient key={index} id={`barGradient-${index}`} x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor={entry.color} stopOpacity={0.8} />
+                          <stop offset="95%" stopColor={entry.color} stopOpacity={0.6} />
+                        </linearGradient>
+                      ))}
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" />
+                    <XAxis
+                      dataKey="name"
+                      stroke="var(--color-textSecondary)"
+                      fontSize={10}
+                      tickLine={false}
+                      axisLine={false}
+                    />
+                    <YAxis
+                      stroke="var(--color-textSecondary)"
+                      fontSize={10}
+                      tickLine={false}
+                      axisLine={false}
+                    />
+                    <Tooltip content={<CustomTooltip />} />
+                    <Bar
+                      dataKey="value"
+                      radius={[8, 8, 0, 0]}
+                      stroke="none"
+                    >
+                      {taskTypeData.map((_, index) => (
+                        <Cell key={`cell-${index}`} fill={`url(#barGradient-${index})`} />
+                      ))}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </ThemeCard>
+          </div>
+
+          {/* Enhanced Completion Trend and Recent Activity - Split 7:3 for non-admin users */}
+          <div className={`grid grid-cols-1 gap-8 xl:grid-cols-10`}>
+            {/* Completion Trend */}
+            <ThemeCard className="p-4 sm:p-8 xl:col-span-7" variant="glass">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 gap-4">
+                <div className="flex items-center space-x-4">
+                  <div className="relative">
+                    <div className="p-4 rounded-3xl text-white shadow-2xl" style={{ background: `linear-gradient(135deg, var(--color-accent), var(--color-secondary))` }}>
+                      <TrendingUp size={24} />
+                    </div>
+                    <div className="absolute -inset-1 rounded-3xl opacity-30 blur-lg" style={{ background: `linear-gradient(135deg, var(--color-accent), var(--color-secondary))` }}></div>
+                  </div>
+                  <div>
+                    <h3 className="text-lg sm:text-xl font-bold text-[var(--color-text)] mb-1">
+                      {(user?.role === 'admin' || user?.role === 'manager') ? 'Team Completion Trend' : 'Your Completion Trend'}
+                    </h3>
+                    <p className="text-xs text-[var(--color-textSecondary)]">
+                      {(user?.role === 'admin' || user?.role === 'manager') ? 'Team performance insights over the last 6 months' : 'Your performance insights over the last 6 months'}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex flex-col sm:flex-row items-center space-y-4 sm:space-y-0 sm:space-x-4 w-full sm:w-auto">
+                  {(user?.role === 'admin' || user?.role === 'manager') && teamMembersList.length > 0 && (
+                    <div className="relative z-10 w-full sm:w-auto">
+                      <button
+                        onClick={() => setShowTeamMemberFilter(!showTeamMemberFilter)}
+                        className="flex items-center justify-center px-4 py-2 bg-[var(--color-surface)] rounded-2xl border border-[var(--color-border)] shadow-lg hover:shadow-xl transition-all duration-200 text-[var(--color-text)] font-semibold w-full"
+                      >
+                        <Users size={16} className="mr-2" />
+                        <span>
+                          {selectedTeamMember === 'all' ? 'All Team' : selectedTeamMember}
+                        </span>
+                        <ChevronDown size={16} className="ml-2" />
+                      </button>
+                      {showTeamMemberFilter && (
+                        <div className="absolute left-0 right-0 top-full mt-2 w-full sm:w-64 z-20">
+                          <ThemeCard className="p-3 max-h-80 overflow-y-auto" variant="elevated" hover={false}>
+                            <div className="space-y-2">
+                              <button
+                                onClick={() => {
+                                  setSelectedTeamMember('all');
+                                  setShowTeamMemberFilter(false);
+                                }}
+                                className={`w-full text-left px-3 py-3 rounded-xl transition-all duration-200 ${selectedTeamMember === 'all'
+                                  ? 'bg-[var(--color-primary)] text-white shadow-lg'
+                                  : 'hover:bg-[var(--color-border)] text-[var(--color-text)]'
+                                  }`}
+                              >
+                                <div className="flex items-center justify-between">
+                                  <div className="flex items-center space-x-3">
+                                    <div className="w-8 h-8 rounded-xl bg-gradient-to-r from-blue-500 to-purple-600 flex items-center justify-center text-white font-bold text-sm">
+                                      <Users size={16} />
+                                    </div>
+                                    <div>
+                                      <span className="font-semibold">All Team</span>
+                                      <p className="text-xs opacity-75">Overall team data</p>
+                                    </div>
+                                  </div>
+                                </div>
+                              </button>
+                              {teamMembersList.map((member, index) => (
+                                <button
+                                  key={member.username}
+                                  onClick={() => {
+                                    setSelectedTeamMember(member.username);
+                                    setShowTeamMemberFilter(false);
+                                  }}
+                                  className={`w-full text-left px-3 py-3 rounded-xl transition-all duration-200 ${selectedTeamMember === member.username
+                                    ? 'bg-[var(--color-primary)] text-white shadow-lg'
+                                    : 'hover:bg-[var(--color-border)] text-[var(--color-text)]'
+                                    }`}
+                                >
+                                  <div className="flex items-center justify-between">
+                                    <div className="flex items-center space-x-3">
+                                      <div className="w-8 h-8 rounded-xl bg-gradient-to-r from-blue-400 to-purple-600 flex items-center justify-center text-white font-bold text-sm">
+                                        {member.username.charAt(0).toUpperCase()}
+                                      </div>
+                                      <div>
+                                        <span className="font-semibold">{member.username}</span>
+                                        <p className="text-xs opacity-75">{member.totalTasks} tasks {member.completionRate.toFixed(1)}% completion</p>
+                                      </div>
+                                    </div>
+                                    <div className="text-right">
+                                      <div className="text-sm font-bold opacity-75">{index + 1}</div>
+                                    </div>
+                                  </div>
+                                </button>
+                              ))}
+                            </div>
+                          </ThemeCard>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  <div className="flex items-center justify-around sm:justify-between flex-wrap gap-2 sm:gap-6 bg-[var(--color-surface)]/50 backdrop-blur-sm rounded-2xl p-3 sm:p-4 border border-[var(--color-border)] w-full sm:w-auto">
+                    <div className="flex items-center space-x-2 sm:space-x-3">
+                      <div className="relative">
+                        <div className="w-3 h-3 sm:w-4 sm:h-4 rounded-full shadow-lg" style={{ background: `linear-gradient(135deg, var(--color-success), var(--color-primary))` }}></div>
+                        <div className="absolute inset-0 w-3 h-3 sm:w-4 sm:h-4 rounded-full animate-pulse opacity-50" style={{ background: `linear-gradient(135deg, var(--color-success), var(--color-primary))` }}></div>
+                      </div>
+                      <span className="text-xs sm:text-sm font-semibold text-[var(--color-text)]">Completed</span>
+                      <div className="text-base sm:text-lg font-bold" style={{ color: 'var(--color-success)' }}>
+                        {trendData.reduce((sum, item) => sum + item.completed, 0)}
+                      </div>
+                    </div>
+                    <div className="w-px h-6 sm:h-8 bg-[var(--color-border)]"></div>
+                    <div className="flex items-center space-x-2 sm:space-x-3">
+                      <div className="relative">
+                        <div className="w-3 h-3 sm:w-4 sm:h-4 rounded-full shadow-lg" style={{ background: `linear-gradient(135deg, var(--color-warning), var(--color-secondary))` }}></div>
+                        <div className="absolute inset-0 w-3 h-3 sm:w-4 sm:h-4 rounded-full animate-pulse opacity-50" style={{ background: `linear-gradient(135deg, var(--color-warning), var(--color-secondary))` }}></div>
+                      </div>
+                      <span className="text-xs sm:text-sm font-semibold text-[var(--color-text)]">Planned</span>
+                      <div className="text-base sm:text-lg font-bold" style={{ color: 'var(--color-warning)' }}>
+                        {trendData.reduce((sum, item) => sum + item.planned, 0)}
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
-            )) || (
-                <div className="text-center py-12 text-[var(--color-textSecondary)]">
-                  <Activity size={48} className="mx-auto mb-4 opacity-30" />
-                  <p className="text-lg font-semibold opacity-60">No recent activity</p>
-                  <p className="text-sm opacity-40">Activity will appear here as tasks are updated</p>
+
+              {(user?.role === 'admin' || user?.role === 'manager') && selectedTeamMember !== 'all' && (
+                <div className="mb-6 p-4 rounded-2xl border border-[var(--color-primary)]/30" style={{ backgroundColor: 'var(--color-primary)05' }}>
+                  <div className="flex items-center space-x-3">
+                    <div className="w-10 h-10 rounded-2xl bg-gradient-to-r from-blue-400 to-purple-600 flex items-center justify-center text-white font-bold">
+                      {selectedTeamMember.charAt(0).toUpperCase()}
+                    </div>
+                    <div>
+                      <h4 className="text-lg font-bold text-[var(--color-text)]">
+                        {selectedTeamMember}'s Performance Trend
+                      </h4>
+                      <p className="text-sm text-[var(--color-textSecondary)]">
+                        Showing individual completion data for {selectedTeamMember}
+                      </p>
+                    </div>
+                  </div>
                 </div>
               )}
+
+              <div className="relative">
+                <ResponsiveContainer width="100%" height={470}>
+                  <AreaChart data={trendData} margin={{ top: 30, right: 10, left: 0, bottom: 20 }}>
+                    <defs>
+                      <linearGradient id="completedAreaGradient" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="var(--color-success)" stopOpacity={0.8} />
+                        <stop offset="95%" stopColor="var(--color-success)" stopOpacity={0.1} />
+                      </linearGradient>
+                      <linearGradient id="completedStrokeGradient" x1="0" y1="0" x2="1" y2="0">
+                        <stop offset="0%" stopColor="var(--color-success)" />
+                        <stop offset="100%" stopColor="var(--color-primary)" />
+                      </linearGradient>
+                      <linearGradient id="plannedAreaGradient" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="var(--color-warning)" stopOpacity={0.6} />
+                        <stop offset="95%" stopColor="var(--color-warning)" stopOpacity={0.05} />
+                      </linearGradient>
+                      <linearGradient id="plannedStrokeGradient" x1="0" y1="0" x2="1" y2="0">
+                        <stop offset="0%" stopColor="var(--color-warning)" />
+                        <stop offset="100%" stopColor="var(--color-secondary)" />
+                      </linearGradient>
+                      <filter id="glow">
+                        <feGaussianBlur stdDeviation="5" result="coloredBlur" />
+                        <feMerge>
+                          <feMergeNode in="coloredBlur" />
+                          <feMergeNode in="SourceGraphic" />
+                        </feMerge>
+                      </filter>
+                      <filter id="dropshadow" x="-50%" y="-50%" width="200%" height="200%">
+                        <feDropShadow dx="0" dy="4" stdDeviation="5" floodOpacity="0.4" />
+                      </filter>
+                    </defs>
+                    <CartesianGrid
+                      strokeDasharray="4 4"
+                      stroke="var(--color-border)"
+                      strokeOpacity={0.4}
+                      vertical={false}
+                    />
+                    <XAxis
+                      dataKey="month"
+                      stroke="var(--color-textSecondary)"
+                      fontSize={11}
+                      fontWeight={500}
+                      tickLine={false}
+                      axisLine={false}
+                      dy={10}
+                      tick={{ fill: 'var(--color-textSecondary)' }}
+                    />
+                    <YAxis
+                      stroke="var(--color-textSecondary)"
+                      fontSize={11}
+                      fontWeight={500}
+                      tickLine={false}
+                      axisLine={false}
+                      dx={-5}
+                      tick={{ fill: 'var(--color-textSecondary)' }}
+                    />
+                    <Tooltip
+                      content={({ active, payload, label }) => {
+                        if (active && payload && payload.length) {
+                          return (
+                            <div className="bg-[var(--color-surface)]/95 backdrop-blur-xl border border-[var(--color-border)] rounded-2xl p-4 shadow-2xl">
+                              <p className="text-sm font-bold text-[var(--color-text)] mb-3">
+                                {label} {new Date().getFullYear()}
+                                {selectedTeamMember !== 'all' && (
+                                  <span className="block text-xs opacity-75">
+                                    {selectedTeamMember}'s Data
+                                  </span>
+                                )}
+                              </p>
+                              <div className="space-y-2">
+                                {payload.map((entry: any, index: number) => (
+                                  <div key={index} className="flex items-center justify-between space-x-4">
+                                    <div className="flex items-center space-x-2">
+                                      <div
+                                        className="w-3 h-3 rounded-full shadow-sm"
+                                        style={{ backgroundColor: entry.color }}
+                                      ></div>
+                                      <span className="text-sm font-medium text-[var(--color-textSecondary)]">
+                                        {entry.name}:
+                                      </span>
+                                    </div>
+                                    <span className="text-sm font-bold" style={{ color: entry.color }}>
+                                      {entry.value}
+                                    </span>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          );
+                        }
+                        return null;
+                      }}
+                    />
+                    <Area
+                      type="monotone"
+                      dataKey="planned"
+                      stroke="url(#plannedStrokeGradient)"
+                      strokeWidth={3}
+                      fillOpacity={1}
+                      fill="url(#plannedAreaGradient)"
+                      name="Planned Tasks"
+                      dot={{
+                        fill: 'var(--color-warning)',
+                        stroke: 'var(--color-background)',
+                        strokeWidth: 2,
+                        r: 5,
+                      }}
+                      activeDot={{
+                        r: 7,
+                        fill: 'var(--color-warning)',
+                        stroke: 'var(--color-background)',
+                        strokeWidth: 3,
+                      }}
+                    />
+                    <Area
+                      type="monotone"
+                      dataKey="completed"
+                      stroke="url(#completedStrokeGradient)"
+                      strokeWidth={3}
+                      fillOpacity={1}
+                      fill="url(#completedAreaGradient)"
+                      name="Completed Tasks"
+                      dot={{
+                        fill: 'var(--color-success)',
+                        stroke: 'var(--color-background)',
+                        strokeWidth: 2,
+                        r: 5,
+                      }}
+                      activeDot={{
+                        r: 7,
+                        fill: 'var(--color-success)',
+                        stroke: 'var(--color-background)',
+                        strokeWidth: 3,
+                      }}
+                    />
+                  </AreaChart>
+                </ResponsiveContainer>
+                <div className="absolute top-4 right-4 opacity-20">
+                  <div className="w-2 h-2 rounded-full animate-pulse" style={{ backgroundColor: 'var(--color-primary)' }}></div>
+                </div>
+                <div className="absolute bottom-8 left-8 opacity-15">
+                  <div className="w-3 h-3 rounded-full animate-pulse delay-1000" style={{ backgroundColor: 'var(--color-accent)' }}></div>
+                </div>
+              </div>
+            </ThemeCard>
+
+            {/* Recent Activity */}
+            <ThemeCard className="p-4 sm:p-8 xl:col-span-3" variant="glass">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 gap-2">
+                <div className="flex items-center space-x-3">
+                  <div className="p-3 rounded-2xl text-white" style={{ background: `linear-gradient(135deg, var(--color-success), var(--color-primary))` }}>
+                    <Activity size={20} />
+                  </div>
+                  <div>
+                    <h3 className="text-lg sm:text-xl font-bold text-[var(--color-text)]">
+                      {(user?.role === 'admin' || user?.role === 'manager') ? 'Recent Activity' : 'Your Recent Activity'}
+                    </h3>
+                    <p className="text-xs text-[var(--color-textSecondary)]">
+                      {(user?.role === 'admin' || user?.role === 'manager') ? 'Latest team task updates' : 'Your latest task updates'}
+                    </p>
+                  </div>
+                </div>
+                <div className="text-sm px-3 py-1.5 rounded-full font-bold whitespace-nowrap" style={{ backgroundColor: 'var(--color-success)20', color: 'var(--color-success)' }}>
+                  Last {dashboardData?.recentActivity?.slice(0, 10).length || 0}
+                </div>
+              </div>
+              <div className="space-y-3 max-h-[480px] sm:max-h-[480px] overflow-y-auto">
+                {dashboardData?.recentActivity?.slice(0, 10).map((activity) => (
+                  <div
+                    key={activity._id}
+                    className="flex items-start space-x-4 p-3 sm:p-4 rounded-2xl border border-[var(--color-border)] hover:border-[var(--color-primary)]/30 transition-all duration-200"
+                    style={{ backgroundColor: 'var(--color-surface)' }}
+                  >
+                    <div className="p-2 rounded-xl shadow-sm" style={{ backgroundColor: 'var(--color-background)' }}>
+                      {getActivityIcon(activity.type)}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-semibold text-[var(--color-text)] mb-1">
+                        {(user?.role === 'admin' || user?.role === 'manager') ? (
+                          <>
+                            <span className="font-bold">{activity.username}</span>
+                            <span className="mx-1 text-[var(--color-textSecondary)]">
+                              {activity.type === 'assigned' && 'was assigned'}
+                              {activity.type === 'completed' && 'completed'}
+                              {activity.type === 'overdue' && 'has overdue'}
+                            </span>
+                          </>
+                        ) : (
+                          <span className="mx-1 text-[var(--color-textSecondary)]">
+                            {activity.type === 'assigned' && 'You were assigned'}
+                            {activity.type === 'completed' && 'You completed'}
+                            {activity.type === 'overdue' && 'You have overdue'}
+                          </span>
+                        )}
+                        <span className="font-bold">{activity.title}</span>
+                      </p>
+                      <div className="flex flex-col sm:flex-row items-start sm:items-center space-y-1 sm:space-y-0 sm:space-x-3">
+                        <span className="text-xs px-2 py-0.5 sm:px-3 sm:py-1 rounded-full font-semibold" style={{ backgroundColor: 'var(--color-primary)20', color: 'var(--color-primary)' }}>
+                          {activity.taskType}
+                        </span>
+                        <span className="text-xs text-[var(--color-textSecondary)]">
+                          {format(new Date(activity.date), 'MMM d, h:mm a')}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                )) || (
+                    <div className="text-center py-12 text-[var(--color-textSecondary)]">
+                      <Activity size={48} className="mx-auto mb-4 opacity-30" />
+                      <p className="text-lg font-semibold opacity-60">No recent activity</p>
+                      <p className="text-sm opacity-40">Activity will appear here as tasks are updated</p>
+                    </div>
+                  )}
+              </div>
+            </ThemeCard>
           </div>
-        </ThemeCard>
+        </div>
       </div>
     </div >
   );

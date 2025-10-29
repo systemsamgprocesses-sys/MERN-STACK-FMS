@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { CheckSquare, Clock, AlertCircle, Upload } from 'lucide-react';
+import { CheckSquare, Clock, AlertCircle, Upload, RotateCcw } from 'lucide-react';
 import axios from 'axios';
 import { address } from '../../utils/ipAddress';
 
@@ -121,6 +121,16 @@ const ViewFMSProgress: React.FC = () => {
     return tasks.length > 0 ? Math.round((completed / tasks.length) * 100) : 0;
   };
 
+  // Add a helper function to check if a step can be updated
+  const canUpdateStep = (currentIndex: number, tasks: any[]): boolean => {
+    // First step can always be updated
+    if (currentIndex === 0) return true;
+    
+    // For other steps, check if previous step is 'Done'
+    const previousStep = tasks[currentIndex - 1];
+    return previousStep && previousStep.status === 'Done';
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -132,158 +142,218 @@ const ViewFMSProgress: React.FC = () => {
   return (
     <div className="min-h-screen p-4 sm:p-6 lg:p-8" style={{ backgroundColor: 'var(--color-background)' }}>
       <div className="max-w-7xl mx-auto">
+        {/* Header Section */}
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-[var(--color-text)] mb-2">FMS Project Progress</h1>
-          <p className="text-[var(--color-textSecondary)]">Track and manage project tasks</p>
+          <div className="flex items-center gap-4 mb-2">
+            <div className="p-3 rounded-2xl" style={{ backgroundColor: 'var(--color-primary)10' }}>
+              <RotateCcw size={28} style={{ color: 'var(--color-primary)' }} />
+            </div>
+            <div>
+              <h1 className="text-4xl font-bold text-[var(--color-text)]">FMS Project Progress</h1>
+              <p className="text-[var(--color-textSecondary)] text-sm mt-1">Track and manage project tasks seamlessly</p>
+            </div>
+          </div>
         </div>
 
         {projects.length === 0 ? (
-          <div className="text-center py-12">
-            <p className="text-[var(--color-textSecondary)]">No projects found</p>
+          <div className="text-center py-20">
+            <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl mb-4" style={{ backgroundColor: 'var(--color-primary)10' }}>
+              <RotateCcw size={40} style={{ color: 'var(--color-primary)' }} />
+            </div>
+            <p className="text-[var(--color-textSecondary)] text-lg font-medium">No projects found</p>
+            <p className="text-[var(--color-textSecondary)] text-sm">Create a project to get started</p>
           </div>
         ) : (
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* Projects List */}
             <div className="lg:col-span-1 space-y-4">
-              <h2 className="text-xl font-bold text-[var(--color-text)] mb-4">Projects</h2>
-              {projects.map((project) => (
-                <div
-                  key={project._id}
-                  onClick={() => setSelectedProject(project)}
-                  className={`p-4 rounded-lg border cursor-pointer transition-all ${
-                    selectedProject?._id === project._id
-                      ? 'border-[var(--color-primary)] bg-[var(--color-primary)]/10'
-                      : 'border-[var(--color-border)] bg-[var(--color-surface)] hover:border-[var(--color-primary)]/50'
-                  }`}
-                >
-                  <h3 className="font-bold text-[var(--color-text)] mb-2">{project.projectName}</h3>
-                  <p className="text-sm text-[var(--color-textSecondary)] mb-2">{project.projectId}</p>
-                  <p className="text-xs text-[var(--color-textSecondary)] mb-3">
-                    {project.fmsId?.fmsName || 'No FMS Assigned'}
-                  </p>
-                  <div className="w-full bg-gray-200 rounded-full h-2 mb-2">
-                    <div
-                      className="bg-[var(--color-primary)] h-2 rounded-full transition-all"
-                      style={{ width: `${calculateProgress(project.tasks)}%` }}
-                    />
+              <h2 className="text-xl font-bold text-[var(--color-text)] mb-4 flex items-center">
+                <span className="w-1 h-6 bg-[var(--color-primary)] rounded-full mr-3"></span>
+                Projects
+              </h2>
+              <div className="space-y-3">
+                {projects.map((project) => (
+                  <div
+                    key={project._id}
+                    onClick={() => setSelectedProject(project)}
+                    className={`p-4 rounded-2xl border-2 cursor-pointer transition-all duration-300 hover:shadow-lg ${
+                      selectedProject?._id === project._id
+                        ? 'border-[var(--color-primary)] bg-[var(--color-primary)]/5 shadow-lg'
+                        : 'border-[var(--color-border)] bg-[var(--color-surface)] hover:border-[var(--color-primary)]/50 hover:-translate-y-1'
+                    }`}
+                  >
+                    <div className="flex items-start justify-between mb-2">
+                      <h3 className="font-bold text-[var(--color-text)]">{project.projectName}</h3>
+                      {selectedProject?._id === project._id && (
+                        <span className="px-2 py-1 rounded-full text-xs font-semibold" style={{ backgroundColor: 'var(--color-primary)10', color: 'var(--color-primary)' }}>
+                          Active
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-xs text-[var(--color-textSecondary)] mb-1 font-medium">{project.projectId}</p>
+                    <p className="text-xs text-[var(--color-textSecondary)] mb-3">
+                      📋 {project.fmsId?.fmsName || 'No FMS Assigned'}
+                    </p>
+                    <div className="flex items-center gap-2">
+                      <div className="flex-1 h-3 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden shadow-sm">
+                        <div
+                          className="h-full bg-gradient-to-r from-green-500 via-emerald-500 to-green-400 transition-all duration-500 rounded-full shadow-lg"
+                          style={{ 
+                            width: `${calculateProgress(project.tasks)}%`,
+                            boxShadow: '0 0 12px rgba(16, 185, 129, 0.6)'
+                          }}
+                        />
+                      </div>
+                      <span className="text-xs font-bold min-w-fit" style={{ color: '#10b981' }}>
+                        {calculateProgress(project.tasks)}%
+                      </span>
+                    </div>
                   </div>
-                  <p className="text-xs text-[var(--color-textSecondary)]">
-                    {calculateProgress(project.tasks)}% Complete
-                  </p>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
 
             {/* Task Details */}
             <div className="lg:col-span-2">
               {selectedProject ? (
-                <div>
-                  <div className="mb-6 p-6 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)]">
-                    <h2 className="text-2xl font-bold text-[var(--color-text)] mb-2">
-                      {selectedProject.projectName}
-                    </h2>
-                    <div className="flex items-center space-x-4 text-sm text-[var(--color-textSecondary)] mb-4">
-                      <span>Started: {new Date(selectedProject.startDate).toLocaleDateString()}</span>
-                      <span>•</span>
-                      <span>Status: {selectedProject.status}</span>
+                <div className="space-y-6">
+                  {/* Project Header Card */}
+                  <div className="p-6 rounded-2xl border border-[var(--color-border)] bg-gradient-to-br from-[var(--color-primary)]/5 to-[var(--color-secondary)]/5">
+                    <div className="flex items-start justify-between mb-4">
+                      <div>
+                        <h2 className="text-2xl font-bold text-[var(--color-text)] mb-2">
+                          {selectedProject.projectName}
+                        </h2>
+                        <div className="flex items-center space-x-3 text-sm text-[var(--color-textSecondary)]">
+                          <span className="flex items-center"><Clock size={14} className="mr-1" /> Started: {new Date(selectedProject.startDate).toLocaleDateString()}</span>
+                          <span>•</span>
+                          <span className="flex items-center gap-2">
+                            Status: 
+                            <span className="px-2 py-1 rounded-full text-xs font-semibold" style={{ backgroundColor: 'var(--color-primary)10', color: 'var(--color-primary)' }}>
+                              {selectedProject.status}
+                            </span>
+                          </span>
+                        </div>
+                      </div>
                     </div>
+                    
                     {selectedProject.totalScore > 0 && (
                       <div className="grid grid-cols-3 gap-4 mt-4">
-                        <div className="p-3 rounded-lg bg-[var(--color-background)]">
-                          <p className="text-xs text-[var(--color-textSecondary)] mb-1">Performance Score</p>
-                          <p className="text-2xl font-bold text-[var(--color-primary)]">{selectedProject.totalScore}%</p>
+                        <div className="p-4 rounded-xl bg-white/50 dark:bg-[var(--color-background)]/50 border border-[var(--color-border)]/50 hover:shadow-md transition-all">
+                          <p className="text-xs text-[var(--color-textSecondary)] mb-2 font-medium uppercase tracking-wider">Performance Score</p>
+                          <p className="text-2xl font-bold" style={{ color: 'var(--color-primary)' }}>{selectedProject.totalScore}%</p>
                         </div>
-                        <div className="p-3 rounded-lg bg-[var(--color-background)]">
-                          <p className="text-xs text-[var(--color-textSecondary)] mb-1">On-Time Tasks</p>
+                        <div className="p-4 rounded-xl bg-white/50 dark:bg-[var(--color-background)]/50 border border-[var(--color-border)]/50 hover:shadow-md transition-all">
+                          <p className="text-xs text-[var(--color-textSecondary)] mb-2 font-medium uppercase tracking-wider">On-Time Tasks</p>
                           <p className="text-2xl font-bold text-green-600">{selectedProject.tasksOnTime || 0}</p>
                         </div>
-                        <div className="p-3 rounded-lg bg-[var(--color-background)]">
-                          <p className="text-xs text-[var(--color-textSecondary)] mb-1">Late Tasks</p>
+                        <div className="p-4 rounded-xl bg-white/50 dark:bg-[var(--color-background)]/50 border border-[var(--color-border)]/50 hover:shadow-md transition-all">
+                          <p className="text-xs text-[var(--color-textSecondary)] mb-2 font-medium uppercase tracking-wider">Late Tasks</p>
                           <p className="text-2xl font-bold text-red-600">{selectedProject.tasksLate || 0}</p>
                         </div>
                       </div>
                     )}
                   </div>
 
-                  <h3 className="text-xl font-bold text-[var(--color-text)] mb-4">Tasks</h3>
-                  <div className="space-y-4">
-                    {selectedProject.tasks.map((task, index) => (
-                      <div
-                        key={index}
-                        className="p-4 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)]"
-                      >
-                        <div className="flex items-start justify-between mb-3">
-                          <div className="flex-1">
-                            <div className="flex items-center space-x-3 mb-2">
-                              <h4 className="text-lg font-bold text-[var(--color-text)]">
-                                Step {task.stepNo}: {task.what}
-                              </h4>
-                              <span className={`px-3 py-1 rounded-full text-xs ${getStatusColor(task.status)}`}>
-                                {task.status}
-                              </span>
+                  {/* Tasks Section */}
+                  <div>
+                    <h3 className="text-xl font-bold text-[var(--color-text)] mb-4 flex items-center">
+                      <span className="w-1 h-6 bg-[var(--color-primary)] rounded-full mr-3"></span>
+                      Steps & Tasks
+                    </h3>
+                    <div className="space-y-4">
+                      {selectedProject.tasks.map((task, index) => (
+                        <div
+                          key={index}
+                          className="p-5 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] hover:shadow-lg hover:border-[var(--color-primary)]/50 transition-all duration-300"
+                        >
+                          <div className="flex items-start justify-between mb-3">
+                            <div className="flex-1">
+                              <div className="flex items-center space-x-3 mb-2">
+                                <span className="flex items-center justify-center w-8 h-8 rounded-full text-sm font-bold text-white" style={{ backgroundColor: 'var(--color-primary)' }}>
+                                  {task.stepNo}
+                                </span>
+                                <h4 className="text-lg font-bold text-[var(--color-text)]">
+                                  {task.what}
+                                </h4>
+                                <span className={`px-3 py-1 rounded-full text-xs font-semibold ${getStatusColor(task.status)}`}>
+                                  {task.status}
+                                </span>
+                              </div>
+                              <p className="text-sm text-[var(--color-textSecondary)] mb-3 ml-11">{task.how}</p>
+                              <div className="flex items-center space-x-4 text-sm text-[var(--color-textSecondary)] ml-11">
+                                <span className="flex items-center gap-1">👤 {task.who.map((w: any) => w.username).join(', ')}</span>
+                                {task.plannedDueDate && (
+                                  <>
+                                    <span>•</span>
+                                    <span className="flex items-center gap-1">
+                                      <Clock size={14} /> Due: {new Date(task.plannedDueDate).toLocaleDateString()}
+                                    </span>
+                                  </>
+                                )}
+                              </div>
                             </div>
-                            <p className="text-sm text-[var(--color-textSecondary)] mb-2">{task.how}</p>
-                            <div className="flex items-center space-x-4 text-sm text-[var(--color-textSecondary)]">
-                              <span>
-                                Assigned to: {task.who.map((w: any) => w.username).join(', ')}
-                              </span>
-                              {task.plannedDueDate && (
-                                <>
-                                  <span>•</span>
-                                  <span className="flex items-center">
-                                    <Clock size={14} className="mr-1" />
-                                    Due: {new Date(task.plannedDueDate).toLocaleDateString()}
-                                  </span>
-                                </>
+                            {task.status !== 'Done' && 
+                              task.who.some((w: any) => w._id === user?.id) && 
+                              canUpdateStep(index, selectedProject.tasks) && (
+                                <button
+                                  onClick={() => {
+                                    setSelectedTask({ ...task, index });
+                                    setTaskStatus(task.status);
+                                  }}
+                                  className="px-4 py-2 rounded-lg text-white font-semibold hover:shadow-lg hover:scale-105 transition-all text-sm ml-4 flex-shrink-0"
+                                  style={{ backgroundColor: 'var(--color-primary)' }}
+                                >
+                                  Update
+                                </button>
                               )}
-                            </div>
+                            {task.status !== 'Done' && 
+                              task.who.some((w: any) => w._id === user?.id) && 
+                              !canUpdateStep(index, selectedProject.tasks) && (
+                                <div className="px-4 py-2 text-sm text-[var(--color-warning)] bg-[var(--color-warning)]/10 rounded-lg ml-4 flex-shrink-0">
+                                  ⚠️ Complete previous step first
+                                </div>
+                              )}
                           </div>
-                          {task.status !== 'Done' && task.who.some((w: any) => w._id === user?.id) && (
-                            <button
-                              onClick={() => {
-                                setSelectedTask({ ...task, index });
-                                setTaskStatus(task.status);
-                              }}
-                              className="px-4 py-2 bg-[var(--color-primary)] text-white rounded-lg hover:opacity-90 text-sm"
-                            >
-                              Update
-                            </button>
+
+                          {task.requiresChecklist && task.checklistItems.length > 0 && (
+                            <div className="mt-4 p-4 rounded-lg bg-[var(--color-background)] border border-[var(--color-border)]/50">
+                              <p className="text-sm font-bold text-[var(--color-text)] mb-3">✓ Checklist</p>
+                              <div className="space-y-2">
+                                {task.checklistItems.map((item: any, idx: number) => (
+                                  <div key={idx} className="flex items-center space-x-2 text-sm">
+                                    {item.completed ? (
+                                      <CheckSquare size={16} className="text-green-600" />
+                                    ) : (
+                                      <div className="w-4 h-4 border-2 border-[var(--color-border)] rounded" />
+                                    )}
+                                    <span className={item.completed ? 'line-through text-[var(--color-textSecondary)]' : 'text-[var(--color-text)]'}>
+                                      {item.text}
+                                    </span>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+
+                          {task.actualCompletedOn && (
+                            <div className="mt-3 p-3 rounded-lg bg-green-50 dark:bg-green-500/10 border border-green-200 dark:border-green-500/30 text-sm text-green-700 dark:text-green-400 flex items-center">
+                              <CheckSquare size={16} className="mr-2" />
+                              Completed on {new Date(task.actualCompletedOn).toLocaleDateString()} by {task.completedBy?.username}
+                            </div>
                           )}
                         </div>
-
-                        {task.requiresChecklist && task.checklistItems.length > 0 && (
-                          <div className="mt-3 p-3 rounded bg-[var(--color-background)]">
-                            <p className="text-sm font-medium text-[var(--color-text)] mb-2">Checklist</p>
-                            <div className="space-y-1">
-                              {task.checklistItems.map((item: any, idx: number) => (
-                                <div key={idx} className="flex items-center space-x-2 text-sm">
-                                  {item.completed ? (
-                                    <CheckSquare size={16} className="text-green-600" />
-                                  ) : (
-                                    <div className="w-4 h-4 border border-gray-400 rounded" />
-                                  )}
-                                  <span className={item.completed ? 'line-through text-[var(--color-textSecondary)]' : 'text-[var(--color-text)]'}>
-                                    {item.text}
-                                  </span>
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-                        )}
-
-                        {task.actualCompletedOn && (
-                          <div className="mt-3 text-sm text-green-600 flex items-center">
-                            <CheckSquare size={16} className="mr-2" />
-                            Completed on {new Date(task.actualCompletedOn).toLocaleDateString()} by {task.completedBy?.username}
-                          </div>
-                        )}
-                      </div>
-                    ))}
+                      ))}
+                    </div>
                   </div>
                 </div>
               ) : (
-                <div className="flex items-center justify-center h-64 text-[var(--color-textSecondary)]">
-                  Select a project to view tasks
+                <div className="text-center py-12">
+                  <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl mb-4" style={{ backgroundColor: 'var(--color-primary)10' }}>
+                    <AlertCircle size={32} style={{ color: 'var(--color-primary)' }} />
+                  </div>
+                  <p className="text-[var(--color-text)] font-medium">Select a project to view details</p>
+                  <p className="text-[var(--color-textSecondary)] text-sm">Choose from the list on the left</p>
                 </div>
               )}
             </div>

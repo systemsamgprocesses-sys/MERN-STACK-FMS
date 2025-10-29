@@ -4,6 +4,8 @@ import { useAuth } from '../contexts/AuthContext';
 import { CheckSquare, Calendar, Users, Filter, Search } from 'lucide-react';
 import axios from 'axios';
 import { address } from '../../utils/ipAddress';
+import TaskCompletionModal from '../components/TaskCompletionModal';
+import { useTaskSettings } from '../hooks/useTaskSettings';
 
 interface Task {
   _id: string;
@@ -20,9 +22,11 @@ interface Task {
 
 const AdminTasks: React.FC = () => {
   const { user } = useAuth();
+  const { settings: taskSettings, loading: settingsLoading } = useTaskSettings();
   const [tasks, setTasks] = useState<Task[]>([]);
   const [filteredTasks, setFilteredTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
+  const [showCompleteModal, setShowCompleteModal] = useState<string | null>(null);
   const [filter, setFilter] = useState({
     status: '',
     priority: '',
@@ -40,15 +44,24 @@ const AdminTasks: React.FC = () => {
   const fetchAdminTasks = async () => {
     try {
       const response = await axios.get(`${address}/api/tasks?assignedTo=${user?.id}`);
-      setTasks(response.data);
+      // Handle both array response and paginated response
+      const tasksData = Array.isArray(response.data) ? response.data : (response.data.tasks || []);
+      setTasks(tasksData);
     } catch (error) {
       console.error('Error fetching admin tasks:', error);
+      setTasks([]); // Set empty array on error
     } finally {
       setLoading(false);
     }
   };
 
   const applyFilters = () => {
+    // Ensure tasks is an array before filtering
+    if (!Array.isArray(tasks)) {
+      setFilteredTasks([]);
+      return;
+    }
+
     let filtered = [...tasks];
 
     if (filter.status) {
@@ -69,6 +82,15 @@ const AdminTasks: React.FC = () => {
     setFilteredTasks(filtered);
   };
 
+  const handleTaskCompletion = () => {
+    setShowCompleteModal(null);
+    fetchAdminTasks();
+  };
+
+  const getTaskToComplete = () => {
+    return tasks.find(task => task._id === showCompleteModal);
+  };
+
   const getPriorityColor = (priority: string) => {
     return priority === 'high' ? 'text-red-600 bg-red-50' : 'text-blue-600 bg-blue-50';
   };
@@ -81,13 +103,15 @@ const AdminTasks: React.FC = () => {
     }
   };
 
-  if (loading) {
+  if (loading || settingsLoading) {
     return (
       <div className="flex items-center justify-center h-64">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[var(--color-primary)]"></div>
       </div>
     );
   }
+
+  const completingTask = getTaskToComplete();
 
   return (
     <div className="min-h-screen bg-[var(--color-background)] p-6">
@@ -161,7 +185,14 @@ const AdminTasks: React.FC = () => {
               
               <p className="text-sm text-[var(--color-textSecondary)] mb-4">{task.description}</p>
               
-              <div className="space-y-2 text-sm">
+              <div className="space-y-2 text-sm mb-4">
+                <div className="flex items-center justify-between">
+                  <span className="text-[var(--color-textSecondary)]">
+                    <Users size={14} className="inline mr-1" />
+                    Assigned By:
+                  </span>
+                  <span className="font-medium text-[var(--color-text)]">{task.assignedBy.username}</span>
+                </div>
                 <div className="flex items-center justify-between">
                   <span className="text-[var(--color-textSecondary)]">Status:</span>
                   <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(task.status)}`}>
@@ -180,11 +211,21 @@ const AdminTasks: React.FC = () => {
                 <div className="flex items-center justify-between">
                   <span className="text-[var(--color-textSecondary)]">
                     <Users size={14} className="inline mr-1" />
-                    Assigned By:
+                    Assigned To:
                   </span>
-                  <span className="font-medium text-[var(--color-text)]">{task.assignedBy.username}</span>
+                  <span className="font-medium text-[var(--color-text)]">{task.assignedTo.username}</span>
                 </div>
               </div>
+
+              {task.status !== 'completed' && (
+                <button
+                  onClick={() => setShowCompleteModal(task._id)}
+                  className="w-full py-2 px-4 bg-[var(--color-success)] text-white rounded-lg hover:opacity-90 transition-all flex items-center justify-center"
+                >
+                  <CheckSquare size={16} className="mr-2" />
+                  Complete Task
+                </button>
+              )}
             </div>
           ))}
         </div>
@@ -196,6 +237,20 @@ const AdminTasks: React.FC = () => {
           </div>
         )}
       </div>
+
+      {/* Task Completion Modal */}
+      {showCompleteModal && completingTask && (
+        <TaskCompletionModal
+          taskId={showCompleteModal}
+          taskTitle={completingTask.title}
+          isRecurring={false}
+          allowAttachments={taskSettings.adminTasks?.allowAttachments ?? true}
+          mandatoryAttachments={taskSettings.adminTasks?.mandatoryAttachments ?? false}
+          mandatoryRemarks={taskSettings.adminTasks?.mandatoryRemarks ?? false}
+          onClose={() => setShowCompleteModal(null)}
+          onComplete={handleTaskCompletion}
+        />
+      )}
     </div>
   );
 };

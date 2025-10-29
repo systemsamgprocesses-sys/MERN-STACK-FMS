@@ -391,49 +391,50 @@ const AssignTask: React.FC = () => {
 
   return (
     <div className={`max-w-5xl mx-auto space-y-2 p-4 ${isDark ? 'text-gray-100' : 'text-gray-900'}`}>
-      <div className="flex items-center space-x-3 rounded-xl shadow-sm p-4 border border-gray-100">
-        <UserPlus size={20} style={{ color: 'var(--color-primary)' }} />
-        <h1 className={`text-xl font-bold ${isDark ? 'text-gray-100' : 'text-gray-900'}`}>
-          Assign Task
-        </h1>
+      {/* Enhanced Header */}
+      <div className="flex items-center gap-4 rounded-2xl p-6 border-0" style={{ background: 'linear-gradient(135deg, var(--color-primary), var(--color-secondary))', color: 'white' }}>
+        <div className="p-3 rounded-xl bg-white/20">
+          <UserPlus size={28} className="text-white" />
+        </div>
+        <div>
+          <h1 className="text-3xl font-bold text-white">Assign Task</h1>
+          <p className="text-white/80 text-sm mt-1">Create and distribute tasks to your team</p>
+        </div>
       </div>
 
       {/* Internal validation messages */}
       {message.text && (
         <div
-          className={`p-4 rounded-lg border ${
+          className={`p-4 rounded-xl border-l-4 flex items-start gap-3 ${
             message.type === 'success'
-              ? 'bg-green-50 text-green-800 border-green-200'
-              : 'bg-red-50 text-red-800 border-red-200'
+              ? 'bg-green-50/80 text-green-800 border-green-500 dark:bg-green-500/10 dark:text-green-300'
+              : 'bg-red-50/80 text-red-800 border-red-500 dark:bg-red-500/10 dark:text-red-300'
           }`}
-          style={{
-            backgroundColor: message.type === 'success' ? 'var(--color-success-light)' : 'var(--color-error-light)',
-            color: message.type === 'success' ? 'var(--color-success-dark)' : 'var(--color-error-dark)',
-            borderColor: message.type === 'success' ? 'var(--color-success-border)' : 'var(--color-error-border)',
-          }}
         >
-          <div className="flex items-center">
+          <div className="mt-0.5">
             {message.type === 'success' ? (
-              <CheckSquare className="mr-2" size={16} />
+              <CheckSquare size={20} />
             ) : (
-              <X className="mr-2" size={16} />
+              <X size={20} />
             )}
-            {message.text}
           </div>
+          <p className="font-medium">{message.text}</p>
         </div>
       )}
 
       <form onSubmit={handleSubmit} className="space-y-6">
-        {/* Task Details and Priority */}
-        <div className={`p-4 rounded-xl border shadow-sm ${isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'}`}>
-          <h2 className={`text-lg font-semibold mb-4 flex items-center ${isDark ? 'text-gray-100' : 'text-gray-900'}`}>
-            <Calendar className="mr-2" size={16} style={{ color: 'var(--color-primary)' }} />
+        {/* Task Details Section */}
+        <div className={`p-6 rounded-2xl border shadow-sm ${isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'}`}>
+          <h2 className={`text-lg font-bold mb-6 flex items-center gap-3 ${isDark ? 'text-gray-100' : 'text-gray-900'}`}>
+            <div className="p-2 rounded-lg" style={{ backgroundColor: 'var(--color-primary)10' }}>
+              <CheckSquare size={20} style={{ color: 'var(--color-primary)' }} />
+            </div>
             Task Details
           </h2>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
-              <label className={`block text-sm font-medium mb-2 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
+              <label className={`block text-sm font-semibold mb-3 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
                 Task Title *
               </label>
               <input
@@ -442,18 +443,17 @@ const AssignTask: React.FC = () => {
                 value={formData.title}
                 onChange={handleInputChange}
                 required
-                className={`w-full px-2 py-2 border rounded-lg focus:ring-2 transition-colors ${
+                className={`w-full px-4 py-3 border-2 rounded-xl focus:ring-2 focus:ring-[var(--color-primary)]/30 focus:border-[var(--color-primary)] transition-all ${
                   isDark
-                    ? 'bg-gray-700 border-gray-600 text-gray-100 focus:ring-blue-400 focus:border-blue-400'
-                    : 'border-gray-300 focus:ring-blue-500 focus:border-blue-500'
+                    ? 'bg-gray-700 border-gray-600 text-gray-100'
+                    : 'border-gray-300 bg-white text-gray-900'
                 }`}
-                style={{ borderColor: 'var(--color-border)', color: 'var(--color-text)', backgroundColor: 'var(--color-surface)' }}
                 placeholder="Enter task title"
               />
             </div>
 
             <div>
-              <label className={`block text-sm font-medium mb-2 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
+              <label className={`block text-sm font-semibold mb-3 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
                 Task Type *
               </label>
               <select
@@ -461,12 +461,11 @@ const AssignTask: React.FC = () => {
                 value={formData.taskType}
                 onChange={handleInputChange}
                 required
-                className={`w-full px-2 py-2 border rounded-lg focus:ring-2 transition-colors ${
+                className={`w-full px-4 py-3 border-2 rounded-xl focus:ring-2 focus:ring-[var(--color-primary)]/30 focus:border-[var(--color-primary)] transition-all font-medium ${
                   isDark
-                    ? 'bg-gray-700 border-gray-600 text-gray-100 focus:ring-blue-400 focus:border-blue-400'
-                    : 'border-gray-300 focus:ring-blue-500 focus:border-blue-500'
+                    ? 'bg-gray-700 border-gray-600 text-gray-100'
+                    : 'border-gray-300 bg-white text-gray-900'
                 }`}
-                style={{ borderColor: 'var(--color-border)', color: 'var(--color-text)', backgroundColor: 'var(--color-surface)' }}
               >
                 <option value="one-time">One Time</option>
                 <option value="daily">Daily</option>
@@ -478,63 +477,62 @@ const AssignTask: React.FC = () => {
             </div>
 
             <div className="md:col-span-2">
-              <label className={`block text-sm font-medium mb-2 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
+              <label className={`block text-sm font-semibold mb-3 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
                 Description
               </label>
               <textarea
                 name="description"
                 value={formData.description}
                 onChange={handleInputChange}
-                rows={3}
-                className={`w-full px-2 py-2 border rounded-lg focus:ring-2 transition-colors ${
+                rows={4}
+                className={`w-full px-4 py-3 border-2 rounded-xl focus:ring-2 focus:ring-[var(--color-primary)]/30 focus:border-[var(--color-primary)] transition-all resize-none ${
                   isDark
-                    ? 'bg-gray-700 border-gray-600 text-gray-100 focus:ring-blue-400 focus:border-blue-400'
-                    : 'border-gray-300 focus:ring-blue-500 focus:border-blue-500'
+                    ? 'bg-gray-700 border-gray-600 text-gray-100'
+                    : 'border-gray-300 bg-white text-gray-900'
                 }`}
-                style={{ borderColor: 'var(--color-border)', color: 'var(--color-text)', backgroundColor: 'var(--color-surface)' }}
                 placeholder="Enter task description"
               />
             </div>
           </div>
         </div>
 
-        {/* User Assignment and Priority */}
-        <div className={`p-4 rounded-xl border shadow-sm ${isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'}`}>
+        {/* User Assignment and Priority Section */}
+        <div className={`p-6 rounded-2xl border shadow-sm ${isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'}`}>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
             {/* User Assignment Dropdown */}
             <div>
-              <h2 className={`text-lg font-semibold mb-4 flex items-center ${isDark ? 'text-gray-100' : 'text-gray-900'}`}>
-                <Users className="mr-2" size={16} style={{ color: 'var(--color-primary)' }} />
+              <h2 className={`text-lg font-bold mb-4 flex items-center gap-3 ${isDark ? 'text-gray-100' : 'text-gray-900'}`}>
+                <div className="p-2 rounded-lg" style={{ backgroundColor: 'var(--color-primary)10' }}>
+                  <Users size={20} style={{ color: 'var(--color-primary)' }} />
+                </div>
                 Assign To Users *
               </h2>
 
               <div className="relative" ref={dropdownRef}>
                 <button
                   type="button"
-                  className={`w-full flex justify-between items-center px-4 py-2 border rounded-lg text-left transition-colors ${
+                  className={`w-full flex justify-between items-center px-4 py-3 border-2 rounded-xl transition-all font-medium ${
                     isDark
-                      ? 'bg-gray-700 border-gray-600 text-gray-100 focus:ring-blue-400 focus:border-blue-400'
-                      : 'border-gray-300 focus:ring-blue-500 focus:border-blue-500'
-                  }`}
-                  style={{ borderColor: 'var(--color-border)', color: 'var(--color-text)', backgroundColor: 'var(--color-surface)' }}
+                      ? 'bg-gray-700 border-gray-600 text-gray-100'
+                      : 'border-gray-300 bg-white text-gray-900'
+                  } hover:border-[var(--color-primary)]/50`}
                   onClick={() => setShowUserDropdown(!showUserDropdown)}
                 >
                   {formData.assignedTo.length > 0 ? (
-                    <span className="text-sm">
+                    <span className="text-sm font-medium">
                       {getSelectedUsers().map(u => u.username).join(', ')}
                     </span>
                   ) : (
                     <span className="text-sm text-gray-500">Select users...</span>
                   )}
-                  <ChevronDown size={18} className={`${showUserDropdown ? 'transform rotate-180' : ''}`} />
+                  <ChevronDown size={20} className={`transition-transform ${showUserDropdown ? 'rotate-180' : ''}`} style={{ color: 'var(--color-primary)' }} />
                 </button>
 
                 {showUserDropdown && (
                   <div
-                    className={`absolute z-10 w-full mt-2 rounded-md shadow-lg border ${
+                    className={`absolute z-10 w-full mt-2 rounded-xl shadow-lg border ${
                       isDark ? 'bg-gray-700 border-gray-600' : 'bg-white border-gray-200'
                     }`}
-                    style={{ borderColor: 'var(--color-border)', backgroundColor: 'var(--color-surface)' }}
                   >
                     <div className="p-2">
                       <div className="relative">
@@ -625,20 +623,21 @@ const AssignTask: React.FC = () => {
 
             {/* Priority */}
             <div>
-              <label className={`block text-lg font-semibold mb-4 flex items-center ${isDark ? 'text-gray-100' : 'text-gray-900'}`}>
-                <Clock className="mr-2" size={16} style={{ color: 'var(--color-primary)' }} />
+              <label className={`block text-lg font-bold mb-4 flex items-center gap-3 ${isDark ? 'text-gray-100' : 'text-gray-900'}`}>
+                <div className="p-2 rounded-lg" style={{ backgroundColor: 'var(--color-primary)10' }}>
+                  <Clock size={20} style={{ color: 'var(--color-primary)' }} />
+                </div>
                 Priority
               </label>
               <select
                 name="priority"
                 value={formData.priority}
                 onChange={handleInputChange}
-                className={`w-full px-2 py-2 border rounded-lg focus:ring-2 transition-colors ${
+                className={`w-full px-4 py-3 border-2 rounded-xl focus:ring-2 focus:ring-[var(--color-primary)]/30 focus:border-[var(--color-primary)] transition-all font-medium ${
                   isDark
-                    ? 'bg-gray-700 border-gray-600 text-gray-100 focus:ring-blue-400 focus:border-blue-400'
-                    : 'border-gray-300 focus:ring-blue-500 focus:border-blue-500'
+                    ? 'bg-gray-700 border-gray-600 text-gray-100'
+                    : 'border-gray-300 bg-white text-gray-900'
                 }`}
-                style={{ borderColor: 'var(--color-border)', color: 'var(--color-text)', backgroundColor: 'var(--color-surface)' }}
               >
                 <option value="normal">Normal</option>
                 <option value="high">High</option>
@@ -647,44 +646,85 @@ const AssignTask: React.FC = () => {
           </div>
         </div>
 
+        {/* Selected Users Display */}
+        {formData.assignedTo.length > 0 && (
+          <div
+            className="p-4 rounded-2xl border-2"
+            style={{
+              backgroundColor: 'var(--color-primary)10',
+              borderColor: 'var(--color-primary)30'
+            }}
+          >
+            <p className={`text-sm font-bold mb-3 flex items-center gap-2`} style={{ color: 'var(--color-primary)' }}>
+              <Users size={18} />
+              Selected Users ({formData.assignedTo.length}):
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {getSelectedUsers().map(selectedUser => (
+                <span
+                  key={selectedUser._id}
+                  className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold text-white transition-all hover:shadow-md"
+                  style={{
+                    backgroundColor: 'var(--color-primary)',
+                  }}
+                >
+                  {selectedUser.username}
+                  <button
+                    type="button"
+                    onClick={() => handleUserSelection(selectedUser._id)}
+                    className="hover:scale-110 transition-transform"
+                    style={{ color: 'white' }}
+                  >
+                    <X size={16} />
+                  </button>
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* Weekly Days Selection */}
         {isWeekly && (
-          <div className={`p-4 rounded-xl border shadow-sm ${isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'}`}>
-            <h2 className={`text-lg font-semibold mb-4 ${isDark ? 'text-gray-100' : 'text-gray-900'}`}>
+          <div className={`p-6 rounded-2xl border shadow-sm ${isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'}`}>
+            <h2 className={`text-lg font-bold mb-6 flex items-center gap-3 ${isDark ? 'text-gray-100' : 'text-gray-900'}`}>
+              <div className="p-2 rounded-lg" style={{ backgroundColor: 'var(--color-primary)10' }}>
+                <Calendar size={20} style={{ color: 'var(--color-primary)' }} />
+              </div>
               Select Weekly Days *
             </h2>
 
             <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3">
               {weekDays.map(day => (
-                <div
+                <button
                   key={day.value}
-                  className={`p-2 rounded-lg border-2 cursor-pointer transition-all text-center ${
+                  type="button"
+                  onClick={() => handleWeekDaySelection(day.value)}
+                  className={`p-4 rounded-2xl border-2 cursor-pointer transition-all font-semibold text-center hover:shadow-md ${
                     formData.weeklyDays.includes(day.value)
-                      ? 'border-blue-500 bg-blue-50'
-                      : (isDark ? 'border-gray-600 bg-gray-700 hover:border-gray-500' : 'border-gray-200 bg-gray-50 hover:border-gray-300')
+                      ? 'text-white shadow-lg scale-105'
+                      : (isDark ? 'border-gray-600 bg-gray-700 text-gray-100 hover:border-gray-500' : 'border-gray-300 bg-gray-50 text-gray-900 hover:border-gray-400')
                   }`}
                   style={{
-                    borderColor: formData.weeklyDays.includes(day.value) ? 'var(--color-primary)' : 'var(--color-border)',
-                    backgroundColor: formData.weeklyDays.includes(day.value) ? 'var(--color-primary-light)' : 'var(--color-surface)'
+                    borderColor: formData.weeklyDays.includes(day.value) ? 'var(--color-primary)' : undefined,
+                    backgroundColor: formData.weeklyDays.includes(day.value) ? 'var(--color-primary)' : undefined,
                   }}
-                  onClick={() => handleWeekDaySelection(day.value)}
                 >
-                  <div className={`text-md font-medium ${isDark ? 'text-gray-100' : 'text-gray-900'}`}>{day.short}</div>
-                  <div className={`text-xs mt-1 ${isDark ? 'text-gray-300' : 'text-gray-600'}`}>{day.label}</div>
-                </div>
+                  <div className="text-lg font-bold">{day.short}</div>
+                  <div className="text-xs mt-1 opacity-80">{day.label}</div>
+                </button>
               ))}
             </div>
 
             {formData.weeklyDays.length > 0 && (
               <div
-                className="mt-2 p-2 rounded-lg border"
+                className="mt-4 p-3 rounded-xl border-l-4"
                 style={{
-                  backgroundColor: 'var(--color-primary-light)',
-                  borderColor: 'var(--color-primary-border)'
+                  backgroundColor: 'var(--color-primary)10',
+                  borderColor: 'var(--color-primary)'
                 }}
               >
-                <p className={`text-xs font-medium`} style={{ color: 'var(--color-primary-dark)' }}>
-                  Selected Days: {formData.weeklyDays.map(dayValue =>
+                <p className="text-sm font-semibold" style={{ color: 'var(--color-primary)' }}>
+                  ✓ Selected Days: {formData.weeklyDays.map(dayValue =>
                     weekDays.find(d => d.value === dayValue)?.label
                   ).join(', ')}
                 </p>
@@ -695,9 +735,11 @@ const AssignTask: React.FC = () => {
 
         {/* Monthly Day Selection */}
         {isMonthly && (
-          <div className={`p-6 rounded-xl border shadow-sm ${isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'}`}>
-            <h2 className={`text-xl font-semibold mb-6 flex items-center ${isDark ? 'text-gray-100' : 'text-gray-900'}`}>
-              <Hash className="mr-2" size={20} style={{ color: 'var(--color-primary)' }} />
+          <div className={`p-6 rounded-2xl border shadow-sm ${isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'}`}>
+            <h2 className={`text-lg font-bold mb-6 flex items-center gap-3 ${isDark ? 'text-gray-100' : 'text-gray-900'}`}>
+              <div className="p-2 rounded-lg" style={{ backgroundColor: 'var(--color-primary)10' }}>
+                <Hash size={20} style={{ color: 'var(--color-primary)' }} />
+              </div>
               Monthly Day Selection *
             </h2>
 
@@ -711,10 +753,10 @@ const AssignTask: React.FC = () => {
                   value={formData.monthlyDay}
                   onChange={handleInputChange}
                   required
-                  className={`w-full px-4 py-3 border rounded-lg focus:ring-2 transition-colors ${
+                  className={`w-full px-4 py-3 border-2 rounded-xl focus:ring-2 focus:ring-[var(--color-primary)]/30 focus:border-[var(--color-primary)] transition-all font-medium ${
                     isDark
-                      ? 'bg-gray-700 border-gray-600 text-gray-100 focus:ring-blue-400 focus:border-blue-400'
-                      : 'border-gray-300 focus:ring-blue-500 focus:border-blue-500'
+                      ? 'bg-gray-700 border-gray-600 text-gray-100'
+                      : 'border-gray-300 bg-white text-gray-900'
                   }`}
                   style={{ borderColor: 'var(--color-border)', color: 'var(--color-text)', backgroundColor: 'var(--color-surface)' }}
                 >
@@ -1019,68 +1061,106 @@ const AssignTask: React.FC = () => {
         />
 
         {/* Attachments */}
-        <div className={`p-4 rounded-xl border shadow-sm ${isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'}`}>
-          <h2 className={`text-lg font-semibold mb-4 flex items-center ${isDark ? 'text-gray-100' : 'text-gray-900'}`}>
-            <Paperclip className="mr-2" size={16} style={{ color: 'var(--color-primary)' }} />
+        <div className={`p-6 rounded-2xl border shadow-sm ${isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'}`}>
+          <h2 className={`text-lg font-bold mb-6 flex items-center gap-3 ${isDark ? 'text-gray-100' : 'text-gray-900'}`}>
+            <div className="p-2 rounded-lg" style={{ backgroundColor: 'var(--color-primary)10' }}>
+              <Paperclip size={20} style={{ color: 'var(--color-primary)' }} />
+            </div>
             Attachments (Max 10MB per file)
           </h2>
-          <div>
-            <input
-              type="file"
-              multiple
-              onChange={handleFileChange}
-              className={`block w-full text-sm file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold ${
-                isDark
-                  ? 'file:bg-blue-500 file:text-white hover:file:bg-blue-600'
-                  : 'file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100'
-              }`}
-              style={{
-                '--file-bg-color': isDark ? 'var(--color-primary)' : 'var(--color-primary-light)',
-                '--file-text-color': isDark ? 'var(--color-background)' : 'var(--color-primary-dark)',
-                '--file-hover-bg-color': isDark ? 'var(--color-primary-dark)' : 'var(--color-primary-hover)',
-              } as React.CSSProperties}
-            />
-            <p className={`mt-2 text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
-              Supported formats: PDF, images (JPG, PNG), documents (DOCX, XLSX), voice recordings. Max 10MB per file.
-            </p>
-          </div>
-          <div className="mt-4 space-y-2">
-            {attachments.length > 0 && (
-              <p className={`text-sm font-medium ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
-                Selected files ({attachments.length}):
-              </p>
-            )}
-            {attachments.map((file, index) => (
-              <div
-                key={index}
-                className={`flex items-center justify-between p-2 rounded-lg ${
-                  isAudioFile(file) 
-                    ? (isDark ? 'bg-blue-900/30 border border-blue-700' : 'bg-blue-50 border border-blue-200')
-                    : (isDark ? 'bg-gray-700' : 'bg-gray-100')
-                }`}
-              >
-                <span className={`text-sm ${isDark ? 'text-gray-200' : 'text-gray-800'} flex items-center`}>
-                  {isAudioFile(file) && (
-                    <span className="mr-2 flex items-center">
-                      <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse mr-1"></div>
-                      <Volume2 size={14} className="text-blue-500 mr-1" />
-                      <span className="text-xs font-medium text-blue-600">Voice Recording</span>
-                    </span>
-                  )}
-                  <span className={isAudioFile(file) ? 'ml-2' : ''}>
-                    {file.name} ({(file.size / 1024 / 1024).toFixed(2)} MB)
-                  </span>
-                </span>
-                <button
-                  type="button"
-                  onClick={() => removeAttachment(index)}
-                  className={`text-red-500 hover:text-red-700`}
-                >
-                  <X size={16} />
-                </button>
+          
+          {/* Centered File Upload Area */}
+          <div className="flex flex-col items-center justify-center">
+            <div className={`w-full max-w-md p-8 rounded-2xl border-2 border-dashed text-center transition-all ${
+              isDark 
+                ? 'border-gray-600 bg-gray-700/50 hover:border-gray-500 hover:bg-gray-700' 
+                : 'border-gray-300 bg-gray-50 hover:border-[var(--color-primary)] hover:bg-[var(--color-primary)]/5'
+            }`}>
+              <div className="mb-4">
+                <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl" style={{ backgroundColor: 'var(--color-primary)10' }}>
+                  <Paperclip size={24} style={{ color: 'var(--color-primary)' }} />
+                </div>
               </div>
-            ))}
+              
+              <input
+                type="file"
+                multiple
+                onChange={handleFileChange}
+                className={`hidden`}
+                id="file-input"
+              />
+              
+              <label htmlFor="file-input" className="cursor-pointer">
+                <p className={`text-sm font-semibold mb-1 ${isDark ? 'text-gray-100' : 'text-gray-900'}`}>
+                  Click to upload files
+                </p>
+                <p className={`text-xs mb-4 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+                  or drag and drop
+                </p>
+              </label>
+              
+              <p className={`text-xs leading-relaxed ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                Supported formats: PDF, images (JPG, PNG), documents (DOCX, XLSX), voice recordings. Max 10MB per file.
+              </p>
+            </div>
           </div>
+
+          {/* Selected Files List */}
+          {attachments.length > 0 && (
+            <div className="mt-6">
+              <div className="flex items-center gap-2 mb-4">
+                <CheckSquare size={18} style={{ color: 'var(--color-primary)' }} />
+                <p className={`text-sm font-bold ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
+                  Selected files ({attachments.length}):
+                </p>
+              </div>
+              <div className="space-y-2">
+                {attachments.map((file, index) => (
+                  <div
+                    key={index}
+                    className={`flex items-center justify-between p-3 rounded-xl border transition-all ${
+                      isAudioFile(file) 
+                        ? (isDark ? 'bg-blue-900/20 border-blue-700/50' : 'bg-blue-50/80 border-blue-200')
+                        : (isDark ? 'bg-gray-700/50 border-gray-600' : 'bg-gray-50/80 border-gray-200')
+                    }`}
+                  >
+                    <span className={`text-sm font-medium flex items-center gap-2 ${isDark ? 'text-gray-200' : 'text-gray-800'}`}>
+                      {isAudioFile(file) && (
+                        <span className="flex items-center gap-1">
+                          <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
+                          <Volume2 size={16} className="text-blue-500" />
+                          <span className="text-xs font-semibold text-blue-600">Voice</span>
+                        </span>
+                      )}
+                      <span className={isAudioFile(file) ? '' : ''}>
+                        {file.name}
+                      </span>
+                      <span className={`text-xs font-medium ml-auto ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+                        {(file.size / 1024 / 1024).toFixed(2)} MB
+                      </span>
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => removeAttachment(index)}
+                      className="p-1 rounded-lg transition-all hover:scale-110"
+                      style={{ color: 'var(--color-error)', backgroundColor: 'var(--color-error)/10' }}
+                    >
+                      <X size={18} />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* No files message */}
+          {attachments.length === 0 && (
+            <div className="mt-4 p-4 rounded-xl border border-dashed" style={{ borderColor: 'var(--color-primary)30', backgroundColor: 'var(--color-primary)05' }}>
+              <p className={`text-sm text-center font-medium ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                No file chosen
+              </p>
+            </div>
+          )}
         </div>
 
         {/* Submit Buttons */}

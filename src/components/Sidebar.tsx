@@ -140,7 +140,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
           willChange: 'width',
           backfaceVisibility: 'hidden',
           perspective: 1000,
-          boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03)'
+          boxShadow: '0 10px 30px -10px rgba(0, 0, 0, 0.1)'
         }}
       >
         {/* Header */}
@@ -150,8 +150,8 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
           {/* Desktop toggle button */}
           <button
             onClick={toggleCollapse}
-            className="hidden lg:flex p-1 rounded-md hover:bg-opacity-10 transition-colors duration-200"
-            style={{ color: 'var(--color-text)' }}
+            className="hidden lg:flex p-1.5 rounded-lg hover:bg-opacity-10 transition-all duration-200 hover:scale-110"
+            style={{ color: 'var(--color-primary)' }}
           >
             {isCollapsed ? <ChevronRight size={18} /> : <ChevronLeft size={18} />}
           </button>
@@ -159,16 +159,16 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
           {/* Mobile close button */}
           <button
             onClick={onClose}
-            className="p-1 rounded-md lg:hidden hover:bg-opacity-10"
+            className="p-1.5 rounded-lg lg:hidden hover:scale-110 transition-all duration-200"
             style={{ backgroundColor: 'var(--color-primary)', color: 'var(--color-background)' }}
           >
-            <X size={14} />
+            <X size={16} />
           </button>
         </div>
 
         {/* Navigation */}
-        <nav className="mt-4">
-          <div className="px-2 space-y-2">
+        <nav className="mt-4 pb-32">
+          <div className="px-2 space-y-1">
             {filteredMenuItems.map((item) => (
               <Tooltip
                 key={item.path}
@@ -179,10 +179,10 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
                   to={item.path}
                   onClick={onClose}
                   className={({ isActive }) =>
-                    `flex items-center px-3 py-3 text-sm font-semibold rounded-xl transition-all duration-300 ${
+                    `flex items-center px-3 py-3 text-sm font-semibold rounded-xl transition-all duration-300 group ${
                       isActive
-                        ? 'text-white shadow-lg'
-                        : 'hover:scale-105'
+                        ? 'text-white shadow-lg scale-105'
+                        : 'hover:scale-105 hover:translate-x-1'
                     } ${isCollapsed ? 'justify-center' : ''}`
                   }
                   style={({ isActive }) => ({
@@ -190,27 +190,22 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
                       ? 'linear-gradient(135deg, var(--color-primary), var(--color-secondary))'
                       : 'transparent',
                     color: isActive ? 'white' : 'var(--color-text)',
-                    ':hover': !isActive ? {
-                      backgroundColor: 'var(--color-surface)',
-                      transform: 'translateX(4px)'
-                    } : {}
                   })}
                   onMouseEnter={(e) => {
                     if (!e.currentTarget.classList.contains('text-white')) {
-                      e.currentTarget.style.backgroundColor = 'rgba(99, 102, 241, 0.08)';
-                      e.currentTarget.style.transform = 'translateX(4px)';
+                      e.currentTarget.style.backgroundColor = 'rgba(99, 102, 241, 0.1)';
+                      e.currentTarget.style.borderRadius = '0.75rem';
                     }
                   }}
                   onMouseLeave={(e) => {
                     if (!e.currentTarget.classList.contains('text-white')) {
                       e.currentTarget.style.backgroundColor = 'transparent';
-                      e.currentTarget.style.transform = 'translateX(0)';
                     }
                   }}
                 >
-                  <item.icon size={16} className={isCollapsed ? '' : 'mr-3'} />
+                  <item.icon size={18} className={isCollapsed ? '' : 'mr-3'} />
                   {!isCollapsed && (
-                    <span className="transition-opacity duration-200">
+                    <span className="transition-opacity duration-200 flex-1">
                       {item.label}
                     </span>
                   )}
@@ -221,27 +216,27 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
         </nav>
 
         {/* User Profile */}
-        <div className="absolute bottom-0 left-0 right-0 p-4 border-t backdrop-blur-sm" style={{ borderColor: 'var(--color-border)', backgroundColor: 'rgba(var(--color-surface-rgb, 255, 255, 255), 0.5)' }}>
+        <div className="absolute bottom-0 left-0 right-0 p-4 border-t backdrop-blur-md" style={{ borderColor: 'var(--color-border)', background: 'linear-gradient(180deg, rgba(255,255,255,0.3) 0%, rgba(var(--color-surface-rgb, 255, 255, 255), 0.6) 100%)' }}>
           {isCollapsed ? (
             <Tooltip content={`${user?.username} (${user?.role})`} show={true}>
               <div className="flex justify-center">
-                <div className="relative w-10 h-10 rounded-xl flex items-center justify-center text-white text-sm font-bold shadow-lg" style={{ background: 'linear-gradient(135deg, var(--color-primary), var(--color-accent))' }}>
+                <div className="relative w-10 h-10 rounded-xl flex items-center justify-center text-white text-sm font-bold shadow-lg hover:scale-110 transition-transform" style={{ background: 'linear-gradient(135deg, var(--color-primary), var(--color-accent))' }}>
                   {user?.username?.charAt(0).toUpperCase()}
-                  <div className="absolute inset-0 rounded-xl bg-gradient-to-br from-white/20 to-transparent"></div>
+                  <div className="absolute inset-0 rounded-xl bg-gradient-to-br from-white/30 to-transparent"></div>
                 </div>
               </div>
             </Tooltip>
           ) : (
-            <div className="flex items-center transition-opacity duration-200">
+            <div className="flex items-center transition-all duration-200 group hover:scale-105">
               <div className="relative w-10 h-10 rounded-xl flex items-center justify-center text-white text-sm font-bold shadow-lg" style={{ background: 'linear-gradient(135deg, var(--color-primary), var(--color-accent))' }}>
                 {user?.username?.charAt(0).toUpperCase()}
-                <div className="absolute inset-0 rounded-xl bg-gradient-to-br from-white/20 to-transparent"></div>
+                <div className="absolute inset-0 rounded-xl bg-gradient-to-br from-white/30 to-transparent"></div>
               </div>
-              <div className="ml-3">
-                <p className="text-sm font-semibold" style={{ color: 'var(--color-text)' }}>
+              <div className="ml-3 min-w-0">
+                <p className="text-sm font-semibold truncate" style={{ color: 'var(--color-text)' }}>
                   {user?.username}
                 </p>
-                <p className="text-xs font-medium capitalize" style={{ color: 'var(--color-textSecondary)' }}>
+                <p className="text-xs font-medium capitalize truncate" style={{ color: 'var(--color-textSecondary)' }}>
                   {user?.role}
                 </p>
               </div>

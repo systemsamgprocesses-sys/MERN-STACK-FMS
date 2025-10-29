@@ -1,8 +1,141 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Poppins:wght@400;500;600;700;800;900&display=swap');
+
+* {
+  font-family: 'Inter', sans-serif;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: 'Poppins', sans-serif;
+  font-weight: 700;
+}
+
+/* Modern Color Scheme */
+:root {
+  /* Primary Colors - Modern Teal/Green */
+  --color-primary: #10b981;
+  --color-primary-light: #d1fae5;
+  --color-primary-dark: #059669;
+  --color-secondary: #14b8a6;
+  --color-accent: #06b6d4;
+  
+  /* Status Colors */
+  --color-success: #10b981;
+  --color-warning: #f59e0b;
+  --color-error: #ef4444;
+  
+  /* Background Colors */
+  --color-background: #f8fafc;
+  --color-surface: #ffffff;
+  --color-border: #e2e8f0;
+  --color-text: #1e293b;
+  --color-textSecondary: #64748b;
+}
+
+[data-theme="dark"] {
+  --color-background: #0f172a;
+  --color-surface: #1e293b;
+  --color-border: #334155;
+  --color-text: #f1f5f9;
+  --color-textSecondary: #cbd5e1;
+}
+
+/* Modern Spinner Animation */
+@keyframes modernSpin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes pulseScale {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.1);
+    opacity: 0.8;
+  }
+}
+
+.spinner {
+  width: 40px;
+  height: 40px;
+  border: 3px solid rgba(16, 185, 129, 0.2);
+  border-top: 3px solid #10b981;
+  border-right: 3px solid #14b8a6;
+  border-radius: 50%;
+  animation: modernSpin 1s linear infinite;
+}
+
+.spinner-pulse {
+  width: 40px;
+  height: 40px;
+  border: 3px solid rgba(16, 185, 129, 0.2);
+  border-radius: 50%;
+  animation: pulseScale 1.5s ease-in-out infinite;
+  background: linear-gradient(45deg, transparent 30%, #10b981 50%, transparent 70%);
+  background-size: 200% 200%;
+}
+
+.spinner-dots {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  justify-content: center;
+}
+
+.spinner-dots span {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #10b981, #14b8a6);
+  animation: pulseScale 1.4s ease-in-out infinite;
+}
+
+.spinner-dots span:nth-child(2) {
+  animation-delay: 0.2s;
+}
+
+.spinner-dots span:nth-child(3) {
+  animation-delay: 0.4s;
+}
+
+/* Progress Bar */
+.progress-bar-container {
+  height: 6px;
+  background-color: var(--color-border);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.progress-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #10b981, #14b8a6);
+  border-radius: 999px;
+  transition: width 500ms ease-out;
+  box-shadow: 0 0 8px rgba(16, 185, 129, 0.5);
+}
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 @layer base {
+  :root {
+    --border: 0 0% 89%;
+    --background: 0 0% 100%;
+    --foreground: 0 0% 3%;
+  }
+
+  .dark {
+    --border: 0 0% 14%;
+    --background: 0 0% 3%;
+    --foreground: 0 0% 98%;
+  }
+
   * {
     @apply border-border;
   }
@@ -58,75 +191,118 @@
 
 /* Print Styles */
 @media print {
-  @page {
-    size: A4;
-    margin: 1cm;
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+    color-adjust: exact !important;
   }
 
   body {
-    background: white !important;
-    color: black !important;
+    background-color: white;
+    color: black;
+    margin: 0;
+    padding: 20px;
   }
 
-  /* Hide navigation and interactive elements */
-  header, nav, button, .no-print {
-    display: none !important;
-  }
-
-  /* Ensure cards and tables are visible */
-  .bg-\[--color-surface\], .bg-\[--color-background\] {
-    background: white !important;
-    border: 1px solid #e5e7eb !important;
-  }
-
-  /* Ensure text is readable */
-  * {
-    color: black !important;
-  }
-
-  /* Page breaks */
-  .page-break {
+  .print-container {
     page-break-after: always;
   }
 
-  /* Avoid breaking inside cards */
-  .card, .rounded-xl {
-    page-break-inside: avoid;
+  .print-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 30px;
+    border-bottom: 3px solid #10b981;
+    padding-bottom: 15px;
   }
 
-  /* Table styles for print */
-  table {
+  .print-logo {
+    height: 40px;
+    width: 40px;
+    object-fit: contain;
+  }
+
+  .print-title {
+    font-size: 24px;
+    font-weight: 700;
+    color: #1e293b;
+    margin: 0;
+  }
+
+  .print-subtitle {
+    font-size: 12px;
+    color: #64748b;
+    margin: 5px 0 0 0;
+  }
+
+  .print-table {
     width: 100%;
     border-collapse: collapse;
+    margin-top: 20px;
   }
 
-  th, td {
-    border: 1px solid #ddd;
-    padding: 8px;
+  .print-table th {
+    background-color: #10b981;
+    color: white;
+    padding: 12px;
     text-align: left;
+    font-weight: 600;
+    border: 1px solid #10b981;
   }
 
-  th {
-    background-color: #f3f4f6 !important;
-    font-weight: bold;
+  .print-table td {
+    padding: 10px 12px;
+    border: 1px solid #e2e8f0;
   }
 
-  /* Logo and branding */
-  .print-logo {
-    max-width: 150px;
-    margin-bottom: 20px;
+  .print-badge {
+    display: inline-block;
+    padding: 4px 12px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 600;
   }
 
-  /* Headers */
-  h1, h2, h3 {
-    color: #1f2937 !important;
-    margin-top: 10px;
-    margin-bottom: 5px;
+  .print-footer {
+    margin-top: 30px;
+    border-top: 1px solid #e2e8f0;
+    padding-top: 15px;
+    text-align: center;
+    font-size: 11px;
+    color: #64748b;
   }
 
-  /* Ensure charts are visible if possible */
-  svg {
-    max-width: 100%;
+  .no-print {
+    display: none !important;
+  }
+
+  @page {
+    margin: 0.5in;
+    size: A4;
+  }
+}
+
+/* Additional responsive utilities */
+@layer components {
+  .glass-effect {
+    @apply backdrop-blur-md bg-white bg-opacity-80;
+  }
+
+  .gradient-primary {
+    @apply bg-gradient-to-r from-indigo-600 to-purple-600;
+  }
+
+  .gradient-accent {
+    @apply bg-gradient-to-r from-pink-500 to-rose-500;
+  }
+
+  .shadow-elevated {
+    @apply shadow-2xl;
+  }
+
+  .card-hover {
+    @apply transition-all duration-300 hover:shadow-xl hover:scale-105;
   }
 }
 

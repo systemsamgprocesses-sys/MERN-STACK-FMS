@@ -112,6 +112,17 @@ function mapTaskStatus(status) {
   return statusMap[status?.trim()] || 'pending';
 }
 
+// Map completion score based on "On time or not?" field
+function mapCompletionScore(onTimeStatus) {
+  const trimmed = onTimeStatus?.trim().toLowerCase();
+  if (trimmed === 'on time') {
+    return 100;
+  } else if (trimmed === 'not on time') {
+    return 0;
+  }
+  return null; // No score for other cases (like empty, pending tasks, etc.)
+}
+
 // Hash password
 async function hashPassword(password) {
   const salt = await bcryptjs.genSalt(10);
@@ -119,7 +130,7 @@ async function hashPassword(password) {
 }
 
 // Create user if not exists
-async function getOrCreateUser(username, userMap, createdUsers) {
+async function getOrCreateUser(username, phoneNumber, userMap, createdUsers) {
   // Check if already in userMap
   if (userMap[username]) {
     return userMap[username];
@@ -146,6 +157,7 @@ async function getOrCreateUser(username, userMap, createdUsers) {
     const newUser = new User({
       username,
       email,
+      phoneNumber: phoneNumber || '',
       password: hashedPassword,
       name: username,
       role: 'employee',
@@ -163,7 +175,7 @@ async function getOrCreateUser(username, userMap, createdUsers) {
     });
     
     await newUser.save();
-    console.log(`👤 Created missing user: ${username}`);
+    console.log(`👤 Created missing user: ${username} (Phone: ${phoneNumber || 'N/A'})`);
     
     const userId = newUser._id.toString();
     userMap[username] = userId;
@@ -219,6 +231,7 @@ export async function importTasksFromCSV(csvFilePath) {
         // Parse and map data
         const assignedByName = row['GIVEN BY']?.trim();
         const assignedToName = row['GIVEN TO']?.trim();
+        const phoneNumber = row['Numbers']?.trim() || '';
         const dueDate = parseDate(row['PLANNED DATE']);
         const completedDate = parseDate(row['completed on']);
         
@@ -228,8 +241,8 @@ export async function importTasksFromCSV(csvFilePath) {
         }
         
         // Get or create users
-        const assignedBy = await getOrCreateUser(assignedByName, userMap, createdUsers);
-        const assignedTo = await getOrCreateUser(assignedToName, userMap, createdUsers);
+        const assignedBy = await getOrCreateUser(assignedByName, '', userMap, createdUsers);
+        const assignedTo = await getOrCreateUser(assignedToName, phoneNumber, userMap, createdUsers);
         
         if (!assignedBy || !assignedTo) {
           console.warn(`⚠️  Skipping task ${row['Task Id']} - could not create/find users`);
@@ -253,7 +266,11 @@ export async function importTasksFromCSV(csvFilePath) {
           completionRemarks: row['Reason for Revision']?.trim() || '',
           revisionCount: parseInt(row['Revision Count']) || 0,
           isActive: true,
-          attachments: []
+          attachments: [],
+          completionScore: mapCompletionScore(row['On time or not?']),
+          // Store additional metadata from CSV
+          department: row['DEPARTMENT']?.trim() || '',
+          phoneNumber: phoneNumber
         };
         
         taskDocuments.push({
@@ -288,7 +305,8 @@ export async function importTasksFromCSV(csvFilePath) {
         } else {
           const newTask = new Task(taskItem.data);
           await newTask.save();
-          console.log(`✅ INSERTED: ${taskItem.taskId} - ${taskItem.data.title} (${taskItem.data.status})`);
+          const scoreInfo = newTask.completionScore !== null ? ` (Score: ${newTask.completionScore})` : '';
+          console.log(`✅ INSERTED: ${taskItem.taskId} - ${taskItem.data.title} (${taskItem.data.status})${scoreInfo}`);
           inserted++;
         }
       } catch (error) {
@@ -326,7 +344,7 @@ export async function importTasksFromCSV(csvFilePath) {
 }
 
 // Run if called directly
-const csvPath = path.join(__dirname, '../../assets/tasks.csv');
+const csvPath = path.join(__dirname, '../../assets/Management Dashboard _ Delegation System - MASTER.csv');
 
 console.log(`\n📁 CSV File Path: ${csvPath}`);
 

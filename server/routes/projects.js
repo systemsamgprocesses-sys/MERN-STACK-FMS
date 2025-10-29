@@ -273,7 +273,7 @@ router.get('/pending-fms-tasks/:userId', async (req, res) => {
     const { userId } = req.params;
     
     const projects = await Project.find({ status: { $in: ['Active', 'In Progress'] } })
-      .populate('tasks.who', 'username email')
+      .populate('tasks.who', 'username email phoneNumber')
       .populate('fmsId', 'fmsName');
     
     const userPendingTasks = [];

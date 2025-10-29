@@ -11,7 +11,8 @@
     "start": "node ./server/index.js",
     "import-fms": "node ./server/utils/importFMSData.js",
     "import-tasks": "node ./server/utils/importTasksData.js",
-    "seed-users": "node ./server/utils/seedUsers.js"
+    "seed-users": "node ./server/utils/seedUsers.js",
+    "update-phone-numbers": "node ./server/utils/updateUserPhoneNumbers.js"
   },
   "dependencies": {
     "axios": "^1.6.7",

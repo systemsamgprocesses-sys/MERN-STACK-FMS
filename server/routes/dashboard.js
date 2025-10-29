@@ -16,7 +16,7 @@ router.get('/analytics', async (req, res) => {
     const userObjectId = userId ? new mongoose.Types.ObjectId(userId) : null;
     const now = new Date();
 
-    let baseQuery = { isActive: true };
+    let baseQuery = {};
     if (isAdmin !== 'true' && userObjectId) {
       baseQuery.assignedTo = userObjectId;
     }
@@ -771,9 +771,7 @@ router.get('/counts', async (req, res) => {
     // Convert userId to ObjectId for proper MongoDB queries
     const userObjectId = userId ? new mongoose.Types.ObjectId(userId) : null;
 
-    let baseQuery = { isActive: true };
-    let dateRangeQuery = {};
-
+    let baseQuery = {};
     if (isAdmin !== 'true' && userObjectId) {
       baseQuery.assignedTo = userObjectId;
     }
@@ -1009,36 +1007,35 @@ router.get('/counts', async (req, res) => {
       yearlyPending,
       yearlyCompleted
     ] = await Promise.all([
-      Task.countDocuments({ ...baseQuery, ...dateRangeQuery }),
-      Task.countDocuments({ ...baseQuery, ...dateRangeQuery, status: 'pending' }),
-      Task.countDocuments({ ...baseQuery, ...dateRangeQuery, status: 'completed' }),
+      Task.countDocuments({ ...baseQuery }),
+      Task.countDocuments({ ...baseQuery, status: 'pending' }),
+      Task.countDocuments({ ...baseQuery, status: 'completed' }),
       Task.countDocuments({
         ...baseQuery,
-        ...dateRangeQuery,
         status: { $ne: 'completed' },
         $or: [
           { dueDate: { $lt: new Date() } },
           { nextDueDate: { $lt: new Date() } }
         ]
       }),
-      Task.countDocuments({ ...baseQuery, ...dateRangeQuery, taskType: 'one-time' }),
-      Task.countDocuments({ ...baseQuery, ...dateRangeQuery, taskType: 'one-time', status: 'pending' }),
-      Task.countDocuments({ ...baseQuery, ...dateRangeQuery, taskType: 'one-time', status: 'completed' }),
-      Task.countDocuments({ ...baseQuery, ...dateRangeQuery, taskType: 'daily' }),
-      Task.countDocuments({ ...baseQuery, ...dateRangeQuery, taskType: 'daily', status: 'pending' }),
-      Task.countDocuments({ ...baseQuery, ...dateRangeQuery, taskType: 'daily', status: 'completed' }),
-      Task.countDocuments({ ...baseQuery, ...dateRangeQuery, taskType: 'weekly' }),
-      Task.countDocuments({ ...baseQuery, ...dateRangeQuery, taskType: 'weekly', status: 'pending' }),
-      Task.countDocuments({ ...baseQuery, ...dateRangeQuery, taskType: 'weekly', status: 'completed' }),
-      Task.countDocuments({ ...baseQuery, ...dateRangeQuery, taskType: 'monthly' }),
-      Task.countDocuments({ ...baseQuery, ...dateRangeQuery, taskType: 'monthly', status: 'pending' }),
-      Task.countDocuments({ ...baseQuery, ...dateRangeQuery, taskType: 'monthly', status: 'completed' }),
-      Task.countDocuments({ ...baseQuery, ...dateRangeQuery, taskType: 'quarterly' }),
-      Task.countDocuments({ ...baseQuery, ...dateRangeQuery, taskType: 'quarterly', status: 'pending' }),
-      Task.countDocuments({ ...baseQuery, ...dateRangeQuery, taskType: 'quarterly', status: 'completed' }),
-      Task.countDocuments({ ...baseQuery, ...dateRangeQuery, taskType: 'yearly' }),
-      Task.countDocuments({ ...baseQuery, ...dateRangeQuery, taskType: 'yearly', status: 'pending' }),
-      Task.countDocuments({ ...baseQuery, ...dateRangeQuery, taskType: 'yearly', status: 'completed' })
+      Task.countDocuments({ ...baseQuery, taskType: 'one-time' }),
+      Task.countDocuments({ ...baseQuery, taskType: 'one-time', status: 'pending' }),
+      Task.countDocuments({ ...baseQuery, taskType: 'one-time', status: 'completed' }),
+      Task.countDocuments({ ...baseQuery, taskType: 'daily' }),
+      Task.countDocuments({ ...baseQuery, taskType: 'daily', status: 'pending' }),
+      Task.countDocuments({ ...baseQuery, taskType: 'daily', status: 'completed' }),
+      Task.countDocuments({ ...baseQuery, taskType: 'weekly' }),
+      Task.countDocuments({ ...baseQuery, taskType: 'weekly', status: 'pending' }),
+      Task.countDocuments({ ...baseQuery, taskType: 'weekly', status: 'completed' }),
+      Task.countDocuments({ ...baseQuery, taskType: 'monthly' }),
+      Task.countDocuments({ ...baseQuery, taskType: 'monthly', status: 'pending' }),
+      Task.countDocuments({ ...baseQuery, taskType: 'monthly', status: 'completed' }),
+      Task.countDocuments({ ...baseQuery, taskType: 'quarterly' }),
+      Task.countDocuments({ ...baseQuery, taskType: 'quarterly', status: 'pending' }),
+      Task.countDocuments({ ...baseQuery, taskType: 'quarterly', status: 'completed' }),
+      Task.countDocuments({ ...baseQuery, taskType: 'yearly' }),
+      Task.countDocuments({ ...baseQuery, taskType: 'yearly', status: 'pending' }),
+      Task.countDocuments({ ...baseQuery, taskType: 'yearly', status: 'completed' })
     ]);
 
     // Get previous period data for trend calculation

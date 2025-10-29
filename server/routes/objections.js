@@ -40,9 +40,9 @@ router.post('/task/:taskId', async (req, res) => {
     await task.save();
 
     const populatedTask = await Task.findById(taskId)
-      .populate('assignedTo', 'username email')
-      .populate('assignedBy', 'username email')
-      .populate('objections.requestedBy', 'username email');
+      .populate('assignedTo', 'username email phoneNumber')
+      .populate('assignedBy', 'username email phoneNumber')
+      .populate('objections.requestedBy', 'username email phoneNumber');
 
     res.json({ 
       success: true, 
@@ -104,10 +104,10 @@ router.post('/task/:taskId/objection/:objectionIndex/respond', async (req, res) 
     await task.save();
 
     const populatedTask = await Task.findById(taskId)
-      .populate('assignedBy', 'username email')
-      .populate('assignedTo', 'username email')
-      .populate('objections.requestedBy', 'username email')
-      .populate('objections.approvedBy', 'username email');
+      .populate('assignedBy', 'username email phoneNumber')
+      .populate('assignedTo', 'username email phoneNumber')
+      .populate('objections.requestedBy', 'username email phoneNumber')
+      .populate('objections.approvedBy', 'username email phoneNumber');
 
     res.json({ 
       success: true, 
@@ -160,8 +160,8 @@ router.post('/fms/:projectId/task/:taskIndex', async (req, res) => {
     await project.save();
 
     const populatedProject = await Project.findById(projectId)
-      .populate('tasks.who', 'username email')
-      .populate('tasks.objections.requestedBy', 'username email');
+      .populate('tasks.who', 'username email phoneNumber')
+      .populate('tasks.objections.requestedBy', 'username email phoneNumber');
 
     res.json({ 
       success: true, 
@@ -185,16 +185,16 @@ router.get('/pending/:userId', async (req, res) => {
       'objections.status': 'pending',
       isActive: true
     })
-      .populate('assignedTo', 'username email')
-      .populate('assignedBy', 'username email')
-      .populate('objections.requestedBy', 'username email');
+      .populate('assignedTo', 'username email phoneNumber')
+      .populate('assignedBy', 'username email phoneNumber')
+      .populate('objections.requestedBy', 'username email phoneNumber');
 
     // Get FMS projects where user is the first step assignee
     const fmsProjects = await Project.find({
       'tasks.objections.status': 'pending'
     })
-      .populate('tasks.who', 'username email')
-      .populate('tasks.objections.requestedBy', 'username email');
+      .populate('tasks.who', 'username email phoneNumber')
+      .populate('tasks.objections.requestedBy', 'username email phoneNumber');
 
     const fmsObjections = fmsProjects.filter(project => {
       // Check if user is in the first step's 'who' array
@@ -263,9 +263,9 @@ router.post('/fms/:projectId/task/:taskIndex/objection/:objectionIndex/respond',
     await project.save();
 
     const populatedProject = await Project.findById(projectId)
-      .populate('tasks.who', 'username email')
-      .populate('tasks.objections.requestedBy', 'username email')
-      .populate('tasks.objections.approvedBy', 'username email');
+      .populate('tasks.who', 'username email phoneNumber')
+      .populate('tasks.objections.requestedBy', 'username email phoneNumber')
+      .populate('tasks.objections.approvedBy', 'username email phoneNumber');
 
     res.json({ 
       success: true, 

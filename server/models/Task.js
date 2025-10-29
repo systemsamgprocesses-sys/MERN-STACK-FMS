@@ -181,7 +181,10 @@ const taskSchema = new mongoose.Schema({
     weeklyDays: [Number],
     monthlyDay: Number,
     yearlyDuration: Number
-  }
+  },
+  // Additional metadata from CSV import
+  phoneNumber: String,    // Mobile number of assigned user
+  department: String      // Department from CSV
 }, {
   timestamps: true
 });

@@ -24,7 +24,7 @@ interface Task {
   taskType: string;
   assignedBy: { username: string; email: string };
   assignedTo: {
-    _id: string; username: string; email: string
+    _id: string; username: string; email: string; phoneNumber?: string
   };
   dueDate?: string;
   priority: string;
@@ -898,7 +898,7 @@ const PendingTasks: React.FC = () => {
                       </div>
                       <div>
                         <div className="text-sm text-[--color-text]">{task.assignedTo.username}</div>
-                        <div className="text-sm text-[--color-textSecondary]">{task.assignedTo.email}</div>
+                        <div className="text-sm text-[--color-textSecondary]">{task.phoneNumber || task.assignedTo.phoneNumber || task.assignedTo.email}</div>
                       </div>
                     </div>
                   </td>

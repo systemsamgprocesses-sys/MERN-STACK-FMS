@@ -25,7 +25,7 @@ interface Task {
   taskType: string;
   assignedBy: { username: string; email: string };
   assignedTo: {
-    _id: string; username: string; email: string 
+    _id: string; username: string; email: string; phoneNumber?: string 
 };
   dueDate: string;
   priority: string;
@@ -490,7 +490,7 @@ const PendingRecurringTasks: React.FC = () => {
                   {isAdmin && (
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm text-[var(--color-text)]">{task.assignedTo.username}</div>
-                      <div className="text-sm text-[var(--color-textSecondary)]">{task.assignedTo.email}</div>
+                      <div className="text-sm text-[var(--color-textSecondary)]">{task.phoneNumber || task.assignedTo.phoneNumber || task.assignedTo.email}</div>
                     </td>
                   )}
                   {/* Attachments in Table View */}

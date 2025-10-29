@@ -6,6 +6,7 @@ interface User {
   _id: string;
   username: string;
   email: string;
+  phoneNumber?: string;
 }
 
 // interface Task {

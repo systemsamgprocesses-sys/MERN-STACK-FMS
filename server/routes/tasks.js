@@ -214,7 +214,7 @@ router.get('/', async (req, res) => {
       endDate
     } = req.query;
 
-    const query = { isActive: true };
+    const query = {};
 
     // Handle multiple task types (comma-separated)
     if (taskType) {
@@ -242,8 +242,8 @@ router.get('/', async (req, res) => {
     }
 
     const tasks = await Task.find(query)
-      .populate('assignedBy', 'username email')
-      .populate('assignedTo', 'username email')
+      .populate('assignedBy', 'username email phoneNumber')
+      .populate('assignedTo', 'username email phoneNumber')
       .sort({ dueDate: 1, createdAt: -1 })
       .limit(limit * 1)
       .skip((page - 1) * limit);
@@ -275,8 +275,8 @@ router.get('/pending', async (req, res) => {
     if (taskType) query.taskType = taskType; // Filter by task type if provided
 
     const tasks = await Task.find(query)
-      .populate('assignedBy', 'username email')
-      .populate('assignedTo', 'username email')
+      .populate('assignedBy', 'username email phoneNumber')
+      .populate('assignedTo', 'username email phoneNumber')
       .sort({ dueDate: 1 }); // Sort by due date ascending
 
     res.json(tasks);
@@ -305,8 +305,8 @@ router.get('/pending-recurring', async (req, res) => {
     if (userId) query.assignedTo = userId; // Filter by assigned user if provided
 
     const tasks = await Task.find(query)
-      .populate('assignedBy', 'username email')
-      .populate('assignedTo', 'username email')
+      .populate('assignedBy', 'username email phoneNumber')
+      .populate('assignedTo', 'username email phoneNumber')
       .sort({ dueDate: 1 }); // Sort by due date ascending
 
     res.json(tasks);
@@ -442,8 +442,8 @@ router.post('/', async (req, res) => {
     await task.save();
 
     const populatedTask = await Task.findById(task._id)
-      .populate('assignedBy', 'username email')
-      .populate('assignedTo', 'username email');
+      .populate('assignedBy', 'username email phoneNumber')
+      .populate('assignedTo', 'username email phoneNumber');
 
     res.status(201).json(populatedTask);
   } catch (error) {
@@ -459,8 +459,8 @@ router.put('/:id', async (req, res) => {
       req.params.id,
       req.body, // req.body should now correctly include the attachments array if it's being updated
       { new: true } // Return the updated document
-    ).populate('assignedBy', 'username email')
-     .populate('assignedTo', 'username email');
+    ).populate('assignedBy', 'username email phoneNumber')
+     .populate('assignedTo', 'username email phoneNumber');
 
     if (!task) {
       return res.status(404).json({ message: 'Task not found' });
@@ -548,8 +548,8 @@ router.post('/:id/complete', async (req, res) => {
     await task.save();
 
     const populatedTask = await Task.findById(task._id)
-      .populate('assignedBy', 'username email')
-      .populate('assignedTo', 'username email');
+      .populate('assignedBy', 'username email phoneNumber')
+      .populate('assignedTo', 'username email phoneNumber');
 
     res.json(populatedTask);
   } catch (error) {
@@ -584,8 +584,8 @@ router.post('/:id/revise', async (req, res) => {
     await task.save();
 
     const populatedTask = await Task.findById(task._id)
-      .populate('assignedBy', 'username email')
-      .populate('assignedTo', 'username email')
+      .populate('assignedBy', 'username email phoneNumber')
+      .populate('assignedTo', 'username email phoneNumber')
       .populate('revisions.revisedBy', 'username email');
 
     res.json(populatedTask);

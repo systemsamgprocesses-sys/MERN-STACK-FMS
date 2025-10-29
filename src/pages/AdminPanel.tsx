@@ -19,6 +19,7 @@ interface User {
   };
   isActive: boolean;
   createdAt: string;
+  phoneNumber?: string; // Added phoneNumber to the interface
 }
 
 interface TaskCompletionSettings {
@@ -606,7 +607,7 @@ const AdminPanel: React.FC = () => {
                     <td className="py-3 px-4">
                       <div>
                         <p className="font-medium text-sm" style={{ color: 'var(--color-text)' }}>{user.username}</p>
-                        <p className="text-xs" style={{ color: 'var(--color-textSecondary)' }}>{user.email}</p>
+                        <p className="text-xs" style={{ color: 'var(--color-textSecondary)' }}>{user.phoneNumber || user.email}</p>
                       </div>
                     </td>
                     <td className="py-3 px-4">
@@ -697,7 +698,7 @@ const AdminPanel: React.FC = () => {
                         {user.username}
                       </p>
                       <p className="text-xs truncate" style={{ color: 'var(--color-textSecondary)' }}>
-                        {user.email}
+                        {user.phoneNumber || user.email}
                       </p>
                     </div>
                   </div>

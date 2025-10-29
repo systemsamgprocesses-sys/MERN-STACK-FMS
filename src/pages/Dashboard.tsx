@@ -159,7 +159,7 @@ const Dashboard: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [selectedMonth, setSelectedMonth] = useState(new Date());
   const [showMonthFilter, setShowMonthFilter] = useState(false);
-  const [viewMode, setViewMode] = useState<'current' | 'all-time'>('current');
+  const [viewMode, setViewMode] = useState<'current' | 'all-time'>('all-time');
 
   // New states for team member selection
   const [selectedTeamMember, setSelectedTeamMember] = useState<string>('all');
@@ -658,23 +658,7 @@ const Dashboard: React.FC = () => {
             {/* Controls Section */}
             <div className="flex flex-col sm:flex-row gap-3 w-full lg:w-auto">
               {/* View Mode Toggle */}
-              <div className="flex gap-2 p-1.5 rounded-2xl border" style={{ backgroundColor: 'var(--color-surface)', borderColor: 'var(--color-border)' }}>
-                <button
-                  onClick={() => {
-                    setViewMode('current');
-                    setSelectedMonth(new Date());
-                  }}
-                  className={`px-4 py-2.5 rounded-xl font-semibold transition-all duration-300 text-sm ${
-                    viewMode === 'current'
-                      ? 'text-white shadow-lg'
-                      : 'text-[var(--color-textSecondary)] hover:text-[var(--color-text)]'
-                  }`}
-                  style={{
-                    backgroundColor: viewMode === 'current' ? 'var(--color-primary)' : 'transparent'
-                  }}
-                >
-                  This Month
-                </button>
+              <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
                 <button
                   onClick={() => setViewMode('all-time')}
                   className={`px-4 py-2.5 rounded-xl font-semibold transition-all duration-300 text-sm ${
@@ -689,58 +673,6 @@ const Dashboard: React.FC = () => {
                   All Time
                 </button>
               </div>
-
-              {/* Month Filter */}
-              {viewMode === 'current' && (
-                <div className="relative z-10">
-                  <button
-                    onClick={() => setShowMonthFilter(!showMonthFilter)}
-                    className="flex items-center gap-2 px-4 py-2.5 rounded-2xl border font-semibold transition-all duration-200 text-sm w-full sm:w-auto"
-                    style={{ 
-                      backgroundColor: 'var(--color-surface)',
-                      borderColor: 'var(--color-border)',
-                      color: 'var(--color-text)'
-                    }}
-                  >
-                    <Calendar size={18} />
-                    <span className="hidden sm:inline">
-                      {isSameMonth(selectedMonth, new Date()) && isSameYear(selectedMonth, new Date())
-                        ? 'Current'
-                        : format(selectedMonth, 'MMM yyyy')}
-                    </span>
-                    <ChevronDown size={18} className={`transition-transform ${showMonthFilter ? 'rotate-180' : ''}`} />
-                  </button>
-                  
-                  {showMonthFilter && (
-                    <div className="absolute top-full mt-3 right-0 w-56 z-50 rounded-2xl shadow-2xl border overflow-hidden" style={{ backgroundColor: 'var(--color-surface)', borderColor: 'var(--color-border)' }}>
-                      <div className="p-3 max-h-72 overflow-y-auto">
-                        {monthOptions.map((date, index) => {
-                          const isSelected = format(date, 'yyyy-MM') === format(selectedMonth, 'yyyy-MM');
-                          return (
-                            <button
-                              key={index}
-                              onClick={() => {
-                                setSelectedMonth(date);
-                                setShowMonthFilter(false);
-                              }}
-                              className={`w-full text-left px-4 py-2.5 rounded-lg transition-all duration-200 font-medium ${
-                                isSelected
-                                  ? 'text-white shadow-lg'
-                                  : 'hover:bg-[var(--color-background)] text-[var(--color-text)]'
-                              }`}
-                              style={{
-                                backgroundColor: isSelected ? 'var(--color-primary)' : 'transparent'
-                              }}
-                            >
-                              {format(date, 'MMMM yyyy')}
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )}
             </div>
           </div>
 
@@ -749,7 +681,7 @@ const Dashboard: React.FC = () => {
             <h2 className="text-2xl font-bold text-[var(--color-text)] mb-6">Quick Stats</h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
               <div 
-                onClick={() => navigate('/master-tasks')} 
+                onClick={() => navigate('/master-tasks', { replace: true })} 
                 className="group cursor-pointer"
               >
                 <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-blue-500 to-blue-600 dark:from-blue-950 dark:to-blue-900 p-6 border border-blue-300 dark:border-blue-800 hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
@@ -765,7 +697,7 @@ const Dashboard: React.FC = () => {
               </div>
 
               <div 
-                onClick={() => navigate('/pending-tasks')} 
+                onClick={() => navigate('/pending-tasks', { replace: true })} 
                 className="group cursor-pointer"
               >
                 <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-yellow-500 to-yellow-600 dark:from-yellow-950 dark:to-yellow-900 p-6 border border-yellow-300 dark:border-yellow-800 hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
@@ -786,7 +718,7 @@ const Dashboard: React.FC = () => {
               </div>
 
               <div 
-                onClick={() => navigate('/master-tasks?status=completed')} 
+                onClick={() => navigate('/master-tasks?status=completed', { replace: true })} 
                 className="group cursor-pointer"
               >
                 <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-green-500 to-green-600 dark:from-green-950 dark:to-green-900 p-6 border border-green-300 dark:border-green-800 hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
@@ -807,7 +739,7 @@ const Dashboard: React.FC = () => {
               </div>
 
               <div 
-                onClick={() => navigate('/pending-tasks')} 
+                onClick={() => navigate('/pending-tasks', { replace: true })} 
                 className="group cursor-pointer"
               >
                 <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-red-500 to-red-600 dark:from-red-950 dark:to-red-900 p-6 border border-red-300 dark:border-red-800 hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
@@ -855,7 +787,7 @@ const Dashboard: React.FC = () => {
                 <p className="text-sm text-[var(--color-textSecondary)]">Overview of ongoing FMS projects</p>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
-                <div onClick={() => navigate('/view-fms-progress')} className="cursor-pointer">
+                <div onClick={() => navigate('/fms-progress', { replace: true })} className="cursor-pointer">
                   <MetricCard
                     icon={<Activity size={24} className="text-indigo-600" />}
                     title="Active Projects"
@@ -864,7 +796,7 @@ const Dashboard: React.FC = () => {
                     percentage={100}
                   />
                 </div>
-                <div onClick={() => navigate('/view-fms-progress')} className="cursor-pointer">
+                <div onClick={() => navigate('/fms-progress', { replace: true })} className="cursor-pointer">
                   <MetricCard
                     icon={<CheckCircle size={24} className="text-green-600" />}
                     title="Completed Projects"
@@ -873,7 +805,7 @@ const Dashboard: React.FC = () => {
                     percentage={((dashboardData?.fmsMetrics?.completedProjects || 0) / ((dashboardData?.fmsMetrics?.totalProjects || 1))) * 100}
                   />
                 </div>
-                <div onClick={() => navigate('/view-fms-progress')} className="cursor-pointer">
+                <div onClick={() => navigate('/fms-progress', { replace: true })} className="cursor-pointer">
                   <MetricCard
                     icon={<Clock size={24} className="text-amber-600" />}
                     title="Pending Tasks"
@@ -882,7 +814,7 @@ const Dashboard: React.FC = () => {
                     percentage={((dashboardData?.fmsMetrics?.pendingFMSTasks || 0) / (dashboardData?.fmsMetrics?.totalFMSTasks || 1)) * 100}
                   />
                 </div>
-                <div onClick={() => navigate('/view-fms-progress')} className="cursor-pointer">
+                <div onClick={() => navigate('/fms-progress', { replace: true })} className="cursor-pointer">
                   <MetricCard
                     icon={<Target size={24} className="text-purple-600" />}
                     title="Avg Progress"
@@ -1381,7 +1313,7 @@ const Dashboard: React.FC = () => {
           </div>
         </div>
       </div>
-    </div >
+    </div>
   );
 };
 

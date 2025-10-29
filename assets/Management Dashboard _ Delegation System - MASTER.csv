@@ -1,0 +1,1173 @@
+Task Id,GIVEN BY,GIVEN TO,GIVEN TO USER ID,TASK DESCRIPTION,HOW TO DO- TUTORIAL LINKS (OPTIONAL),DEPARTMENT,TASK FREQUENCY,PLANNED DATE,Task Status,Revision Date,Reason for Revision,completed on,Revision Status,Revision 1 Date,Revision 2 Date,Revision Status & Log,Revision Count,Scoring Impact,On time or not?,,Numbers
+AT-1,Karan Malhotra,AJAY KUMAR JHA,Ajay Kumar Jha,Provisional Balance Sheet,,ACCOUNTS,One Time Only,01/09/2025,Completed,,,01/09/2025,,,,,,,On Time,,6280758617
+AT-2,Karan Malhotra,AJAY KUMAR JHA,Ajay Kumar Jha,Final Balance Sheet,,ACCOUNTS,One Time Only,30/09/2025,Completed,,,23/10/2025,,,,,,,Not On Time,,6280758617
+AT-3,Karan Malhotra,PRATIBHA BEDI,Pratibha Bedi,Final Balance Sheet,,ACCOUNTS,One Time Only,30/09/2025,Completed,,,23/10/2025,,,,,,,Not On Time,,9888624803
+AT-4,Karan Malhotra,AJAY KUMAR JHA,Ajay Kumar Jha,GST Return- R1 (Sales),GST Return- R1,ACCOUNTS,MONTHLY,09/09/2025,Completed,,,24/10/2025,,,,,,,Not On Time,,6280758617
+AT-5,Karan Malhotra,AJAY KUMAR JHA,Ajay Kumar Jha,GST Return- R1 (Sales),GST Return- R1,ACCOUNTS,MONTHLY,09/10/2025,Completed,,,15/10/2025,,,,,,,Not On Time,,6280758617
+AT-6,Karan Malhotra,AJAY KUMAR JHA,Ajay Kumar Jha,GST Return- R1 (Sales),GST Return- R1,ACCOUNTS,MONTHLY,09/11/2025,Pending,,,,,,,,,,,,6280758617
+AT-7,Karan Malhotra,AJAY KUMAR JHA,Ajay Kumar Jha,GST Return- R1 (Sales),GST Return- R1,ACCOUNTS,MONTHLY,09/12/2025,Pending,,,,,,,,,,,,6280758617
+AT-8,Karan Malhotra,AJAY KUMAR JHA,Ajay Kumar Jha,GST Return- R1 (Sales),GST Return- R1,ACCOUNTS,MONTHLY,09/01/2026,Pending,,,,,,,,,,,,6280758617
+AT-9,Karan Malhotra,AJAY KUMAR JHA,Ajay Kumar Jha,GST Return- R1 (Sales),GST Return- R1,ACCOUNTS,MONTHLY,09/02/2026,Pending,,,,,,,,,,,,6280758617
+AT-10,Karan Malhotra,AJAY KUMAR JHA,Ajay Kumar Jha,GST Return- R1 (Sales),GST Return- R1,ACCOUNTS,MONTHLY,09/03/2026,Pending,,,,,,,,,,,,6280758617
+AT-11,Karan Malhotra,AJAY KUMAR JHA,Ajay Kumar Jha,GST Return- R1 (Sales),GST Return- R1,ACCOUNTS,MONTHLY,09/04/2026,Pending,,,,,,,,,,,,6280758617
+AT-12,Karan Malhotra,AJAY KUMAR JHA,Ajay Kumar Jha,GST Return- R1 (Sales),GST Return- R1,ACCOUNTS,MONTHLY,09/05/2026,Pending,,,,,,,,,,,,6280758617
+AT-13,Karan Malhotra,AJAY KUMAR JHA,Ajay Kumar Jha,GST Return- R1 (Sales),GST Return- R1,ACCOUNTS,MONTHLY,09/06/2026,Pending,,,,,,,,,,,,6280758617
+AT-14,Karan Malhotra,AJAY KUMAR JHA,Ajay Kumar Jha,GST Return- R1 (Sales),GST Return- R1,ACCOUNTS,MONTHLY,09/07/2026,Pending,,,,,,,,,,,,6280758617
+AT-15,Karan Malhotra,AJAY KUMAR JHA,Ajay Kumar Jha,GST Return- R1 (Sales),GST Return- R1,ACCOUNTS,MONTHLY,09/08/2026,Pending,,,,,,,,,,,,6280758617
+AT-16,Karan Malhotra,AJAY KUMAR JHA,Ajay Kumar Jha,GST Return- R2 (Purchase),GST- R2,ACCOUNTS,MONTHLY,30/09/2025,Completed,,,15/10/2025,,,,,,,Not On Time,,6280758617
+AT-17,Karan Malhotra,AJAY KUMAR JHA,Ajay Kumar Jha,GST Return- R2 (Purchase),GST- R2,ACCOUNTS,MONTHLY,30/10/2025,Pending,,,,,,,,,,,,6280758617
+AT-18,Karan Malhotra,AJAY KUMAR JHA,Ajay Kumar Jha,GST Return- R2 (Purchase),GST- R2,ACCOUNTS,MONTHLY,30/11/2025,Pending,,,,,,,,,,,,6280758617
+AT-19,Karan Malhotra,AJAY KUMAR JHA,Ajay Kumar Jha,GST Return- R2 (Purchase),GST- R2,ACCOUNTS,MONTHLY,30/12/2025,Pending,,,,,,,,,,,,6280758617
+AT-20,Karan Malhotra,AJAY KUMAR JHA,Ajay Kumar Jha,GST Return- R2 (Purchase),GST- R2,ACCOUNTS,MONTHLY,30/01/2026,Pending,,,,,,,,,,,,6280758617
+AT-21,Karan Malhotra,AJAY KUMAR JHA,Ajay Kumar Jha,GST Return- R2 (Purchase),GST- R2,ACCOUNTS,MONTHLY,02/03/2026,Pending,,,,,,,,,,,,6280758617
+AT-22,Karan Malhotra,AJAY KUMAR JHA,Ajay Kumar Jha,GST Return- R2 (Purchase),GST- R2,ACCOUNTS,MONTHLY,02/04/2026,Pending,,,,,,,,,,,,6280758617
+AT-23,Karan Malhotra,AJAY KUMAR JHA,Ajay Kumar Jha,GST Return- R2 (Purchase),GST- R2,ACCOUNTS,MONTHLY,02/05/2026,Pending,,,,,,,,,,,,6280758617
+AT-24,Karan Malhotra,AJAY KUMAR JHA,Ajay Kumar Jha,GST Return- R2 (Purchase),GST- R2,ACCOUNTS,MONTHLY,02/06/2026,Pending,,,,,,,,,,,,6280758617
+AT-25,Karan Malhotra,AJAY KUMAR JHA,Ajay Kumar Jha,GST Return- R2 (Purchase),GST- R2,ACCOUNTS,MONTHLY,02/07/2026,Pending,,,,,,,,,,,,6280758617
+AT-26,Karan Malhotra,AJAY KUMAR JHA,Ajay Kumar Jha,GST Return- R2 (Purchase),GST- R2,ACCOUNTS,MONTHLY,02/08/2026,Pending,,,,,,,,,,,,6280758617
+AT-27,Karan Malhotra,AJAY KUMAR JHA,Ajay Kumar Jha,GST Return- R2 (Purchase),GST- R2,ACCOUNTS,MONTHLY,02/09/2026,Pending,,,,,,,,,,,,6280758617
+AT-28,Karan Malhotra,AJAY KUMAR JHA,Ajay Kumar Jha,GST Return- 9-C,GST- 9C,ACCOUNTS,One Time Only,31/12/2025,Pending,,,,,,,,,,,,6280758617
+AT-29,Karan Malhotra,AJAY KUMAR JHA,Ajay Kumar Jha,GST Return- 3-B,GST Return- 3B,ACCOUNTS,MONTHLY,19/09/2025,Completed,,,,,,,,,,On Time,,6280758617
+AT-30,Karan Malhotra,AJAY KUMAR JHA,Ajay Kumar Jha,GST Return- 3-B,GST Return- 3B,ACCOUNTS,MONTHLY,19/10/2025,Terminated,,,,,,,,,,,,6280758617
+AT-31,Karan Malhotra,AJAY KUMAR JHA,Ajay Kumar Jha,GST Return- 3-B,GST Return- 3B,ACCOUNTS,MONTHLY,19/11/2025,Pending,,,,,,,,,,,,6280758617
+AT-32,Karan Malhotra,AJAY KUMAR JHA,Ajay Kumar Jha,GST Return- 3-B,GST Return- 3B,ACCOUNTS,MONTHLY,19/12/2025,Pending,,,,,,,,,,,,6280758617
+AT-33,Karan Malhotra,AJAY KUMAR JHA,Ajay Kumar Jha,GST Return- 3-B,GST Return- 3B,ACCOUNTS,MONTHLY,19/01/2026,Pending,,,,,,,,,,,,6280758617
+AT-34,Karan Malhotra,AJAY KUMAR JHA,Ajay Kumar Jha,GST Return- 3-B,GST Return- 3B,ACCOUNTS,MONTHLY,19/02/2026,Pending,,,,,,,,,,,,6280758617
+AT-35,Karan Malhotra,AJAY KUMAR JHA,Ajay Kumar Jha,GST Return- 3-B,GST Return- 3B,ACCOUNTS,MONTHLY,19/03/2026,Pending,,,,,,,,,,,,6280758617
+AT-36,Karan Malhotra,AJAY KUMAR JHA,Ajay Kumar Jha,GST Return- 3-B,GST Return- 3B,ACCOUNTS,MONTHLY,19/04/2026,Pending,,,,,,,,,,,,6280758617
+AT-37,Karan Malhotra,AJAY KUMAR JHA,Ajay Kumar Jha,GST Return- 3-B,GST Return- 3B,ACCOUNTS,MONTHLY,19/05/2026,Pending,,,,,,,,,,,,6280758617
+AT-38,Karan Malhotra,AJAY KUMAR JHA,Ajay Kumar Jha,GST Return- 3-B,GST Return- 3B,ACCOUNTS,MONTHLY,19/06/2026,Pending,,,,,,,,,,,,6280758617
+AT-39,Karan Malhotra,AJAY KUMAR JHA,Ajay Kumar Jha,GST Return- 3-B,GST Return- 3B,ACCOUNTS,MONTHLY,19/07/2026,Pending,,,,,,,,,,,,6280758617
+AT-40,Karan Malhotra,AJAY KUMAR JHA,Ajay Kumar Jha,GST Return- 3-B,GST Return- 3B,ACCOUNTS,MONTHLY,19/08/2026,Pending,,,,,,,,,,,,6280758617
+AT-41,Karan Malhotra,AJAY KUMAR JHA,Ajay Kumar Jha,GST Reconciliation,GST Reconciliation,ACCOUNTS,QUARTERLY,05/09/2025,Completed,,,,,,,,,,On Time,,6280758617
+AT-42,Karan Malhotra,AJAY KUMAR JHA,Ajay Kumar Jha,GST Reconciliation,GST Reconciliation,ACCOUNTS,QUARTERLY,05/12/2025,Pending,,,,,,,,,,,,6280758617
+AT-43,Karan Malhotra,AJAY KUMAR JHA,Ajay Kumar Jha,GST Reconciliation,GST Reconciliation,ACCOUNTS,QUARTERLY,05/03/2026,Pending,,,,,,,,,,,,6280758617
+AT-44,Karan Malhotra,AJAY KUMAR JHA,Ajay Kumar Jha,GST Reconciliation,GST Reconciliation,ACCOUNTS,QUARTERLY,05/06/2026,Pending,,,,,,,,,,,,6280758617
+AT-45,Karan Malhotra,AJAY KUMAR JHA,Ajay Kumar Jha,GST Reconciliation,GST Reconciliation,ACCOUNTS,QUARTERLY,05/09/2026,Pending,,,,,,,,,,,,6280758617
+AT-46,Karan Malhotra,PRATIBHA BEDI,Pratibha Bedi,Sales Book,Sales Book,ACCOUNTS,MONTHLY,09/09/2025,Completed,,,30/09/2025,,,,,,,On Time,,9888624803
+AT-47,Karan Malhotra,PRATIBHA BEDI,Pratibha Bedi,Sales Book,Sales Book,ACCOUNTS,MONTHLY,09/10/2025,Completed,,,11/10/2025,,,,,,,Not On Time,,9888624803
+AT-48,Karan Malhotra,PRATIBHA BEDI,Pratibha Bedi,Sales Book,Sales Book,ACCOUNTS,MONTHLY,09/11/2025,Pending,,,,,,,,,,,,9888624803
+AT-49,Karan Malhotra,PRATIBHA BEDI,Pratibha Bedi,Sales Book,Sales Book,ACCOUNTS,MONTHLY,09/12/2025,Pending,,,,,,,,,,,,9888624803
+AT-50,Karan Malhotra,PRATIBHA BEDI,Pratibha Bedi,Sales Book,Sales Book,ACCOUNTS,MONTHLY,09/01/2026,Pending,,,,,,,,,,,,9888624803
+AT-51,Karan Malhotra,PRATIBHA BEDI,Pratibha Bedi,Sales Book,Sales Book,ACCOUNTS,MONTHLY,09/02/2026,Pending,,,,,,,,,,,,9888624803
+AT-52,Karan Malhotra,PRATIBHA BEDI,Pratibha Bedi,Sales Book,Sales Book,ACCOUNTS,MONTHLY,09/03/2026,Pending,,,,,,,,,,,,9888624803
+AT-53,Karan Malhotra,PRATIBHA BEDI,Pratibha Bedi,Sales Book,Sales Book,ACCOUNTS,MONTHLY,09/04/2026,Pending,,,,,,,,,,,,9888624803
+AT-54,Karan Malhotra,PRATIBHA BEDI,Pratibha Bedi,Sales Book,Sales Book,ACCOUNTS,MONTHLY,09/05/2026,Pending,,,,,,,,,,,,9888624803
+AT-55,Karan Malhotra,PRATIBHA BEDI,Pratibha Bedi,Sales Book,Sales Book,ACCOUNTS,MONTHLY,09/06/2026,Pending,,,,,,,,,,,,9888624803
+AT-56,Karan Malhotra,PRATIBHA BEDI,Pratibha Bedi,Sales Book,Sales Book,ACCOUNTS,MONTHLY,09/07/2026,Pending,,,,,,,,,,,,9888624803
+AT-57,Karan Malhotra,PRATIBHA BEDI,Pratibha Bedi,Sales Book,Sales Book,ACCOUNTS,MONTHLY,09/08/2026,Pending,,,,,,,,,,,,9888624803
+AT-58,Karan Malhotra,AJAY KUMAR JHA,Ajay Kumar Jha,TDS Deposit,TDS Deposit,ACCOUNTS,MONTHLY,07/09/2025,Completed,,,,,,,,,,On Time,,6280758617
+AT-59,Karan Malhotra,AJAY KUMAR JHA,Ajay Kumar Jha,TDS Deposit,TDS Deposit,ACCOUNTS,MONTHLY,07/10/2025,Completed,,,15/10/2025,,,,,,,Not On Time,,6280758617
+AT-60,Karan Malhotra,AJAY KUMAR JHA,Ajay Kumar Jha,TDS Deposit,TDS Deposit,ACCOUNTS,MONTHLY,07/11/2025,Pending,,,,,,,,,,,,6280758617
+AT-61,Karan Malhotra,AJAY KUMAR JHA,Ajay Kumar Jha,TDS Deposit,TDS Deposit,ACCOUNTS,MONTHLY,07/12/2025,Pending,,,,,,,,,,,,6280758617
+AT-62,Karan Malhotra,AJAY KUMAR JHA,Ajay Kumar Jha,TDS Deposit,TDS Deposit,ACCOUNTS,MONTHLY,07/01/2026,Pending,,,,,,,,,,,,6280758617
+AT-63,Karan Malhotra,AJAY KUMAR JHA,Ajay Kumar Jha,TDS Deposit,TDS Deposit,ACCOUNTS,MONTHLY,07/02/2026,Pending,,,,,,,,,,,,6280758617
+AT-64,Karan Malhotra,AJAY KUMAR JHA,Ajay Kumar Jha,TDS Deposit,TDS Deposit,ACCOUNTS,MONTHLY,07/03/2026,Pending,,,,,,,,,,,,6280758617
+AT-65,Karan Malhotra,AJAY KUMAR JHA,Ajay Kumar Jha,TDS Deposit,TDS Deposit,ACCOUNTS,MONTHLY,07/04/2026,Pending,,,,,,,,,,,,6280758617
+AT-66,Karan Malhotra,AJAY KUMAR JHA,Ajay Kumar Jha,TDS Deposit,TDS Deposit,ACCOUNTS,MONTHLY,07/05/2026,Pending,,,,,,,,,,,,6280758617
+AT-67,Karan Malhotra,AJAY KUMAR JHA,Ajay Kumar Jha,TDS Deposit,TDS Deposit,ACCOUNTS,MONTHLY,07/06/2026,Pending,,,,,,,,,,,,6280758617
+AT-68,Karan Malhotra,AJAY KUMAR JHA,Ajay Kumar Jha,TDS Deposit,TDS Deposit,ACCOUNTS,MONTHLY,07/07/2026,Pending,,,,,,,,,,,,6280758617
+AT-69,Karan Malhotra,AJAY KUMAR JHA,Ajay Kumar Jha,TDS Deposit,TDS Deposit,ACCOUNTS,MONTHLY,07/08/2026,Pending,,,,,,,,,,,,6280758617
+AT-70,Karan Malhotra,AJAY KUMAR JHA,Ajay Kumar Jha,TDS Return,TDS Return,ACCOUNTS,QUARTERLY,04/09/2025,Completed,,,,,,,,,,On Time,,6280758617
+AT-71,Karan Malhotra,AJAY KUMAR JHA,Ajay Kumar Jha,TDS Return,TDS Return,ACCOUNTS,QUARTERLY,04/12/2025,Pending,,,,,,,,,,,,6280758617
+AT-72,Karan Malhotra,AJAY KUMAR JHA,Ajay Kumar Jha,TDS Return,TDS Return,ACCOUNTS,QUARTERLY,04/03/2026,Pending,,,,,,,,,,,,6280758617
+AT-73,Karan Malhotra,AJAY KUMAR JHA,Ajay Kumar Jha,TDS Return,TDS Return,ACCOUNTS,QUARTERLY,04/06/2026,Pending,,,,,,,,,,,,6280758617
+AT-74,Karan Malhotra,AJAY KUMAR JHA,Ajay Kumar Jha,TDS Return,TDS Return,ACCOUNTS,QUARTERLY,04/09/2026,Pending,,,,,,,,,,,,6280758617
+AT-75,Karan Malhotra,AJAY KUMAR JHA,Ajay Kumar Jha,Profitability Statement,When asked by MD on Excel Format,ACCOUNTS,One Time Only,08/09/2025,Completed,,,08/09/2025,,,,,,,On Time,,6280758617
+AT-413,Karan Malhotra,GURJEEVAN SINGH,Gurjeevan Singh,Issue Salary Cheques,Issue Salary Cheque,ACCOUNTS,MONTHLY,10/09/2025,Completed,,,10/09/2025,,,,,,,On Time,,9417371882
+AT-414,Karan Malhotra,GURJEEVAN SINGH,Gurjeevan Singh,Issue Salary Cheques,Issue Salary Cheque,ACCOUNTS,MONTHLY,10/10/2025,Completed,,,24/10/2025,,,,,,,Not On Time,,9417371882
+AT-415,Karan Malhotra,GURJEEVAN SINGH,Gurjeevan Singh,Issue Salary Cheques,Issue Salary Cheque,ACCOUNTS,MONTHLY,10/11/2025,Pending,,,,,,,,,,,,9417371882
+AT-416,Karan Malhotra,GURJEEVAN SINGH,Gurjeevan Singh,Issue Salary Cheques,Issue Salary Cheque,ACCOUNTS,MONTHLY,10/12/2025,Pending,,,,,,,,,,,,9417371882
+AT-417,Karan Malhotra,GURJEEVAN SINGH,Gurjeevan Singh,Issue Salary Cheques,Issue Salary Cheque,ACCOUNTS,MONTHLY,10/01/2026,Pending,,,,,,,,,,,,9417371882
+AT-418,Karan Malhotra,GURJEEVAN SINGH,Gurjeevan Singh,Issue Salary Cheques,Issue Salary Cheque,ACCOUNTS,MONTHLY,10/02/2026,Pending,,,,,,,,,,,,9417371882
+AT-419,Karan Malhotra,GURJEEVAN SINGH,Gurjeevan Singh,Issue Salary Cheques,Issue Salary Cheque,ACCOUNTS,MONTHLY,10/03/2026,Pending,,,,,,,,,,,,9417371882
+AT-420,Karan Malhotra,GURJEEVAN SINGH,Gurjeevan Singh,Issue Salary Cheques,Issue Salary Cheque,ACCOUNTS,MONTHLY,10/04/2026,Pending,,,,,,,,,,,,9417371882
+AT-421,Karan Malhotra,GURJEEVAN SINGH,Gurjeevan Singh,Issue Salary Cheques,Issue Salary Cheque,ACCOUNTS,MONTHLY,10/05/2026,Pending,,,,,,,,,,,,9417371882
+AT-422,Karan Malhotra,GURJEEVAN SINGH,Gurjeevan Singh,Issue Salary Cheques,Issue Salary Cheque,ACCOUNTS,MONTHLY,10/06/2026,Pending,,,,,,,,,,,,9417371882
+AT-423,Karan Malhotra,GURJEEVAN SINGH,Gurjeevan Singh,Issue Salary Cheques,Issue Salary Cheque,ACCOUNTS,MONTHLY,10/07/2026,Pending,,,,,,,,,,,,9417371882
+AT-424,Karan Malhotra,GURJEEVAN SINGH,Gurjeevan Singh,Issue Salary Cheques,Issue Salary Cheque,ACCOUNTS,MONTHLY,10/08/2026,Pending,,,,,,,,,,,,9417371882
+AT-425,Karan Malhotra,GURJEEVAN SINGH,Gurjeevan Singh,Issue Salary Cheques,Issue Salary Cheque,ACCOUNTS,MONTHLY,10/09/2026,Pending,,,,,,,,,,,,9417371882
+AT-426,Karan Malhotra,KARAN MALHOTRA,Karan Malhotra,PALM MARINA - Outside wire,,MANAGEMENT,One Time Only,,Pending,,,,,,,,,,,,9878620625
+AT-427,Karan Malhotra,KARAN MALHOTRA,Karan Malhotra,PALM MARINA - Vastu of Projects,,MANAGEMENT,One Time Only,03/10/2025,Pending,03/10/2025,AGAIN CONFIRM BY MD,,,,,"[{""oldDate"":""2025-08-11"",""newDate"":""2025-10-03"",""reason"":""AGAIN CONFIRM BY MD"",""revisedBy"":""EA"",""revisionDate"":""2025-10-01T15:02:36"",""revisionCount"":1,""scoringImpact"":""No""}]",1,No,,,9878620625
+AT-428,Karan Malhotra,KARAN MALHOTRA,Karan Malhotra,ONE AMG - Vastu of Projects,,MANAGEMENT,One Time Only,03/10/2025,Pending,03/10/2025,AGAIN CONFIRM BY MD,,,,,"[{""oldDate"":""2025-08-11"",""newDate"":""2025-10-03"",""reason"":""AGAIN CONFIRM BY MD"",""revisedBy"":""EA"",""revisionDate"":""2025-10-01T15:03:57"",""revisionCount"":1,""scoringImpact"":""No""}]",1,No,,,9878620625
+AT-429,Karan Malhotra,KARAN MALHOTRA,Karan Malhotra,PALM GARDEN - ALL PLANS OR IMAGE Ready,,MANAGEMENT,One Time Only,03/10/2025,Completed,03/10/2025,AGAIN CONFIRM BY MD,,,,,"[{""oldDate"":""2025-08-25"",""newDate"":""2025-10-03"",""reason"":""AGAIN CONFIRM BY MD"",""revisedBy"":""EA"",""revisionDate"":""2025-10-01T15:05:24"",""revisionCount"":1,""scoringImpact"":""No""}]",1,No,On Time,,9878620625
+AT-430,Karan Malhotra,KARAN MALHOTRA,Karan Malhotra,ORDER CHINAWEAR - ALL order done,,MANAGEMENT,One Time Only,03/10/2025,Pending,03/10/2025,AGAIN CONFIRM BY MD,,,,,"[{""oldDate"":""2025-08-14"",""newDate"":""2025-10-03"",""reason"":""AGAIN CONFIRM BY MD"",""revisedBy"":""EA"",""revisionDate"":""2025-10-01T15:07:21"",""revisionCount"":1,""scoringImpact"":""No""}]",1,No,,,9878620625
+AT-431,Karan Malhotra,KARAN MALHOTRA,Karan Malhotra,"ORDER CHINAWEAR - PALM MARINA:- TILES, AIR CONDITION,ENGAGE POP",,MANAGEMENT,One Time Only,03/10/2025,Pending,03/10/2025,AGAIN CONFIRM BY MD,,,,,"[{""oldDate"":""2025-08-14"",""newDate"":""2025-10-03"",""reason"":""AGAIN CONFIRM BY MD"",""revisedBy"":""EA"",""revisionDate"":""2025-10-01T15:08:49"",""revisionCount"":1,""scoringImpact"":""No""}]",1,No,,,9878620625
+AT-432,Karan Malhotra,KARAN MALHOTRA,Karan Malhotra,"ORDER CHINAWEAR - ONE AMG :- TILES, AIR CONDITION,LIFT, MARBALES, ENGAGE POP",,MANAGEMENT,One Time Only,03/10/2025,Pending,03/10/2025,Again confirm by Md,,,,,"[{""oldDate"":""2025-08-14"",""newDate"":""2025-10-03"",""reason"":""Again confirm by Md"",""revisedBy"":""EA"",""revisionDate"":""2025-10-01T15:42:21"",""revisionCount"":1,""scoringImpact"":""No""}]",1,No,,,9878620625
+AT-433,Karan Malhotra,RAJ KALRA,Raj Kalra,FLORENCE - Brochure and Creative,,,One Time Only,,Pending,,,,,,,,,,,,#N/A
+AT-434,Karan Malhotra,RAJ KALRA,Raj Kalra,FLORENCE - Club work,,,One Time Only,,Pending,,,,,,,,,,,,#N/A
+AT-435,Karan Malhotra,RAJ KALRA,Raj Kalra,FLORENCE - Kothi work,,,One Time Only,,Pending,,,,,,,,,,,,#N/A
+AT-436,Karan Malhotra,DEEPAK KUMAR RATRA,Deepak Kumar Ratra,PALM GARDEN - Layout,,LEGAL & LIAISONING,One Time Only,29/08/2025,Completed,,,,,,,,,,On Time,,9888003348
+AT-437,Karan Malhotra,DEEPAK KUMAR RATRA,Deepak Kumar Ratra,PALM GARDEN - PUBLICATION,,LEGAL & LIAISONING,One Time Only,12/09/2025,Completed,,,,,,,,,,On Time,,9888003348
+AT-438,Karan Malhotra,DEEPAK KUMAR RATRA,Deepak Kumar Ratra,PALM GARDEN - Deposite p..,,LEGAL & LIAISONING,One Time Only,10/10/2025,Pending,10/10/2025,Approved by MD,,,,,"[{""oldDate"":""2025-09-30"",""newDate"":""2025-10-10"",""reason"":""Approved by MD"",""revisedBy"":""EA"",""revisionDate"":""2025-10-01T15:37:05"",""revisionCount"":1,""scoringImpact"":""No""}]",1,No,,,9888003348
+AT-439,Karan Malhotra,DEEPAK KUMAR RATRA,Deepak Kumar Ratra,PALM MARINA - Sewerage,,LEGAL & LIAISONING,One Time Only,08/10/2025,Pending,06/10/2025,Approved by karan sir ,,,,,"[{""oldDate"":""2025-09-27"",""newDate"":""2025-10-06"",""reason"":""Approved by karan sir "",""revisedBy"":""EA"",""revisionDate"":""2025-10-01T15:35:58"",""revisionCount"":1,""scoringImpact"":""No""}]",1,No,,,9888003348
+AT-440,Karan Malhotra,DEEPAK KUMAR RATRA,Deepak Kumar Ratra,FLORENCE - EC,,LEGAL & LIAISONING,One Time Only,14/08/2025,Completed,,,,,,,,,,On Time,,9888003348
+AT-442,Karan Malhotra,DEEPAK KUMAR RATRA,Deepak Kumar Ratra,PALM BROADWAY - Date of Approval,,LEGAL & LIAISONING,One Time Only,06/10/2025,Pending,06/10/2025,CRO UNDER PROCESS ,,,,,"[{""oldDate"":""2025-09-03"",""newDate"":""2025-10-06"",""reason"":""CRO UNDER PROCESS "",""revisedBy"":""EA"",""revisionDate"":""2025-10-01T15:47:30"",""revisionCount"":1,""scoringImpact"":""No""}]",1,No,,,9888003348
+AT-443,Karan Malhotra,DEEPAK KUMAR RATRA,Deepak Kumar Ratra,PALM HEIGHTS  - Smaaash,,LEGAL & LIAISONING,One Time Only,,Completed,,,17/10/2025 11:05:45,,,,,,,Not On Time,,9888003348
+AT-444,Karan Malhotra,DEEPAK KUMAR RATRA,Deepak Kumar Ratra,PALM HEIGHTS  - Barbieque company,,LEGAL & LIAISONING,One Time Only,,Completed,,,17/10/2025 11:05:51,,,,,,,Not On Time,,9888003348
+AT-445,Karan Malhotra,DEEPAK KUMAR RATRA,Deepak Kumar Ratra,PALM HEIGHTS  - Bikaner wala,,LEGAL & LIAISONING,One Time Only,,Completed,,,17/10/2025 11:05:54,,,,,,,Not On Time,,9888003348
+AT-446,Karan Malhotra,DEEPAK KUMAR RATRA,Deepak Kumar Ratra,PALM HEIGHTS  - Uncle jacks,,LEGAL & LIAISONING,One Time Only,,Completed,,,17/10/2025 11:05:57,,,,,,,Not On Time,,9888003348
+AT-447,Karan Malhotra,DEEPAK KUMAR RATRA,Deepak Kumar Ratra,PALM HEIGHTS  - Chalu bistro,,LEGAL & LIAISONING,One Time Only,,Completed,,,17/10/2025 11:08:27,,,,,,,Not On Time,,9888003348
+AT-448,Karan Malhotra,DEEPAK KUMAR RATRA,Deepak Kumar Ratra,OTHER WORK - Rasta Sehmatinama,,LEGAL & LIAISONING,One Time Only,30/09/2025,Completed,,,,,,,,,,On Time,,9888003348
+AT-450,Karan Malhotra,DEEPAK KUMAR RATRA,Deepak Kumar Ratra,OTHER WORK - DEV ARORA,,LEGAL & LIAISONING,One Time Only,,HOLD BY MD,,,,,,,,,,,,9888003348
+AT-451,Karan Malhotra,DEEPAK KUMAR RATRA,Deepak Kumar Ratra,OTHER WORK - Record keeping,,LEGAL & LIAISONING,One Time Only,,Completed,,,17/10/2025 11:08:15,,,,,,,Not On Time,,9888003348
+AT-452,Karan Malhotra,GAURAV SODHI,Gaurav Sodhi,PALM GARDEN - Amgeco plaza,,MANAGEMENT,One Time Only,,HOLD BY MD,,,,,,,,,,,,9780600201
+AT-453,Karan Malhotra,GAURAV SODHI,Gaurav Sodhi,PALM GARDEN - UPGRADE ALL PLANS OR IMAGES READY,,MANAGEMENT,One Time Only,25/08/2025,Completed,,,01/10/2025,,,,,,,,,9780600201
+AT-454,Karan Malhotra,GAURAV SODHI,Gaurav Sodhi,PALM GARDEN - Set Target & Plan For Sales Plan & Staffing,,MANAGEMENT,One Time Only,,Completed,,,,,,,,,,,,9780600201
+AT-455,Karan Malhotra,GAURAV SODHI,Gaurav Sodhi,OTHER WORK - Tehsildaar,,MANAGEMENT,One Time Only,19/08/2025,HOLD BY MD,,,,,,,,,,,,9780600201
+AT-456,Karan Malhotra,GAURAV SODHI,Gaurav Sodhi,OTHER WORK - Jassi,,MANAGEMENT,One Time Only,,Pending,,,,,,,,,,,,9780600201
+AT-457,Karan Malhotra,GAURAV SODHI,Gaurav Sodhi,PALM HEIGHTS  - Pind Balluchi,,MANAGEMENT,One Time Only,20/08/2025,Pending,,,,,,,,,,,,9780600201
+AT-458,Karan Malhotra,GAURAV SODHI,Gaurav Sodhi,PALM HEIGHTS  - Baskin Robin,,MANAGEMENT,One Time Only,05/09/2025,Completed,,,14/10/2025,,,,,,,,,9780600201
+AT-459,Karan Malhotra,GAURAV SODHI,Gaurav Sodhi,PALM HEIGHTS  - Uncle jacks,,MANAGEMENT,One Time Only,,Pending,,,,,,,,,,,,9780600201
+AT-460,Karan Malhotra,GAURAV SODHI,Gaurav Sodhi,PALM HEIGHTS  - Bikaner wala,,MANAGEMENT,One Time Only,,Pending,,,,,,,,,,,,9780600201
+AT-461,Karan Malhotra,GAURAV SODHI,Gaurav Sodhi,PALM HEIGHTS  - Smaaash,,MANAGEMENT,One Time Only,,Pending,,,,,,,,,,,,9780600201
+AT-462,Karan Malhotra,GAURAV SODHI,Gaurav Sodhi,PALM HEIGHTS  - Barbieque company,,MANAGEMENT,One Time Only,,Pending,,,,,,,,,,,,9780600201
+AT-463,Karan Malhotra,GAURAV SODHI,Gaurav Sodhi,PALM HEIGHTS  - Civet caffee,,MANAGEMENT,One Time Only,,Pending,,,,,,,,,,,,9780600201
+AT-464,Karan Malhotra,GAURAV SODHI,Gaurav Sodhi,PALM HEIGHTS  - Chalu bistro,,MANAGEMENT,One Time Only,,Pending,,,,,,,,,,,,9780600201
+AT-465,Karan Malhotra,RITESH CHAUDHARY,Ritesh Chaudhary,OTHER WORK - China order list,,ARCHITECT,One Time Only,10/11/2025,Pending,30/09/2025,"Due to Design Change
+
+",,,,,"[{""oldDate"":""2025-09-15"",""newDate"":""2025-09-30"",""reason"":""Due to Design Change\n\n"",""revisedBy"":""EA"",""revisionDate"":""2025-09-25T12:05:03"",""revisionCount"":1,""scoringImpact"":""Yes""}]",1,Yes,,,8126008219
+AT-466,Karan Malhotra,RITESH CHAUDHARY,Ritesh Chaudhary,OTHER WORK - Wire Thara Leval,,ARCHITECT,One Time Only,20/09/2025,Completed,,,29/09/2025,,,,,,,,,8126008219
+AT-467,Karan Malhotra,RITESH CHAUDHARY,Ritesh Chaudhary,PALM MARINA - Ceiling,,ARCHITECT,One Time Only,17/09/2025,Completed,,,17/10/2025 11:30:33,,,,,,,Not On Time,,8126008219
+AT-468,Karan Malhotra,RITESH CHAUDHARY,Ritesh Chaudhary,PALM MARINA - Betterment & uplifting of Mall Meeting,,ARCHITECT,One Time Only,06/11/2025,Pending,,,,Approved by EA,,,"[{""oldDate"":""2025-09-19"",""newDate"":""2025-10-22"",""reason"":""Revision approved by EA"",""approvedBy"":""EA"",""approvalDate"":""2025-10-01T14:42:05"",""revisionCount"":1,""scoringImpact"":""No""}]",1,No,,,8126008219
+AT-469,Karan Malhotra,RITESH CHAUDHARY,Ritesh Chaudhary,PALM MARINA - Landscape work,,ARCHITECT,One Time Only,05/11/2025,Completed,25/09/2025,Due to design change,17/10/2025 11:27:41,,,,"[{""oldDate"":""2025-09-17"",""newDate"":""2025-09-25"",""reason"":""Due to design change"",""revisedBy"":""EA"",""revisionDate"":""2025-09-25T15:39:15"",""revisionCount"":1,""scoringImpact"":""Yes""}]",1,Yes,On Time,,8126008219
+AT-470,Karan Malhotra,RITESH CHAUDHARY,Ritesh Chaudhary,PALM MARINA - Elevation,,ARCHITECT,One Time Only,17/09/2025,Completed,,,24/10/2025 16:47:03,,,,,,,Not On Time,,8126008219
+AT-471,Karan Malhotra,RITESH CHAUDHARY,Ritesh Chaudhary,PALM MARINA - 3.5 Meter Extension,,ARCHITECT,One Time Only,29/09/2025,Completed,29/09/2025,no reason,01/10/2025 13:35:22,,,,"[{""oldDate"":""2025-09-07"",""newDate"":""2025-09-29"",""reason"":""no reason"",""revisedBy"":""EA"",""revisionDate"":""2025-09-29T10:14:18"",""revisionCount"":1,""scoringImpact"":""Yes""}]",1,Yes,Not On Time,,8126008219
+AT-472,Karan Malhotra,RITESH CHAUDHARY,Ritesh Chaudhary,PALM MARINA - Parking Drawing,,ARCHITECT,One Time Only,30/09/2025,Pending,30/09/2025,due to design change,,,,,"[{""oldDate"":""2025-09-18"",""newDate"":""2025-09-30"",""reason"":""due to design change"",""revisedBy"":""EA"",""revisionDate"":""2025-09-25T15:40:28"",""revisionCount"":1,""scoringImpact"":""Yes""}]",1,Yes,,,8126008219
+AT-473,Karan Malhotra,RITESH CHAUDHARY,Ritesh Chaudhary,PALM MARINA - 2 Floor GFC,,ARCHITECT,One Time Only,02/10/2025,Completed,02/10/2025,due to design change,07/10/2025,,,,"[{""oldDate"":""2025-09-17"",""newDate"":""2025-10-02"",""reason"":""due to design change"",""revisedBy"":""EA"",""revisionDate"":""2025-09-25T15:41:00"",""revisionCount"":1,""scoringImpact"":""Yes""}]",1,Yes,,,8126008219
+AT-474,Karan Malhotra,RITESH CHAUDHARY,Ritesh Chaudhary,PALM MARINA - DG / Transfarmer,,ARCHITECT,One Time Only,02/10/2025,Completed,02/10/2025,due to design change,01/10/2025 13:35:44,,,,"[{""oldDate"":""2025-09-17"",""newDate"":""2025-10-02"",""reason"":""due to design change"",""revisedBy"":""EA"",""revisionDate"":""2025-09-25T15:41:32"",""revisionCount"":1,""scoringImpact"":""Yes""}]",1,Yes,On Time,,8126008219
+AT-475,Karan Malhotra,RITESH CHAUDHARY,Ritesh Chaudhary,PALM MARINA - A.C New BOQ,,ARCHITECT,One Time Only,02/10/2025,Completed,02/10/2025,due to design change,07/10/2025,,,,"[{""oldDate"":""2025-09-19"",""newDate"":""2025-10-02"",""reason"":""due to design change"",""revisedBy"":""EA"",""revisionDate"":""2025-09-25T15:42:34"",""revisionCount"":1,""scoringImpact"":""Yes""}]",1,Yes,,,8126008219
+AT-476,Karan Malhotra,RITESH CHAUDHARY,Ritesh Chaudhary,ONE AMG - LIGHTS,,ARCHITECT,One Time Only,15/09/2025,Pending,,,,,,,,1,,,,8126008219
+AT-477,Karan Malhotra,RITESH CHAUDHARY,Ritesh Chaudhary,ONE AMG - ELEVATION,,ARCHITECT,One Time Only,15/09/2025,Pending,,,,,,,,,,,,8126008219
+AT-478,Karan Malhotra,RITESH CHAUDHARY,Ritesh Chaudhary,ONE AMG - Cinema,,ARCHITECT,One Time Only,30/09/2025,Completed,30/09/2025,due to design change,01/10/2025 13:37:41,,,,"[{""oldDate"":""2025-09-05"",""newDate"":""2025-09-30"",""reason"":""due to design change"",""revisedBy"":""EA"",""revisionDate"":""2025-09-25T15:43:09"",""revisionCount"":1,""scoringImpact"":""Yes""}]",1,Yes,Not On Time,,8126008219
+AT-479,Karan Malhotra,RITESH CHAUDHARY,Ritesh Chaudhary,ONE AMG - Internal Block/brick work- shops,,ARCHITECT,One Time Only,24/09/2025,Completed,,,07/10/2025,,,,,,,,,8126008219
+AT-480,Karan Malhotra,RITESH CHAUDHARY,Ritesh Chaudhary,ONE AMG - Transformer Slab Drawing,,ARCHITECT,One Time Only,20/09/2025,Completed,,,29/09/2025,,,,,,,,,8126008219
+AT-481,Karan Malhotra,RITESH CHAUDHARY,Ritesh Chaudhary,ONE AMG - Terrace floor Plan Multiplex,,ARCHITECT,One Time Only,30/09/2025,Completed,30/09/2025,due to design change,01/10/2025 13:38:05,,,,"[{""oldDate"":""2025-09-01"",""newDate"":""2025-09-30"",""reason"":""due to design change"",""revisedBy"":""EA"",""revisionDate"":""2025-09-29T10:11:58"",""revisionCount"":1,""scoringImpact"":""Yes""}]",1,Yes,Not On Time,,8126008219
+AT-482,Karan Malhotra,RITESH CHAUDHARY,Ritesh Chaudhary,ONE AMG - Toilet - fitting / flooring,,ARCHITECT,One Time Only,01/09/2025,Pending,,,,,,,,,,,,8126008219
+AT-483,Karan Malhotra,RITESH CHAUDHARY,Ritesh Chaudhary,PH - Floor S4,,ARCHITECT,One Time Only,,HOLD BY MD,,HOLD BY MD,,,,,"[{""oldDate"":""2025-09-20"",""newDate"":""2026-03-31"",""reason"":""HOLD BY MD"",""revisedBy"":""EA"",""revisionDate"":""2025-10-07T15:20:45"",""revisionCount"":1,""scoringImpact"":""No""}]",1,No,,,8126008219
+AT-484,Karan Malhotra,KARAMJIT SINGH,Karamjit Singh,MAURYA GREENS - Start Gate,,CIVIL & CONSTRUCTION,One Time Only,,Pending,,,,,,,,,,,,9780600206
+AT-485,Karan Malhotra,KARAMJIT SINGH,Karamjit Singh,MAURYA GREENS - Delivery Break in 12 week PLAN,,CIVIL & CONSTRUCTION,One Time Only,31/12/2025,Pending,,,,,,,,,,,,9780600206
+AT-486,Karan Malhotra,KARAMJIT SINGH,Karamjit Singh,FLORENCE - Delivery Break in 12 week PLAN,,CIVIL & CONSTRUCTION,One Time Only,31/03/2026,Pending,,,,,,,,,,,,9780600206
+AT-487,Karan Malhotra,KARAMJIT SINGH,Karamjit Singh,PALM BROADWAY - BOARD,,CIVIL & CONSTRUCTION,One Time Only,29/08/2025,Pending,,,,,,,,,,,,9780600206
+AT-488,Karan Malhotra,KARAMJIT SINGH,Karamjit Singh,PALM BRORDWAY - BOUNDRIES,,CIVIL & CONSTRUCTION,One Time Only,,Pending,,,,,,,,,,,,9780600206
+AT-489,Karan Malhotra,SURESH KUMAR PANJABI,Suresh Kumar Panjabi,PALM BROADWAY - EV station start,,PROCUREMENT & OPERATIONS,One Time Only,20/08/2025,On-Hold,,HOLD BY MD,,,,,,,,,,9622899199
+AT-490,Karan Malhotra,SURESH KUMAR PANJABI,Suresh Kumar Panjabi,PALM BROADWAY - Store online,,PROCUREMENT & OPERATIONS,One Time Only,05/09/2025,Completed,,,27/10/2025 12:09:54,,,,,,,Not On Time,,9622899199
+AT-491,Karan Malhotra,SURESH KUMAR PANJABI,Suresh Kumar Panjabi,PALM BROADWAY - Store Value Reduction,,PROCUREMENT & OPERATIONS,One Time Only,30/09/2025,Pending,,,14/10/2025,,,,,,,,,9622899199
+AT-493,Karan Malhotra,AMARDEEP SINGH BAINS,Amardeep Singh Bains,PALM MARINA - Nikhil (Balance sheet),,LEASING,One Time Only,05/09/2025,Completed,,,03/10/2025,,,,,,,On Time,,9501118451
+AT-494,Karan Malhotra,AMARDEEP SINGH BAINS,Amardeep Singh Bains,PALM MARINA - Brands Lease Agreement filled farm,,LEASING,One Time Only,10/10/2025,Completed,,,14/10/2025,,,,,,,On Time,,9501118451
+AT-495,Karan Malhotra,AMARDEEP SINGH BAINS,Amardeep Singh Bains,PALM MARINA - Invester Agreement,,LEASING,One Time Only,24/10/2025,Pending,,,,,,,,,,,,9501118451
+AT-496,Karan Malhotra,AMARDEEP SINGH BAINS,Amardeep Singh Bains,PALM MARINA - Lower Ground Storeroom No.,,LEASING,One Time Only,09/10/2025,Completed,,,14/10/2025,,,,,,,On Time,,9501118451
+AT-497,Karan Malhotra,AMARDEEP SINGH BAINS,Amardeep Singh Bains,PALM MARINA - Indoor Signage for SCO List,,LEASING,One Time Only,09/10/2025,Completed,,,11/10/2025,,,,,,,On Time,,9501118451
+AT-498,Karan Malhotra,AMARDEEP SINGH BAINS,Amardeep Singh Bains,PALM MARINA - Facade Signage,,LEASING,One Time Only,09/10/2025,Completed,,,14/10/2025,,,,,,,On Time,,9501118451
+AT-499,Karan Malhotra,AMARDEEP SINGH BAINS,Amardeep Singh Bains,PALM GARDEN - Visit location parking side,,LEASING,One Time Only,09/10/2025,Completed,09/10/2025,Approved by MD,18/10/2025,,,,"[{""oldDate"":""2025-09-22"",""newDate"":""2025-10-09"",""reason"":""Approved by MD"",""revisedBy"":""EA"",""revisionDate"":""2025-10-08T10:19:01"",""revisionCount"":1,""scoringImpact"":""Yes""}]",,,On Time,,9501118451
+AT-500,Karan Malhotra,AMARDEEP SINGH BAINS,Amardeep Singh Bains,ONE AMG / PALM MARINA - Betterment & uplifting of Mall Meeting,,LEASING,One Time Only,19/09/2025,Completed,,,03/10/2025,,,,,,,On Time,,9501118451
+AT-501,Karan Malhotra,AMARDEEP SINGH BAINS,Amardeep Singh Bains,ONE AMG - Invester Lease Agreement,,LEASING,One Time Only,24/10/2025,Pending,24/10/2025,Approved by MD,,,,,"[{""oldDate"":""2025-08-25"",""newDate"":""2025-10-24"",""reason"":""Approved by MD"",""revisedBy"":""EA"",""revisionDate"":""2025-10-03T11:58:13"",""revisionCount"":1,""scoringImpact"":""Yes""}]",,,,,9501118451
+AT-502,Karan Malhotra,AMARDEEP SINGH BAINS,Amardeep Singh Bains,ONE AMG - PVR & NY & MOVIE MAX,,LEASING,One Time Only,29/08/2025,Pending,,,,,,,,,,,,9501118451
+AT-503,Karan Malhotra,AMARDEEP SINGH BAINS,Amardeep Singh Bains,NHAI - Dr. of  first aid,,LEASING,One Time Only,15/08/2025,Pending,,,,,,,,,,,,9501118451
+AT-504,Karan Malhotra,Satnam Electrical,Satnam Electrical,SOLAR,,ELECTRICAL,One Time Only,,HOLD BY MD,03/10/2025,Hold by MD,,,,,"[{""oldDate"":""2025-05-21"",""newDate"":""2025-10-03"",""reason"":""Hold by MD"",""revisedBy"":""EA"",""revisionDate"":""2025-10-01T12:21:35"",""revisionCount"":1,""scoringImpact"":""No""}]",1,No,,,9815585518
+AT-505,Karan Malhotra,Satnam Electrical,Satnam Electrical,PALM GARDEN - CHINA POLE LIGHTS,,ELECTRICAL,One Time Only,05/09/2025,Completed,,,03/10/2025,,,,,,,,,9815585518
+AT-506,Karan Malhotra,Satnam Electrical,Satnam Electrical,PALM GARDEN - FRONT TRANSFARMER / SIDE WALI HT LINE,,ELECTRICAL,One Time Only,22/08/2025,Pending,,,,,,,,,,,,9815585518
+AT-507,Karan Malhotra,Satnam Electrical,Satnam Electrical,PALM GARDEN - FRONT PLANTERCKE LIGHT UP LIGHTER(HOME),,ELECTRICAL,One Time Only,22/09/2025,Completed,,,03/10/2025,,,,,,,,,9815585518
+AT-508,Karan Malhotra,AMRINDER SINGH,Amrinder Singh,PALM HEIGHTS  - INVESTER'S TO CALL FOR KWALITY BRAND DEAL/ PUMA,,ELECTRICAL,One Time Only,,Pending,,,,,,,,,,,,9779102555
+AT-509,Karan Malhotra,AMRINDER SINGH,Amrinder Singh,PALM HEIGHTS  - OPEN BOX ELECTRONICS BRAND TO DISCUSS,,,One Time Only,,Pending,,,,,,,,,,,,9779102555
+AT-510,Karan Malhotra,SUNAINA AWASTHI,Sunaina Awasthi,PROCESSES - GENERAL ADMINISTRATION CHECKLIST,,HUMAN RESOURCE DEPARTMENT,One Time Only,23/08/2025,Completed,,,03/10/2025,,,,,,,,,9463594707
+AT-511,Karan Malhotra,SUNAINA AWASTHI,Sunaina Awasthi,PROCESSES - ACCOUNTS CHECKLIST,,HUMAN RESOURCE DEPARTMENT,One Time Only,29/08/2025,Completed,,,29/08/2025,,,,,,,,,9463594707
+AT-512,Karan Malhotra,SUNAINA AWASTHI,Sunaina Awasthi,PROCESSES - ADMIN CHECKLIST,,HUMAN RESOURCE DEPARTMENT,One Time Only,10/09/2025,Completed,,,10/09/2025,,,,,,,,,9463594707
+AT-514,Karan Malhotra,SUNAINA AWASTHI,Sunaina Awasthi,PROCESSES - AVINASH  TEAM HIRING,,HUMAN RESOURCE DEPARTMENT,One Time Only,,Pending,,,,,,,,,,,,9463594707
+AT-515,Karan Malhotra,AVINASH KUMAR,Avinash Kumar,PALM HEIGHTS  - Cinema,,MALL OPERATIONS,One Time Only,20/10/2025,Pending,,,,,,,,,,,,8586926618
+AT-516,Karan Malhotra,AVINASH KUMAR,Avinash Kumar,PALM HEIGHTS  - All Shops Handover to investor till Diwali,,MALL OPERATIONS,One Time Only,20/10/2025,Pending,,,,,,,,,,,,8586926618
+AT-517,Karan Malhotra,AVINASH KUMAR,Avinash Kumar,PALM HEIGHTS  - Meter Electricity,,MALL OPERATIONS,One Time Only,20/10/2025,Pending,,,,,,,,,,,,8586926618
+AT-526,Satnam Jandu,Satnam Jandu,Satnam Jandu,Amgrealty website project removeal assigned by (Gaurav Sir),,MARKETING,One Time Only,07/10/2025,Completed,,,04/10/2025 12:12:09,,,,,0,,On Time,,9004368410
+AT-527,Maninder Aulakh,ASHOK MALHOTRA,Ashok Malhotra,Wire Height Increase,,MANAGEMENT,One Time Only,04/10/2025,Pending,,,,,,,,0,Yes,,,9814020625
+AT-529,Manik Gill,Manik Gill,Manik Gill,Palm Marina Sale Reel (Rajneet Ghumman),,MARKETING,One Time Only,06/10/2025,Completed,,,06/10/2025 11:17:59,,,,,0,,On Time,,7505230701
+AT-530,Manik Gill,Manik Gill,Manik Gill,One Amg sale Creative (Rajneet Ghumman),,MARKETING,One Time Only,06/10/2025,Completed,,,06/10/2025 11:18:08,,,,,0,,On Time,,7505230701
+AT-531,Manik Gill,Manik Gill,Manik Gill,Palm Marina Creative (Rajneet Ghumman),,MARKETING,One Time Only,06/10/2025,Completed,,,06/10/2025 11:18:21,,,,,0,,On Time,,7505230701
+AT-532,Manik Gill,Manik Gill,Manik Gill,Palm Walk Mall Creative ( Rajneet Mam ) ,,MARKETING,One Time Only,06/10/2025,Completed,,,06/10/2025 11:18:40,,,,,0,,On Time,,7505230701
+AT-533,Manik Gill,Manik Gill,Manik Gill,Palm Marina Sale Creative ( Rajneet Mam ) ,,MARKETING,One Time Only,06/10/2025,Completed,,,06/10/2025 11:18:48,,,,,0,,On Time,,7505230701
+AT-534,Manik Gill,Manik Gill,Manik Gill,Palm Garden Creative ( Rajneet mam ) ,,MARKETING,One Time Only,07/10/2025,Completed,,,07/10/2025 11:15:26,,,,,0,,On Time,,7505230701
+AT-535,Manik Gill,Manik Gill,Manik Gill,One Amg Sale Creative ( Rajneet Mam ) ,,MARKETING,One Time Only,07/10/2025,Completed,,,07/10/2025 13:03:57,,,,,0,,On Time,,7505230701
+AT-536,Manik Gill,Manik Gill,Manik Gill,Palm Marina Creative ( Rajneet Mam ) ,,MARKETING,One Time Only,07/10/2025,Completed,,,07/10/2025 11:15:42,,,,,0,,On Time,,7505230701
+AT-537,Manik Gill,Manik Gill,Manik Gill,Palm Walk Mall Creative ( Rajneet Mam ) ,,MARKETING,One Time Only,07/10/2025,Completed,,,07/10/2025 14:11:24,,,,,0,,On Time,,7505230701
+AT-538,Manik Gill,Manik Gill,Manik Gill,8th October - Wednesday -You're calling it celebrations of Festivals .... We're calling it PALM MARINA ( Rajneet Mam ) ,,MARKETING,One Time Only,15/10/2025,Completed,,,09/10/2025 11:31:23,,,,,0,,On Time,,7505230701
+AT-539,Manik Gill,Manik Gill,Manik Gill,9th October -  Thursday -You're Calling it a HUB For Foodie's ... We're calling it PALM MARINA ( Rajneet Mam ) ,,MARKETING,One Time Only,15/10/2025,Completed,,,10/10/2025 11:22:22,,,,,0,,On Time,,7505230701
+AT-540,Manik Gill,Manik Gill,Manik Gill,10th October - Friday - You're calling it FASHION .... We're calling it PALM MARINA ( Rajneet Mam ) ,,MARKETING,One Time Only,15/10/2025,Completed,,,10/10/2025 14:04:44,,,,,0,,On Time,,7505230701
+AT-541,Manik Gill,Manik Gill,Manik Gill,Palm Marina Sale Creative ( 3 ) ( Rajneet Mam ) ,,MARKETING,One Time Only,15/10/2025,Completed,,,15/10/2025 17:23:09,,,,,0,,On Time,,7505230701
+AT-542,Manik Gill,Manik Gill,Manik Gill,11th October- Saturday -   Sale Reel ( Rajneet Mam ) ,,MARKETING,One Time Only,15/10/2025,Completed,,,15/10/2025 17:24:09,,,,,0,,On Time,,7505230701
+AT-543,Manik Gill,Manik Gill,Manik Gill,9 Oct Pind Balluchi Reel ( Rajneet Mam ) ,,MARKETING,One Time Only,15/10/2025,Completed,,,09/10/2025 11:31:40,,,,,0,,On Time,,7505230701
+AT-544,Manik Gill,Manik Gill,Manik Gill,10 Oct Octave Exceed ( Rajneet mam ),,MARKETING,One Time Only,15/10/2025,Completed,,,09/10/2025 11:31:57,,,,,0,,On Time,,7505230701
+AT-545,Manik Gill,Manik Gill,Manik Gill,11 Oct Food prep / plating Carousal ( Rajneet mam ) ,,MARKETING,One Time Only,15/10/2025,Completed,,,15/10/2025 17:23:23,,,,,0,,On Time,,7505230701
+AT-546,Manik Gill,Manik Gill,Manik Gill,13 Oct Mall Reel ( Rajneet Mam ) ,,MARKETING,One Time Only,15/10/2025,Completed,,,15/10/2025 17:23:32,,,,,0,,On Time,,7505230701
+AT-547,Manik Gill,Manik Gill,Manik Gill,14 Oct Mall Awarness ( Palm Walk Mall ) ( Rajneet Mam ) ,,MARKETING,One Time Only,15/10/2025,Completed,,,15/10/2025 17:23:43,,,,,0,,On Time,,7505230701
+AT-548,Manik Gill,Manik Gill,Manik Gill,"October 9, Thursday - Retail Mix – Essentials & Lifestyle- Visual mix of brands / categories suited (supermarket, pharmacy, fashion, salons) - “From groceries to glam — ONE AMG brings every essential closer to home. Dugri’s everyday destination is now taking shape!” Carousel Grid Layout. ( Rajneet Mam ) ",,MARKETING,One Time Only,14/10/2025,Completed,,,09/10/2025 11:32:24,,,,,0,,On Time,,7505230701
+AT-549,Manik Gill,Manik Gill,Manik Gill,"October 10, Friday - Food & Café Zone Focus- Mood reel with café / quick dining concept renders - “Sip. Snack. Socialize ☕🍔 The most delicious corner of Dugri awaits you at ONE AMG. Leasing open for cafés & restaurants.” - Short Reel - F&B brands / entrepreneurs
+( Rajneet Mam ) ",,MARKETING,One Time Only,14/10/2025,Completed,,,10/10/2025 14:05:03,,,,,0,,On Time,,7505230701
+AT-550,Manik Gill,Manik Gill,Manik Gill,"October 11, Saturday - sale creative reel ( rajneet Mam ) ",,MARKETING,One Time Only,15/10/2025,Completed,,system error,15/10/2025 17:23:54,,,,"[{""oldDate"":""2025-10-14"",""newDate"":""2025-10-15"",""reason"":""system error"",""revisedBy"":""EA"",""revisionDate"":""2025-10-15T16:43:23"",""revisionCount"":1,""scoringImpact"":""No""}]",1,,On Time,,7505230701
+AT-551,Maninder Aulakh,AMARDEEP SINGH BAINS,Amardeep Singh Bains,PALM MARINA OR ONE AMG - BOARD VISIBILTY CHECK,,LEASING,One Time Only,09/10/2025,Completed,,,11/10/2025,,,,,,,On Time,,9501118451
+AT-552,Maninder Aulakh,AMARDEEP SINGH BAINS,Amardeep Singh Bains,PALM MARINA - SHOP PARTITION,,LEASING,One Time Only,18/10/2025,Pending,,,,,,,,,,,,9501118451
+AT-553,Maninder Aulakh,AVINASH KUMAR,Avinash Kumar,TEHSILDAAR - FIRE WORK,,MALL OPERATIONS,One Time Only,13/10/2025,Completed,,,14/10/2025,,,,,0,Yes,,,8586926618
+AT-554,Maninder Aulakh,LALITA DEVI,Lalita Devi,EXTRA LAND VERIFY OR DETAILS,,ADMIN,One Time Only,06/10/2025,Completed,,,14/10/2025,,,,,0,Yes,,,6284503081
+AT-555,Manik Gill,Manik Gill,Manik Gill,Palm Marina Greeting Ad Karva Chauth ( Rajneet Mam ) ,,MARKETING,One Time Only,10/10/2025,Completed,,,10/10/2025 10:37:39,,,,,0,,On Time,,7505230701
+AT-556,Manik Gill,Manik Gill,Manik Gill,Amg Group Greeting Ad Karva Chauth ( Rajneet Mam ) ,,MARKETING,One Time Only,10/10/2025,Completed,,,10/10/2025 10:38:09,,,,,0,,On Time,,7505230701
+AT-557,Maninder Aulakh,DEEPAK KUMAR RATRA,Deepak Kumar Ratra,Brands Lease Agreement Filled Farm,,LEGAL & LIAISONING,One Time Only,15/10/2025,Pending,,,,,,,,0,Yes,,,9888003348
+AT-558,Maninder Aulakh,RITESH CHAUDHARY,Ritesh Chaudhary,PALM GARDEN Discussion on town,,ARCHITECT,One Time Only,14/10/2025,Completed,,,17/10/2025 11:27:28,,,,,0,Yes,Not On Time,,8126008219
+AT-559,Maninder Aulakh,RITESH CHAUDHARY,Ritesh Chaudhary,VINHOMES OCEAN PARK  LOCATION OR PICTURE FIND,,ARCHITECT,One Time Only,14/10/2025,Completed,,,24/10/2025 16:47:37,,,,,0,Yes,Not On Time,,8126008219
+AT-560,Maninder Aulakh,RITESH CHAUDHARY,Ritesh Chaudhary,PALM MARINA CRITICAL POINTS LIST,,ARCHITECT,One Time Only,14/10/2025,Pending,,,,,,,,,,,,8126008219
+AT-561,Deepak Kumar Ratra,Lalita Devi,Lalita Devi,"Pl provide the complete land chart of following colonies as per specimen of RERA:
+1. Florence
+2. Palm Galleria.
+Pl treat it as urgent.
+",,,One Time Only,16/10/2025,Completed,,,16/10/2025 14:33:08,,,0,,,[],On Time,,6284503081
+AT-562,Lalita Devi,Jyoti Soni,Jyoti Soni,Palm Galleria ownership/mortgage/under consent sheet ,,,One Time Only,17/10/2025,Completed,,,16/10/2025 12:33:49,,,0,,,[],On Time,,7087215305
+AT-563,Ravandeep Kaur,Jyoti Soni,Jyoti Soni,please type and sentback to me the Performa of change of ownership,,,One Time Only,16/10/2025,Completed,,,16/10/2025 14:13:28,,,0,,,[],On Time,,7087215305
+AT-564,Lalita Devi,Ravandeep Kaur,Ravandeep Kaur,"Plot No. 807 Palm Garden Sale deed Draft
+Plot No. 698 Palm Garden Ownership
+Plot No. 704 Palm Garden re-Ownership",,,One Time Only,18/10/2025,Completed,,,16/10/2025 16:33:49,,,0,,,[],On Time,,8968743381
+AT-565,Karan Malhotra,Deepak MIS,Deepak MIS,Test Task at KBT,,,One Time Only,23/10/2025,On-Hold,,,,,,0,,,[],,,9915814908
+AT-566,Deepak Kumar Ratra,Satnam Electrical,Satnam Electrical,Pl coordinate with SDO Sahnewal for Transformer installation. ,,,One Time Only,17/10/2025,Completed,,,18/10/2025 10:48:49,,,0,,,[],Not On Time,,9815585518
+AT-567,Lalita Devi,Jyoti Soni,Jyoti Soni,pl. make inventory of Brand Stand,,,One Time Only,18/10/2025,Completed,,,23/10/2025 11:56:40,,,0,,,[],Not On Time,,7087215305
+AT-568,Lalita Devi,Ravandeep Kaur,Ravandeep Kaur,"make resolution of plot No. A-33, and A-71 First Floor Golden Leaf, 
+apply for token A-71 First Floor registry, and plot no. 22 mapple leaf",,,One Time Only,18/10/2025,Completed,,,23/10/2025 11:58:44,,,0,,,[],Not On Time,,8968743381
+AT-570,Maninder Aulakh,AMARDEEP SINGH BAINS,Amardeep Singh Bains,PALM GARDEN BOARD VISIBILTY CHECK,,LEASING,One Time Only,18/10/2025,Completed,,,28/10/2025,,,,,,,,,9501118451
+AT-571,Maninder Aulakh,SATNAM ELECTRICAL,Satnam Electrical,METER REGISTER SUBMIT,,ELECTRICAL,One Time Only,25/10/2025,Pending,,,,,,,,0,Yes,,,9815585518
+AT-572,Lalita Devi,Jyoti Soni,Jyoti Soni,pl. make sheet balance invetory of Palm Marina,,,One Time Only,25/10/2025,Completed,,,24/10/2025 16:08:43,,,0,,,[],On Time,,7087215305
+AT-573,Lalita Devi,Ravandeep Kaur,Ravandeep Kaur,"Palm City Phase-II, under project sale deed copy and all approval copy arrange",,,One Time Only,24/10/2025,Completed,,,24/10/2025 13:03:13,,,0,,,[],On Time,,8968743381
+AT-574,Lalita Devi,Jyoti Soni,Jyoti Soni,pl. make a file maurya green all approval and sale deed copy under project.,,,One Time Only,23/10/2025,Completed,,,,,,0,,,[],On Time,,7087215305
+AT-575,Lalita Devi,Ravandeep Kaur,Ravandeep Kaur,Palm Garden Plot No. 524 Second Floor Possession Letter type and final Print,,,One Time Only,25/10/2025,Completed,,,24/10/2025 13:03:26,,,0,,,[],On Time,,8968743381
+AT-576,TEST DOER,Test Doer,Test Doer,testttt,,,One Time Only,31/10/2025,Pending,,,,,,0,,,[],,,
+AT-577,Karan Malhotra,Lalita Devi,Lalita Devi,BILGA PENDING LAND SALE DEED,,,One Time Only,05/11/2025,Pending,,,,,,0,,,[],,,6284503081
+AT-578,Lalita Devi,Pardeep Kaushal,Pardeep Kaushal,Jainpur all jamabandi Farad,,,One Time Only,25/10/2025,Completed,,,24/10/2025 17:55:13,,,0,,,[],On Time,,9888116684
+AT-579,Pardeep Kaushal ,Ravandeep Kaur,Ravandeep Kaur,Kindly check Fard sahnewal kalan 1,,,One Time Only,24/10/2025,Completed,,,24/10/2025 13:03:40,,,0,,,[],On Time,,8968743381
+AT-580,Deepak Kumar,Satnam Jandu,Satnam Jandu,"Sir please flush the Cache of tasks.agrealty.in
+(Urgent)",,,One Time Only,24/10/2025,Completed,,,24/10/2025 12:14:55,,,0,,,[],On Time,,9004368410
+AT-581,Satnam Jandu,Jyoti Soni,Jyoti Soni,"Jyoti ma'am, can you please create a complete list of RERA registration numbers for all  projects of Ashok Malhotra Group. Link for google sheet is below.",https://docs.google.com/spreadsheets/d/17NwI2JDHgXdKkc5wgqJmvvIRIGEPWsPt1BFRNybi-oA/edit?gid=0#gid=0,,One Time Only,28/10/2025,Completed,,,24/10/2025 12:45:29,,,0,,,[],On Time,,7087215305
+AT-582,Lalita Devi,Ravandeep Kaur,Ravandeep Kaur,"Plot No. 22 Mapple leaf apply for token
+A-28 Golden Leaf apply for token",,,One Time Only,25/10/2025,Completed,,,24/10/2025 16:59:31,,,0,,,[],On Time,,8968743381
+AT-583,Lalita Devi,Ravandeep Kaur,Ravandeep Kaur,"Plot No. 1070 Palm City sale deed apply for token
+",,,One Time Only,25/10/2025,Completed,,,24/10/2025 18:01:43,,,0,,,[],On Time,,8968743381
+AT-584,Lalita Devi,Pardeep Kaushal,Pardeep Kaushal,Palm City Phase-II All Jamabandi Farad,,,One Time Only,25/10/2025,Completed,,,,,,0,,,[],On Time,,9888116684
+AT-585,Pratibha Bedi,Pratibha Bedi,Pratibha Bedi,Bank Receipt & Payments Voucher filing,,Accounts,One Time Only,25/10/2025,Completed,,,25/10/2025 13:12:31,,,0,,,[],On Time,,9888624803
+AT-586,Pratibha Bedi,Pratibha Bedi,Pratibha Bedi,"RAUNI & MLDC 
+2023-24 & 2024-25, BLANCE SHEET SCAN SEND TO DEEPAK SIR",,,One Time Only,25/10/2025,Completed,,,25/10/2025 12:20:38,,,0,,,[],On Time,,9888624803
+AT-587,Karan Malhotra,AJAY KUMAR JHA,Ajay Kumar Jha,GST Return- 3-B,GST Return- 3B,ACCOUNTS,MONTHLY,2025-10-25,Pending,,,,,,0,,,,,,6280758617
+AT-588,Deepak Kumar,Deepak Kumar,Deepak Kumar,test,,na,One Time Only,6/10/2025,Completed,,,25/10/2025 17:57:29,,,0,,,[],Not On Time,,9915814908
+AT-589,Suresh Kumar Panjabi,Harbalihar Singh,Harbalihar Singh,Please purchase one tetephone set  and 3 leads as demanded by Avinash. ,,,One Time Only,27/10/2025,Completed,,,27/10/2025 15:51:31,,,0,,,[],On Time,,9888946647
+AT-590,Suresh Kumar Panjabi,Rajeev Sachdeva,Rajeev Sachdeva,"Kindly coordinate with Mr Jivesh and pick up the fire material from our store as discussed  earlier. The same is still pending. Please accord priority.
+",,1 AMG,One Time Only,31/10/2025,Pending,,,,,,0,,,[],,,9654296510
+AT-591,Pratibha Bedi,Pratibha Bedi,Pratibha Bedi,"MLDC SUNDRY DEBTORS
+AGEING OF TRADE RECEIVABLE LIST READY ",,,One Time Only,27/10/2025,Completed,,,27/10/2025 17:15:58,,,0,,,[],On Time,,9888624803
+AT-592,Pratibha Bedi,Pratibha Bedi,Pratibha Bedi,RAUNI QTR TDS DEATILS READY,,,One Time Only,27/10/2025,Completed,,,27/10/2025 17:15:46,,,0,,,[],On Time,,9888624803
+AT-593,Pratibha Bedi,Pratibha Bedi,Pratibha Bedi,MLDC QTR TDS RETURN DETAILS LIST READY,,,One Time Only,27/10/2025,Completed,,,27/10/2025 17:15:46,,,0,,,[],On Time,,9888624803
+AT-594,Pratibha Bedi,Pratibha Bedi,Pratibha Bedi,MLDC SECURITY RECEIVED FROM BRAND LIST READY,,,One Time Only,27/10/2025,Completed,,,27/10/2025 17:16:05,,,0,,,[],On Time,,9888624803
+AT-244,Gurjeevan Singh,Satnam Jandu,Satnam Jandu,kindly provide me summary of funds used from advertisement account mldc & rauni,,MARKETING,One Time Only,01/11/2025,Completed,,,28/10/2025 10:43:06,,,,,0,,On Time,,9004368410
+AT-245,Pratibha Bedi,Pratibha Bedi,Pratibha Bedi,ELECTRICITY BILL & RENT CHQ READY,,,One Time Only,28/10/2025,Completed,,,28/10/2025 13:32:38,,,0,,,[],On Time,,9888624803
+AT-246,Karan Malhotra,Suresh Kumar Panjabi,Suresh Kumar Panjabi,MACHINERY HEALTH CHECK (15 DAYS AFTER ),,,One Time Only,01/10/2025,Pending,,,,,,0,,,[],,,9622899199
+AT-247,Karan Malhotra,Karamjit Singh,Karamjit Singh,SCHOOL SIDE LABOUR SHIFT ,,,One Time Only,28/10/2025,Pending,,,,,,0,,,[],,,9780600206
+AT-248,Pratibha Bedi,Pratibha Bedi,Pratibha Bedi,MALHOTRA BROTHERS BALANCE SHEET DRAFT,,,One Time Only,28/10/2025,Completed,,,28/10/2025 17:35:51,,,0,,,[],On Time,,9888624803
+AT-249,Karan Malhotra,Raghav Malhotra,Raghav Malhotra,PALM MARINA TERRACE AREA ,,,One Time Only,28/10/2025,Completed,,,28/10/2025 14:47:49,,,0,,,[],On Time,,9814437119
+AT-250,Karan Malhotra,Deepak Kumar Ratra,Deepak Kumar Ratra,TENANT AGREEMENT,,,One Time Only,28/10/2025,Pending,,,,,,0,,,[],,,9888003348
+AT-251,Karan Malhotra,Amardeep Singh Bains,Amardeep Singh Bains,TENANT AGREEMENT ,,,One Time Only,28/10/2025,Pending,,,,,,0,,,[],,,9501118451
+AT-252,Karan Malhotra,Avinash Kumar,Avinash Kumar,Tehsildaar Tanky Remove ,,,One Time Only,28/11/2025,Pending,,,,,,0,,,[],,,8586926618
+AT-253,Pratibha Bedi,Raghav Malhotra,Raghav Malhotra,please provide Gst Certificate Trimax Food ,,,One Time Only,29/10/2025,Pending,,,,,,0,,,[],,,9814437119
+AT-254,Pratibha Bedi,Pratibha Bedi,Pratibha Bedi,MLDC icici Bank & Hdfc Bank tally,,,One Time Only,29/10/2025,Completed,,,29/10/2025 17:24:24,,,0,,,[],On Time,,9888624803
+AT-255,Karan Malhotra,Satnam Jandu,Satnam Jandu,TARGET LIST ,,,One Time Only,29/10/2025,Completed,,,29/10/2025 18:03:43,,,0,,,[],On Time,,9004368410
+AT-256,Karan Malhotra,Deepak Kumar,Deepak Kumar,"FMS REVIEW CALL ATTEND BY BCI TEAM ADITYA 
+",,,One Time Only,30/10/2025,Pending,,,,,,0,,,[],,,9915814908
+AT-257,Karan Malhotra,Maninder Kaur,Maninder Kaur,LIVE TECH SUPPORT LINK FILL FOR FMS SYSTEM CHECK,https://tinyurl.com/techsupport-bci,,One Time Only,29/10/2025,Completed,,,29/10/2025 12:38:43,,,0,,,[],On Time,,9876366656
+AT-258,Pratibha Bedi,Pratibha Bedi,Pratibha Bedi,PURCHASE ENTRY IN TELLY,,,One Time Only,29/10/2025,Completed,,,29/10/2025 16:47:45,,,0,,,[],On Time,,9888624803
+AT-259,Pratibha Bedi,Pratibha Bedi,Pratibha Bedi,MLDC & RAUNI RENT TDS ENTRY IN TALLY SOFTWARE,,,One Time Only,29/10/2025,Completed,,,29/10/2025 16:47:53,,,0,,,[],On Time,,9888624803
+AT-260,Deepak Kumar,Maninder Kaur,Maninder Kaur,"Please fill phone numbers of staff in the sheet shared on mail.
+
+Thank You
+(For WhatsApp Messages)",,,One Time Only,29/10/2025,Completed,,,29/10/2025 15:53:10,,,0,,,[],On Time,,9876366656
+AT-261,Karan Malhotra,Avinash Kumar,Avinash Kumar,PALM WALK OR PALM MARINA SOFA DRY CLEAN ,,,One Time Only,30/10/2025,Pending,,,,,,0,,,[],,,8586926618
+AT-262,Karan Malhotra,Rajeev Sachdeva,Rajeev Sachdeva,"ONE AMG BOQ of TILES, STONE, TOILET INTERIOR, ETC.",,,One Time Only,29/10/2025,Completed,,,29/10/2025 17:05:15,,,0,,,[],On Time,,9654296510
+AT-263,Gurjeevan Singh,Gurjeevan Singh,Gurjeevan Singh,"Chq.issue to PNB INTT.	 12,50,000.00 
+EK DEV. FOR BG	 10,00,000.00 
+ICICI LOMBARD GIC LTD-INS.	 47,701.00 
+KARAN MALHOTRA-C/CARD BILL & M.F.	 2,00,000.00 
+SHENUM MALHOTRA-C/CARD BILL & M.F.	 1,00,000.00 
+A2V INFRA SERVICES	 9,440.00 
+ACE FACILITY MANAGEMENT+TDS	 1,49,711.00 
+GITANJLI SYSTEMS	 27,140.00 
+MYRRA ENTERPRISES 61,832.00
+ACE FACILITY MANAGEMENT PVT.LTD.
+",,ACCOUNTS,One Time Only,29/10/2025,Completed,,,29/10/2025 17:39:27,,,,,0,,On Time,,9417371882
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A
+,,,,,,,,,,,,,,,,,,,,,#N/A

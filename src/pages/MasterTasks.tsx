@@ -637,7 +637,7 @@ const MasterTasks: React.FC = () => {
                       </div>
                       <div>
                         <div className={`text-sm font-medium ${isDark ? 'text-white' : 'text-gray-900'}`}>{task.assignedBy.username}</div>
-                        <div className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>{task.assignedBy.email}</div>
+                        <div className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>{task.phoneNumber || task.assignedBy.phoneNumber || task.assignedBy.email}</div>
                       </div>
                     </div>
                   </td>
@@ -648,7 +648,7 @@ const MasterTasks: React.FC = () => {
                       </div>
                       <div>
                         <div className={`text-sm font-medium ${isDark ? 'text-white' : 'text-gray-900'}`}>{task.assignedTo.username}</div>
-                        <div className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>{task.assignedTo.email}</div>
+                        <div className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>{task.phoneNumber || task.assignedTo.phoneNumber || task.assignedTo.email}</div>
                       </div>
                     </div>
                   </td>

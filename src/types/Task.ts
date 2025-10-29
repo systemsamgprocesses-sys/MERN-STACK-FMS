@@ -20,10 +20,13 @@ export interface Task {
   title: string;
   description: string;
   taskType: string;
-  assignedBy: { username: string; email: string };
+  assignedBy: { username: string; email: string; phoneNumber?: string };
   assignedTo: {
-    _id: any; username: string; email: string 
-};
+    _id: any; 
+    username: string; 
+    email: string;
+    phoneNumber?: string;
+  };
   dueDate?: string;
   priority: string;
   status: string;
@@ -34,6 +37,8 @@ export interface Task {
   createdAt: string;
   attachments: Attachment[];
   completionAttachments?: Attachment[];
-  
+  completionScore?: number;
+  phoneNumber?: string;
+  department?: string;
 }
   

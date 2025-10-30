@@ -182,7 +182,7 @@ const PendingTasks: React.FC = () => {
     let filteredTasks = [...allTasks];
 
     if (filter.assignedTo) {
-      filteredTasks = filteredTasks.filter(task => task.assignedTo._id === filter.assignedTo);
+      filteredTasks = filteredTasks.filter(task => task.assignedTo && task.assignedTo._id === filter.assignedTo);
     }
 
     if (filter.priority) {
@@ -193,7 +193,7 @@ const PendingTasks: React.FC = () => {
       filteredTasks = filteredTasks.filter(task =>
         task.title.toLowerCase().includes(filter.search.toLowerCase()) ||
         task.description.toLowerCase().includes(filter.search.toLowerCase()) ||
-        task.assignedTo.username.toLowerCase().includes(filter.search.toLowerCase())
+        (task.assignedTo && task.assignedTo.username && task.assignedTo.username.toLowerCase().includes(filter.search.toLowerCase()))
       );
     }
 

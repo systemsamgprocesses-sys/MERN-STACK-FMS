@@ -13,6 +13,9 @@ export const config = {
   // CORS Configuration
   corsOrigin: process.env.CORS_ORIGIN || 'http://localhost:5173',
   
+  // Production domain
+  productionDomain: 'https://hub.amgrealty.in',
+  
   // File Upload Configuration
   maxFileSize: 10 * 1024 * 1024, // 10MB
   uploadsDir: './uploads'

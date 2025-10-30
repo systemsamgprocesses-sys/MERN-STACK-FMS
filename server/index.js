@@ -28,8 +28,25 @@ const app = express();
 const PORT = config.port;
 
 // Middleware
+const allowedOrigins = [
+  'http://localhost:5173',
+  'http://localhost:3000',
+  'https://hub.amgrealty.in',
+  config.corsOrigin
+].filter(Boolean);
+
 app.use(cors({
-  origin: config.corsOrigin,
+  origin: function (origin, callback) {
+    // Allow requests with no origin (like mobile apps or curl requests)
+    if (!origin) return callback(null, true);
+    
+    if (allowedOrigins.includes(origin)) {
+      return callback(null, true);
+    } else {
+      console.log('Blocked by CORS:', origin);
+      return callback(new Error('Not allowed by CORS'));
+    }
+  },
   credentials: true
 }));
 app.use(express.json());
@@ -86,6 +103,17 @@ app.use('/uploads', express.static(uploadsDir));
 // Serve assets folder for branding (logo, favicon)
 const assetsDir = path.join(__dirname, '..', 'assets');
 app.use('/assets', express.static(assetsDir));
+
+// Health check endpoint
+app.get('/health', (req, res) => {
+  res.json({
+    status: 'OK',
+    timestamp: new Date().toISOString(),
+    uptime: process.uptime(),
+    environment: config.nodeEnv,
+    version: process.env.npm_package_version || '1.0.0'
+  });
+});
 
 // API Routes
 app.use('/api/auth', authRoutes);

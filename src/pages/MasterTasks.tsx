@@ -34,8 +34,8 @@ const filterTasks = (tasks: Task[], filter: any) => {
       const matchesSearch =
         task.title.toLowerCase().includes(searchLower) ||
         task.description.toLowerCase().includes(searchLower) ||
-        task.assignedTo.username.toLowerCase().includes(searchLower) ||
-        task.assignedBy.username.toLowerCase().includes(searchLower);
+        (task.assignedTo && task.assignedTo.username && task.assignedTo.username.toLowerCase().includes(searchLower)) ||
+        (task.assignedBy && task.assignedBy.username && task.assignedBy.username.toLowerCase().includes(searchLower));
 
       if (!matchesSearch) return false;
     }
@@ -50,7 +50,7 @@ const filterTasks = (tasks: Task[], filter: any) => {
       return false;
     }
     // Assigned to filter
-    if (filter.assignedTo && task.assignedTo._id !== filter.assignedTo) {
+    if (filter.assignedTo && (!task.assignedTo || task.assignedTo._id !== filter.assignedTo)) {
       return false;
     }
     // Date range filter for due date

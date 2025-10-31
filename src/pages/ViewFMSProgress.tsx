@@ -282,7 +282,7 @@ const ViewFMSProgress: React.FC = () => {
                               </div>
                               <p className="text-sm text-[var(--color-textSecondary)] mb-3 ml-11">{task.how}</p>
                               <div className="flex items-center space-x-4 text-sm text-[var(--color-textSecondary)] ml-11">
-                                <span className="flex items-center gap-1">👤 {task.who.map((w: any) => w.username).join(', ')}</span>
+                                <span className="flex items-center gap-1">👤 {task.who.filter((w: any) => w).map((w: any) => w.username || 'Unknown').join(', ')}</span>
                                 {task.plannedDueDate && (
                                   <>
                                     <span>•</span>

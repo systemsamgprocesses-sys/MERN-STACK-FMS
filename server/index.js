@@ -32,6 +32,8 @@ const allowedOrigins = [
   'http://localhost:5173',
   'http://localhost:3000',
   'https://hub.amgrealty.in',
+  'https://task.amgrealty.in',
+  'https://tasks.amgrealty.in',
   config.corsOrigin
 ].filter(Boolean);
 

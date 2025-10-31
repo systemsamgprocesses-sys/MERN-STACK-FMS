@@ -1,9 +1,32 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
+import { copyFileSync } from 'fs';
+import { resolve } from 'path';
 
 // https://vitejs.dev/config/
 export default defineConfig({
-  plugins: [react()],
+  plugins: [
+    react({
+      jsxRuntime: 'automatic',
+      babel: {
+        plugins: []
+      }
+    }),
+    {
+      name: 'copy-htaccess',
+      closeBundle() {
+        try {
+          copyFileSync(
+            resolve(__dirname, 'public/.htaccess'),
+            resolve(__dirname, 'dist/.htaccess')
+          );
+          console.log('✅ .htaccess copied to dist folder');
+        } catch (err) {
+          console.log('ℹ️ No .htaccess found in public folder');
+        }
+      }
+    }
+  ],
   optimizeDeps: {
     exclude: ['lucide-react'],
   },
@@ -15,6 +38,7 @@ export default defineConfig({
     outDir: 'dist',
     sourcemap: false,
     minify: 'terser',
+    target: 'esnext',
     rollupOptions: {
       output: {
         manualChunks: {
@@ -24,8 +48,5 @@ export default defineConfig({
         }
       }
     }
-  },
-  define: {
-    'process.env.NODE_ENV': JSON.stringify(process.env.NODE_ENV || 'development')
   }
 });

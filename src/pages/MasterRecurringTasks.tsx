@@ -133,8 +133,8 @@ const filterTasks = (tasks: Task[], filter: any) => {
       const matchesSearch =
         task.title.toLowerCase().includes(searchLower) ||
         task.description.toLowerCase().includes(searchLower) ||
-        (task.assignedTo && task.assignedTo.username && task.assignedTo.username.toLowerCase().includes(searchLower)) ||
-        (task.assignedBy && task.assignedBy.username && task.assignedBy.username.toLowerCase().includes(searchLower));
+        (task.assignedTo?.username?.toLowerCase().includes(searchLower)) ||
+        (task.assignedBy?.username?.toLowerCase().includes(searchLower));
 
       if (!matchesSearch) return false;
     }
@@ -238,7 +238,7 @@ const MasterRecurringTasks: React.FC = () => {
     dateFrom: '',
     dateTo: ''
   });
-  const [showFilters, setShowFilters] = useState(false);
+  const [showFilters, setShowFilters] = useState(true);
   const [showAttachmentsModal, setShowAttachmentsModal] = useState<{ attachments: Attachment[], type: 'task' | 'completion' } | null>(null);
   const [selectedImagePreview, setSelectedImagePreview] = useState<string | null>(null);
   const [showRemarksModal, setShowRemarksModal] = useState<Task | null>(null);

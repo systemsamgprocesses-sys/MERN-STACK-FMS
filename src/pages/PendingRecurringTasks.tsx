@@ -102,7 +102,7 @@ const PendingRecurringTasks: React.FC = () => {
     assignedTo: '',
     search: ''
   });
-  const [showFilters, setShowFilters] = useState(false);
+  const [showFilters, setShowFilters] = useState(true);
   const [showCompleteModal, setShowCompleteModal] = useState<string | null>(null);
   const [showAttachmentsModal, setShowAttachmentsModal] = useState<Attachment[] | null>(null); // State for attachments modal
   const [selectedImagePreview, setSelectedImagePreview] = useState<string | null>(null); // State for full-screen image preview
@@ -161,8 +161,8 @@ const PendingRecurringTasks: React.FC = () => {
         const matchesSearch =
           task.title.toLowerCase().includes(searchLower) ||
           task.description.toLowerCase().includes(searchLower) ||
-          (task.assignedTo && task.assignedTo.username && task.assignedTo.username.toLowerCase().includes(searchLower)) ||
-          (task.assignedBy && task.assignedBy.username && task.assignedBy.username.toLowerCase().includes(searchLower));
+          (task.assignedTo?.username?.toLowerCase().includes(searchLower)) ||
+          (task.assignedBy?.username?.toLowerCase().includes(searchLower));
 
         if (!matchesSearch) return false;
       }

@@ -57,6 +57,7 @@ const AdminPanel: React.FC = () => {
   const [formData, setFormData] = useState({
     username: '',
     email: '',
+    phoneNumber: '',
     password: '',
     role: 'employee',
     permissions: {
@@ -868,6 +869,25 @@ const AdminPanel: React.FC = () => {
 
                   <div>
                     <label className="block text-sm font-medium mb-2" style={{ color: 'var(--color-text)' }}>
+                      Phone Number
+                    </label>
+                    <input
+                      type="tel"
+                      name="phoneNumber"
+                      value={formData.phoneNumber}
+                      onChange={handleInputChange}
+                      placeholder="Enter phone number"
+                      className="w-full px-3 py-2 border rounded-lg text-sm"
+                      style={{
+                        backgroundColor: 'var(--color-background)',
+                        borderColor: 'var(--color-border)',
+                        color: 'var(--color-text)'
+                      }}
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium mb-2" style={{ color: 'var(--color-text)' }}>
                       Password *
                     </label>
                     <input
@@ -1026,6 +1046,25 @@ const AdminPanel: React.FC = () => {
                       value={formData.email}
                       onChange={handleInputChange}
                       required
+                      className="w-full px-3 py-2 border rounded-lg text-sm"
+                      style={{
+                        backgroundColor: 'var(--color-background)',
+                        borderColor: 'var(--color-border)',
+                        color: 'var(--color-text)'
+                      }}
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium mb-2" style={{ color: 'var(--color-text)' }}>
+                      Phone Number
+                    </label>
+                    <input
+                      type="tel"
+                      name="phoneNumber"
+                      value={formData.phoneNumber}
+                      onChange={handleInputChange}
+                      placeholder="Enter phone number"
                       className="w-full px-3 py-2 border rounded-lg text-sm"
                       style={{
                         backgroundColor: 'var(--color-background)',

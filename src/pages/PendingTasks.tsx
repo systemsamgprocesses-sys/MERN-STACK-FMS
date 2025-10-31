@@ -109,7 +109,7 @@ const PendingTasks: React.FC = () => {
   const [showFMSCompleteModal, setShowFMSCompleteModal] = useState<{ projectId: string; taskIndex: number } | null>(null);
   const [showFMSObjectionModal, setShowFMSObjectionModal] = useState<{ projectId: string; taskIndex: number } | null>(null);
 
-  const [showFilters, setShowFilters] = useState(false);
+  const [showFilters, setShowFilters] = useState(true);
   const [showAttachmentsModal, setShowAttachmentsModal] = useState<Attachment[] | null>(null);
   const [selectedImagePreview, setSelectedImagePreview] = useState<string | null>(null);
   const [downloading, setDownloading] = useState<{ [key: string]: boolean }>({});
@@ -193,7 +193,7 @@ const PendingTasks: React.FC = () => {
       filteredTasks = filteredTasks.filter(task =>
         task.title.toLowerCase().includes(filter.search.toLowerCase()) ||
         task.description.toLowerCase().includes(filter.search.toLowerCase()) ||
-        (task.assignedTo && task.assignedTo.username && task.assignedTo.username.toLowerCase().includes(filter.search.toLowerCase()))
+        (task.assignedTo?.username?.toLowerCase().includes(filter.search.toLowerCase()))
       );
     }
 

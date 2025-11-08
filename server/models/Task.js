@@ -120,6 +120,17 @@ const taskSchema = new mongoose.Schema({
       default: Date.now
     }
   }],
+  completedOnBehalfBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User'
+  },
+  pcConfirmationAttachment: {
+    filename: String,
+    originalName: String,
+    path: String,
+    size: Number,
+    uploadedAt: Date
+  },
   attachments: [{
     filename: String,
     originalName: String,

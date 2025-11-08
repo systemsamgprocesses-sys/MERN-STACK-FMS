@@ -53,6 +53,14 @@ const projectTaskSchema = new mongoose.Schema({
   notes: { type: String },
   completedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
   completedAt: { type: Date },
+  completedOnBehalfBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+  pcConfirmationAttachment: {
+    filename: String,
+    originalName: String,
+    path: String,
+    size: Number,
+    uploadedAt: Date
+  },
   requiresChecklist: { type: Boolean, default: false },
   checklistItems: [{
     id: String,

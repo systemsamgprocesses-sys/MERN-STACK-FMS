@@ -678,7 +678,7 @@ const PendingTasks: React.FC = () => {
                 <h3 className="text-lg font-semibold line-clamp-2 text-[--color-text] transition-colors group-hover:text-[--color-primary]">
                   {task.title}
                 </h3>
-                {user?.role !== 'admin' && (
+                {(user?.role !== 'admin' || user?.role === 'pc') && (
                   <div className="flex space-x-1 ml-2 opacity-0 group-hover:opacity-100 transition-opacity">
                     <button
                       onClick={() => setShowCompleteModal(task._id)}

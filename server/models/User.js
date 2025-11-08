@@ -26,7 +26,7 @@ const userSchema = new mongoose.Schema({
   },
   role: {
     type: String,
-    enum: ['superadmin', 'admin', 'manager', 'employee'],
+    enum: ['superadmin', 'admin', 'manager', 'employee', 'pc'],
     default: 'employee'
   },
   permissions: {
@@ -36,7 +36,8 @@ const userSchema = new mongoose.Schema({
     canDeleteTasks: { type: Boolean, default: false },
     canEditTasks: { type: Boolean, default: false },
     canManageUsers: { type: Boolean, default: false },
-    canEditRecurringTaskSchedules: { type: Boolean, default: false }
+    canEditRecurringTaskSchedules: { type: Boolean, default: false },
+    canCompleteTasksOnBehalf: { type: Boolean, default: false }
   },
   isActive: {
     type: Boolean,

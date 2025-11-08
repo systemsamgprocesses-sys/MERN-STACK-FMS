@@ -16,6 +16,7 @@ interface User {
     canEditTasks: boolean;
     canManageUsers: boolean;
     canEditRecurringTaskSchedules: boolean;
+    canCompleteAnyTask?: boolean; // Added for PC role
   };
   isActive: boolean;
   createdAt: string;
@@ -67,7 +68,8 @@ const AdminPanel: React.FC = () => {
       canDeleteTasks: false,
       canEditTasks: false,
       canManageUsers: false,
-      canEditRecurringTaskSchedules: false
+      canEditRecurringTaskSchedules: false,
+      canCompleteAnyTask: false // Added for PC role
     }
   });
   const [message, setMessage] = useState({ type: '', text: '' });
@@ -77,7 +79,8 @@ const AdminPanel: React.FC = () => {
   const rolePermissions = {
     employee: ['canViewTasks', 'canAssignTasks'],
     manager: ['canViewTasks', 'canViewAllTeamTasks', 'canAssignTasks', 'canDeleteTasks', 'canEditTasks', 'canEditRecurringTaskSchedules'],
-    admin: ['canViewTasks', 'canViewAllTeamTasks', 'canAssignTasks', 'canDeleteTasks', 'canEditTasks', 'canManageUsers', 'canEditRecurringTaskSchedules']
+    admin: ['canViewTasks', 'canViewAllTeamTasks', 'canAssignTasks', 'canDeleteTasks', 'canEditTasks', 'canManageUsers', 'canEditRecurringTaskSchedules'],
+    pc: ['canViewTasks', 'canAssignTasks', 'canCompleteAnyTask'] // Added PC role permissions
   };
   const [passwordUser, setPasswordUser] = useState<User | null>(null);
   const [newPassword, setNewPassword] = useState("");
@@ -298,7 +301,8 @@ const AdminPanel: React.FC = () => {
         canDeleteTasks: false,
         canEditTasks: false,
         canManageUsers: false,
-        canEditRecurringTaskSchedules: false
+        canEditRecurringTaskSchedules: false,
+        canCompleteAnyTask: false
       }
     });
   };
@@ -308,6 +312,7 @@ const AdminPanel: React.FC = () => {
       case 'admin': return 'var(--color-error)';
       case 'manager': return 'var(--color-warning)';
       case 'employee': return 'var(--color-success)';
+      case 'pc': return 'var(--color-info)'; // Color for PC role
       default: return 'var(--color-textSecondary)';
     }
   };
@@ -320,7 +325,8 @@ const AdminPanel: React.FC = () => {
       canDeleteTasks: 'Delete Tasks',
       canEditTasks: 'Edit Tasks',
       canManageUsers: 'Manage Users',
-      canEditRecurringTaskSchedules: 'Edit Recurring Task Schedules'
+      canEditRecurringTaskSchedules: 'Edit Recurring Task Schedules',
+      canCompleteAnyTask: 'Complete Any Task' // Display name for PC permission
     };
     return names[key] || key.replace('can', '').replace(/([A-Z])/g, ' $1').trim();
   };
@@ -923,6 +929,7 @@ const AdminPanel: React.FC = () => {
                       <option value="employee">Employee</option>
                       <option value="manager">Manager</option>
                       <option value="admin">Admin</option>
+                      <option value="pc">PC (Process Coordinator)</option>
                     </select>
                   </div>
                 </div>
@@ -1092,6 +1099,7 @@ const AdminPanel: React.FC = () => {
                       <option value="employee">Employee</option>
                       <option value="manager">Manager</option>
                       <option value="admin">Admin</option>
+                      <option value="pc">PC (Process Coordinator)</option>
                     </select>
                   </div>
                 </div>

@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { CheckSquare, Paperclip, X, Upload, File } from 'lucide-react';
 import axios from 'axios';
 import { address } from '../../utils/ipAddress';
+import { toast } from 'react-toastify';
 
 interface TaskCompletionModalProps {
   taskId: string;
@@ -12,6 +13,15 @@ interface TaskCompletionModalProps {
   mandatoryRemarks: boolean;
   onClose: () => void;
   onComplete: () => void;
+  // Assuming user and settings are passed down or fetched here
+  user?: { id: string; role: string };
+  settings?: {
+    allowAttachments: boolean;
+    mandatoryAttachments: boolean;
+    mandatoryRemarks: boolean;
+  };
+  task: { _id: string }; // Assuming task object with _id is passed
+  isDark?: boolean; // To determine toast theme
 }
 
 const TaskCompletionModal: React.FC<TaskCompletionModalProps> = ({
@@ -22,13 +32,21 @@ const TaskCompletionModal: React.FC<TaskCompletionModalProps> = ({
   mandatoryAttachments,
   mandatoryRemarks,
   onClose,
-  onComplete
+  onComplete,
+  user,
+  settings,
+  task,
+  isDark = false,
 }) => {
   const [completionRemarks, setCompletionRemarks] = useState('');
   const [attachments, setAttachments] = useState<File[]>([]);
   const [uploading, setUploading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  const [errors, setErrors] = useState<{ remarks?: string; attachments?: string }>({});
+  const [errors, setErrors] = useState<{ remarks?: string; attachments?: string; pcUser?: string; pcConfirmation?: string }>({});
+
+  // PC Role specific states
+  const [pcConfirmationFile, setPcConfirmationFile] = useState<File | null>(null);
+  const [selectedUserId, setSelectedUserId] = useState<string>('');
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
@@ -68,7 +86,7 @@ const TaskCompletionModal: React.FC<TaskCompletionModalProps> = ({
   };
 
   const validateForm = (): boolean => {
-    const newErrors: { remarks?: string; attachments?: string } = {};
+    const newErrors: { remarks?: string; attachments?: string; pcUser?: string; pcConfirmation?: string } = {};
 
     if (mandatoryRemarks && !completionRemarks.trim()) {
       newErrors.remarks = 'Completion remarks are required';
@@ -76,6 +94,15 @@ const TaskCompletionModal: React.FC<TaskCompletionModalProps> = ({
 
     if (mandatoryAttachments && attachments.length === 0) {
       newErrors.attachments = 'At least one attachment is required';
+    }
+
+    // PC Role validation
+    if (user?.role === 'pc' && !selectedUserId) {
+      newErrors.pcUser = 'Please select the user you are completing this task for';
+    }
+
+    if (user?.role === 'pc' && !pcConfirmationFile) {
+      newErrors.pcConfirmation = 'PC confirmation attachment is required';
     }
 
     setErrors(newErrors);
@@ -87,26 +114,49 @@ const TaskCompletionModal: React.FC<TaskCompletionModalProps> = ({
 
     setSubmitting(true);
     try {
-      let uploadedFiles: any[] = [];
-      
+      let uploadedAttachments: any[] = [];
+      let pcConfirmationAttachment: any = null;
+
       if (allowAttachments && attachments.length > 0) {
-        uploadedFiles = await uploadFiles(attachments);
+        uploadedAttachments = await uploadFiles(attachments);
       }
 
-      const payload: any = {};
-      
-      if (completionRemarks.trim()) {
-        payload.completionRemarks = completionRemarks.trim();
+      // Upload PC confirmation if PC role
+      if (user?.role === 'pc' && pcConfirmationFile) {
+        const pcFormData = new FormData();
+        pcFormData.append('files', pcConfirmationFile);
+
+        const pcUploadResponse = await axios.post(`${address}/api/upload`, pcFormData, {
+          headers: { 'Content-Type': 'multipart/form-data' },
+        });
+        pcConfirmationAttachment = pcUploadResponse.data.files?.[0] || null;
       }
-      
-      if (uploadedFiles.length > 0) {
-        payload.completionAttachments = uploadedFiles;
+
+      const payload: any = {
+        completionRemarks: completionRemarks.trim(),
+      };
+
+      if (uploadedAttachments.length > 0) {
+        payload.completionAttachments = uploadedAttachments;
+      }
+
+      if (user?.role === 'pc') {
+        payload.completedOnBehalfBy = user.id;
+        payload.completedBy = selectedUserId;
+        if (pcConfirmationAttachment) {
+          payload.pcConfirmationAttachment = pcConfirmationAttachment;
+        }
+      } else {
+        payload.completedBy = user?.id;
       }
 
       await axios.post(`${address}/api/tasks/${taskId}/complete`, payload);
       onComplete();
-    } catch (error) {
+      onClose();
+      toast.success('Task completed successfully!', { theme: isDark ? 'dark' : 'light' });
+    } catch (error: any) {
       console.error('Error completing task:', error);
+      toast.error(error.response?.data?.message || 'Failed to complete task', { theme: isDark ? 'dark' : 'light' });
     } finally {
       setSubmitting(false);
     }
@@ -119,6 +169,13 @@ const TaskCompletionModal: React.FC<TaskCompletionModalProps> = ({
     const i = Math.floor(Math.log(bytes) / Math.log(k));
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
   };
+
+  // Placeholder for fetching users - replace with actual API call or prop
+  const users = [
+    { id: 'user1', name: 'Alice' },
+    { id: 'user2', name: 'Bob' },
+    { id: 'user3', name: 'Charlie' },
+  ];
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
@@ -147,7 +204,7 @@ const TaskCompletionModal: React.FC<TaskCompletionModalProps> = ({
           <div className="mb-6">
             <div className="bg-[var(--color-primary)]/10 p-4 rounded-lg border-l-4 border-[var(--color-primary)] mb-6">
               <p className="text-sm text-[var(--color-text)]">
-                {isRecurring 
+                {isRecurring
                   ? "This will mark the current occurrence as complete. The next occurrence will be automatically scheduled according to the task's recurrence pattern."
                   : "This will mark the task as complete. Once completed, this one-time task will be moved to the completed tasks list."
                 }
@@ -155,6 +212,67 @@ const TaskCompletionModal: React.FC<TaskCompletionModalProps> = ({
             </div>
 
             <div className="space-y-6">
+
+              {/* PC: Select user completing for */}
+              {user?.role === 'pc' && (
+                <div>
+                  <label className="block text-sm font-medium mb-2" style={{ color: 'var(--color-text)' }}>
+                    Completing task on behalf of <span className="text-red-500">*</span>
+                  </label>
+                  <select
+                    value={selectedUserId}
+                    onChange={(e) => {
+                      setSelectedUserId(e.target.value);
+                      if (errors.pcUser) setErrors(prev => ({ ...prev, pcUser: '' }));
+                    }}
+                    className={`w-full px-3 py-2 border rounded-lg transition-colors ${errors.pcUser ? 'border-[var(--color-error)]' : 'border-[var(--color-border]'}`}
+                    style={{
+                      backgroundColor: 'var(--color-surface)',
+                      color: 'var(--color-text)'
+                    }}
+                  >
+                    <option value="">Select User</option>
+                    {users.map(u => (
+                      <option key={u.id} value={u.id}>{u.name}</option>
+                    ))}
+                  </select>
+                  {errors.pcUser && (
+                    <p className="text-sm text-[var(--color-error)] mt-1">{errors.pcUser}</p>
+                  )}
+                </div>
+              )}
+
+              {/* PC: Confirmation Attachment */}
+              {user?.role === 'pc' && (
+                <div>
+                  <label className="block text-sm font-medium mb-2" style={{ color: 'var(--color-text)' }}>
+                    PC Confirmation Attachment <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="file"
+                    onChange={(e) => {
+                      if (e.target.files) {
+                        setPcConfirmationFile(e.target.files[0]);
+                        if (errors.pcConfirmation) setErrors(prev => ({ ...prev, pcConfirmation: '' }));
+                      }
+                    }}
+                    accept=".jpg,.jpeg,.png,.pdf"
+                    className={`w-full p-2 border rounded-lg transition-colors ${errors.pcConfirmation ? 'border-[var(--color-error)]' : 'border-[var(--color-border]'}`}
+                    style={{
+                      backgroundColor: 'var(--color-surface)',
+                      color: 'var(--color-text)'
+                    }}
+                    disabled={submitting || uploading}
+                  />
+                  <p className="text-xs mt-1" style={{ color: 'var(--color-textSecondary)' }}>
+                    Upload proof of authorization (screenshot, signed document, etc.)
+                  </p>
+                  {errors.pcConfirmation && (
+                    <p className="text-sm text-[var(--color-error)] mt-1">{errors.pcConfirmation}</p>
+                  )}
+                </div>
+              )}
+
               {/* Completion Remarks */}
               <div>
                 <label className="block text-sm font-medium text-[var(--color-text)] mb-2">
@@ -185,7 +303,7 @@ const TaskCompletionModal: React.FC<TaskCompletionModalProps> = ({
                     Completion Attachments {mandatoryAttachments && <span className="text-[var(--color-error)]">*</span>}
                     {!mandatoryAttachments && <span className="text-[var(--color-textSecondary)] text-xs">(Optional)</span>}
                   </label>
-                  
+
                   <div className={`border-2 border-dashed rounded-lg p-6 text-center transition-colors ${
                     errors.attachments ? 'border-[var(--color-error)]' : 'border-[var(--color-border)] hover:border-[var(--color-primary)]'
                   }`}>

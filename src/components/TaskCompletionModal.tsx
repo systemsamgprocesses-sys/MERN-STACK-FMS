@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { CheckSquare, Paperclip, X, Upload, File } from 'lucide-react';
 import axios from 'axios';
 import { address } from '../../utils/ipAddress';
@@ -47,6 +47,22 @@ const TaskCompletionModal: React.FC<TaskCompletionModalProps> = ({
   // PC Role specific states
   const [pcConfirmationFile, setPcConfirmationFile] = useState<File | null>(null);
   const [selectedUserId, setSelectedUserId] = useState<string>('');
+  const [users, setUsers] = useState<Array<{ _id: string; username: string }>>([]);
+
+  // Fetch users for PC role
+  useEffect(() => {
+    const fetchUsers = async () => {
+      if (user?.role === 'pc') {
+        try {
+          const response = await axios.get(`${address}/api/users`);
+          setUsers(response.data);
+        } catch (error) {
+          console.error('Error fetching users:', error);
+        }
+      }
+    };
+    fetchUsers();
+  }, [user?.role]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
@@ -170,23 +186,6 @@ const TaskCompletionModal: React.FC<TaskCompletionModalProps> = ({
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
   };
 
-  const [users, setUsers] = useState<Array<{ id: string; name: string }>>([]);
-
-  useEffect(() => {
-    const fetchUsers = async () => {
-      try {
-        const response = await axios.get(`${address}/api/users`);
-        setUsers(response.data.map((u: any) => ({ id: u._id, name: u.username })));
-      } catch (error) {
-        console.error('Error fetching users:', error);
-      }
-    };
-
-    if (user?.role === 'pc') {
-      fetchUsers();
-    }
-  }, [user]);
-
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
       <div className="bg-[var(--color-background)] rounded-xl max-w-2xl w-full shadow-2xl max-h-[90vh] overflow-y-auto">
@@ -243,7 +242,7 @@ const TaskCompletionModal: React.FC<TaskCompletionModalProps> = ({
                   >
                     <option value="">Select User</option>
                     {users.map(u => (
-                      <option key={u.id} value={u.id}>{u.name}</option>
+                      <option key={u._id} value={u._id}>{u.username}</option>
                     ))}
                   </select>
                   {errors.pcUser && (

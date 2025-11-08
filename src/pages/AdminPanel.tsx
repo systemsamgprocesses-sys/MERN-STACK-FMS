@@ -254,6 +254,7 @@ const AdminPanel: React.FC = () => {
       await axios.put(`${address}/api/users/${editingUser._id}`, {
         username: formData.username,
         email: formData.email,
+        phoneNumber: formData.phoneNumber,
         role: formData.role,
         permissions: formData.permissions
       });
@@ -283,6 +284,7 @@ const AdminPanel: React.FC = () => {
     setFormData({
       username: user.username,
       email: user.email,
+      phoneNumber: user.phoneNumber || '',
       password: '',
       role: user.role,
       permissions: user.permissions
@@ -293,6 +295,7 @@ const AdminPanel: React.FC = () => {
     setFormData({
       username: '',
       email: '',
+      phoneNumber: '',
       password: '',
       role: 'employee',
       permissions: {

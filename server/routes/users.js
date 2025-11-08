@@ -49,7 +49,7 @@ router.post('/', async (req, res) => {
 router.put('/:id', async (req, res) => {
   try {
     const { username, email, role, permissions, isActive } = req.body;
-    
+
     const user = await User.findByIdAndUpdate(
       req.params.id,
       { username, email, role, permissions, isActive },
@@ -88,8 +88,8 @@ router.delete('/:id', async (req, res) => {
 router.put('/:id/password', async (req, res) => {
   try {
     const { password } = req.body;
-    if (!password) {
-      return res.status(400).json({ message: 'Password is required' });
+    if (!password || password.trim().length < 6) {
+      return res.status(400).json({ message: 'Password must be at least 6 characters long' });
     }
 
     const user = await User.findById(req.params.id);

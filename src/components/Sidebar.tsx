@@ -17,6 +17,9 @@ import {
   Zap,
   User,
   AlertCircle,
+  UserCheck,
+  Shield,
+  Award,
 } from 'lucide-react';
 
 // Clean and Professional AMG Logo Component
@@ -107,6 +110,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
     { icon: Archive, label: 'Master Tasks', path: '/master-tasks', countKey: 'masterTasks' },
     { icon: RotateCcw, label: 'Master Repetitive', path: '/master-recurring', countKey: 'masterRepetitive' },
     { icon: UserPlus, label: 'Assign Task', path: '/assign-task', permission: 'canAssignTasks' },
+    { icon: UserCheck, label: 'Assigned By Me', path: '/assigned-by-me', permission: 'canAssignTasks' }, // Added Assigned By Me
     { icon: Zap, label: 'Performance', path: '/performance' },
     { icon: Settings, label: 'FMS Templates', path: '/fms-templates', permission: 'canAssignTasks' },
     { icon: Settings, label: 'Start Project', path: '/start-project' },
@@ -114,6 +118,8 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
     { icon: User, label: 'My Tasks', path: '/admin-tasks', requireAdmin: true, countKey: 'myTasks' },
     { icon: Settings, label: 'Admin Panel', path: '/admin', requireAdmin: true },
     { icon: AlertCircle, label: 'Objection Approvals', path: '/objection-approvals', countKey: 'objections' },
+    { icon: Shield, label: 'Audit Logs', path: '/audit-logs', requireAdmin: true }, // Added Audit Logs
+    { icon: Award, label: 'Score Logs', path: '/score-logs', requireAdmin: true }, // Added Score Logs
   ];
 
   useEffect(() => {
@@ -121,15 +127,15 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
       fetchCounts();
       // Refresh counts every 30 seconds
       const interval = setInterval(fetchCounts, 30000);
-      
+
       // Listen for task deletion/update events to refresh counts immediately
       const handleTaskUpdate = () => {
         fetchCounts();
       };
-      
+
       window.addEventListener('taskDeleted', handleTaskUpdate);
       window.addEventListener('taskUpdated', handleTaskUpdate);
-      
+
       return () => {
         clearInterval(interval);
         window.removeEventListener('taskDeleted', handleTaskUpdate);
@@ -147,7 +153,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
       }
       const pendingResponse = await axios.get(`${address}/api/tasks/pending?${pendingParams}`);
       const pendingTasksCount = pendingResponse.data.length || 0;
-      
+
       // Fetch FMS pending tasks
       let fmsTasksCount = 0;
       if (user?.id) {
@@ -187,7 +193,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
 
       // Fetch my tasks count (admin-tasks)
       let myTasksCount = 0;
-      if (user?.role === 'admin') {
+      if (user?.role === 'admin' || user?.role === 'superadmin') { // Include superadmin for My Tasks
         try {
           const myTasksResponse = await axios.get(`${address}/api/tasks?${new URLSearchParams({ assignedTo: user.id })}`);
           myTasksCount = myTasksResponse.data.tasks?.filter((t: any) => t.isActive !== false).length || 0;
@@ -229,8 +235,13 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
   };
 
   const filteredMenuItems = menuItems.filter(item => {
+    // Super admin can see everything
+    if (user?.role === 'superadmin') return true;
+    // Admin can see admin panel and below
     if (item.requireAdmin && user?.role !== 'admin') return false;
+    // Check for specific permissions
     if (item.permission && !user?.permissions[item.permission as keyof typeof user.permissions]) return false;
+    // Regular users see the rest
     return true;
   });
 

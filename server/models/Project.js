@@ -45,8 +45,8 @@ const projectTaskSchema = new mongoose.Schema({
   how: { type: String, required: true },
   plannedDueDate: { type: Date },
   actualDueDate: { type: Date },
-  status: { 
-    type: String, 
+  status: {
+    type: String,
     enum: ['Not Started', 'Pending', 'In Progress', 'Done', 'Awaiting Date'],
     default: 'Not Started'
   },
@@ -68,7 +68,8 @@ const projectTaskSchema = new mongoose.Schema({
     uploadedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
     uploadedAt: { type: Date, default: Date.now }
   }],
-  whenType: { type: String, enum: ['fixed', 'dependent'] },
+  whenType: { type: String, enum: ['fixed', 'dependent', 'ask-on-completion'], default: 'fixed' },
+  plannedDateAsked: { type: Boolean, default: false },
   objections: [objectionSchema],
   creationDate: { type: Date, default: Date.now },
   originalPlannedDate: Date,
@@ -77,7 +78,9 @@ const projectTaskSchema = new mongoose.Schema({
   completionScore: Number,
   scoreImpacted: { type: Boolean, default: false },
   isOnHold: { type: Boolean, default: false },
-  isTerminated: { type: Boolean, default: false }
+  isTerminated: { type: Boolean, default: false },
+  requireAttachments: { type: Boolean, default: false },
+  mandatoryAttachments: { type: Boolean, default: false }
 });
 
 const projectSchema = new mongoose.Schema({

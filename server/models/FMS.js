@@ -25,11 +25,13 @@ const stepSchema = new mongoose.Schema({
   whenUnit: { type: String, enum: ['days', 'hours', 'days+hours'], required: true },
   whenDays: { type: Number },
   whenHours: { type: Number },
-  whenType: { type: String, enum: ['fixed', 'dependent'], required: true },
+  whenType: { type: String, enum: ['fixed', 'dependent', 'ask-on-completion'], required: true },
   requiresChecklist: { type: Boolean, default: false },
   checklistItems: [checklistItemSchema],
   attachments: [attachmentSchema],
-  triggersFMSId: { type: mongoose.Schema.Types.ObjectId, ref: 'FMS' }
+  triggersFMSId: { type: mongoose.Schema.Types.ObjectId, ref: 'FMS' },
+  requireAttachments: { type: Boolean, default: false },
+  mandatoryAttachments: { type: Boolean, default: false }
 });
 
 const fmsSchema = new mongoose.Schema({
@@ -38,6 +40,17 @@ const fmsSchema = new mongoose.Schema({
   steps: [stepSchema],
   createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
   status: { type: String, enum: ['Active', 'Inactive'], default: 'Active' },
+  frequency: {
+    type: String,
+    enum: ['one-time', 'daily', 'weekly', 'monthly', 'quarterly', 'yearly'],
+    default: 'one-time'
+  },
+  frequencySettings: {
+    includeSunday: { type: Boolean, default: false },
+    weeklyDays: [Number],
+    monthlyDay: Number,
+    yearlyDuration: Number
+  },
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now }
 });

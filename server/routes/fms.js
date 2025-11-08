@@ -40,7 +40,7 @@ const upload = multer({
 // Create FMS Template
 router.post('/', upload.array('files', 10), async (req, res) => {
   try {
-    const { fmsName, steps, createdBy } = req.body;
+    const { fmsName, steps, createdBy, frequency, frequencySettings } = req.body;
     
     // Validate required fields
     if (!fmsName || !fmsName.trim()) {
@@ -112,12 +112,22 @@ router.post('/', upload.array('files', 10), async (req, res) => {
       });
     }
     
+    // Helper function to shift Sunday to Monday
+    const shiftSundayToMonday = (date) => {
+      if (date.getDay() === 0) { // 0 is Sunday
+        date.setDate(date.getDate() + 1);
+      }
+      return date;
+    };
+
     const fms = new FMS({
       fmsId,
       fmsName,
       steps: parsedSteps,
       createdBy,
-      status: 'Active'
+      status: 'Active',
+      frequency: frequency || 'one-time',
+      frequencySettings: frequencySettings || {}
     });
     
     await fms.save();

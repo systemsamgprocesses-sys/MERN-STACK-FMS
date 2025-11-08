@@ -1115,4 +1115,40 @@ router.get('/counts', async (req, res) => {
   }
 });
 
+// Get upcoming tasks (next 7 days)
+router.get('/upcoming-tasks', async (req, res) => {
+  try {
+    const { userId, isAdmin } = req.query;
+    const userObjectId = userId ? new mongoose.Types.ObjectId(userId) : null;
+
+    const now = new Date();
+    const sevenDaysFromNow = new Date();
+    sevenDaysFromNow.setDate(sevenDaysFromNow.getDate() + 7);
+
+    let baseQuery = {
+      isActive: true,
+      status: 'pending',
+      $or: [
+        { dueDate: { $gt: now, $lte: sevenDaysFromNow } },
+        { nextDueDate: { $gt: now, $lte: sevenDaysFromNow } }
+      ]
+    };
+
+    if (isAdmin !== 'true' && userObjectId) {
+      baseQuery.assignedTo = userObjectId;
+    }
+
+    const upcomingTasks = await Task.find(baseQuery)
+      .populate('assignedBy', 'username email phoneNumber')
+      .populate('assignedTo', 'username email phoneNumber')
+      .sort({ dueDate: 1, nextDueDate: 1 })
+      .limit(20);
+
+    res.json({ upcomingTasks });
+  } catch (error) {
+    console.error('Upcoming tasks error:', error);
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
 export default router;

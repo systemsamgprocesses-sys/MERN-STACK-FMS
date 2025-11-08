@@ -130,6 +130,14 @@ const taskSchema = new mongoose.Schema({
       default: Date.now
     }
   }],
+  requireAttachments: {
+    type: Boolean,
+    default: false
+  },
+  mandatoryAttachments: {
+    type: Boolean,
+    default: false
+  },
   revisions: [revisionSchema],
   revisionCount: {
     type: Number,

@@ -18,6 +18,8 @@ import fmsRoutes from './routes/fms.js';
 import projectRoutes from './routes/projects.js';
 import leadsRoutes from './routes/leads.js';
 import objectionRoutes from './routes/objections.js';
+import auditLogRoutes from './routes/auditLogs.js';
+import scoreLogRoutes from './routes/scoreLogs.js';
 
 dotenv.config();
 
@@ -41,7 +43,7 @@ app.use(cors({
   origin: function (origin, callback) {
     // Allow requests with no origin (like mobile apps or curl requests)
     if (!origin) return callback(null, true);
-    
+
     if (allowedOrigins.includes(origin)) {
       return callback(null, true);
     } else {
@@ -127,6 +129,8 @@ app.use('/api/fms', fmsRoutes);
 app.use('/api/projects', projectRoutes);
 app.use('/api/leads', leadsRoutes);
 app.use('/api/objections', objectionRoutes);
+app.use('/api/audit-logs', auditLogRoutes);
+app.use('/api/score-logs', scoreLogRoutes);
 
 // Serve frontend in production
 if (config.nodeEnv === 'production') {

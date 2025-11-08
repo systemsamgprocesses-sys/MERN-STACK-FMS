@@ -1,6 +1,7 @@
 import express from 'express';
 import Task from '../models/Task.js';
 import User from '../models/User.js';
+import ScoreLog from '../models/ScoreLog.js';
 
 const router = express.Router();
 
@@ -289,6 +290,45 @@ router.get('/pending', async (req, res) => {
   }
 });
 
+// Get tasks assigned by me
+router.get('/assigned-by-me', async (req, res) => {
+  try {
+    const { userId, page = 1, limit = 50, status } = req.query;
+
+    if (!userId) {
+      return res.status(400).json({ message: 'User ID is required' });
+    }
+
+    const query = {
+      isActive: true,
+      assignedBy: userId
+    };
+
+    if (status) {
+      query.status = status;
+    }
+
+    const tasks = await Task.find(query)
+      .populate('assignedBy', 'username email phoneNumber')
+      .populate('assignedTo', 'username email phoneNumber')
+      .sort({ createdAt: -1 })
+      .limit(limit * 1)
+      .skip((page - 1) * limit);
+
+    const total = await Task.countDocuments(query);
+
+    res.json({
+      tasks,
+      totalPages: Math.ceil(total / limit),
+      currentPage: page,
+      total
+    });
+  } catch (error) {
+    console.error('Error fetching assigned by me tasks:', error);
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
 // Get pending recurring tasks (for the specific "PendingRecurringTasks" frontend component)
 router.get('/pending-recurring', async (req, res) => {
   try {
@@ -549,6 +589,28 @@ router.post('/:id/complete', async (req, res) => {
     console.log(`Task ${task._id} completed with score: ${task.completionScore}`);
 
     await task.save();
+
+    // Log the score
+    try {
+      const scoreLog = new ScoreLog({
+        taskId: task._id,
+        userId: task.assignedTo,
+        taskTitle: task.title,
+        taskType: task.taskType,
+        score: task.completionScore,
+        scorePercentage: task.completionScore * 100,
+        plannedDays: task.plannedDaysCount || 0,
+        actualDays: actualDays,
+        completedAt: task.completedAt,
+        wasOnTime: task.completionScore >= 1.0,
+        scoreImpacted: task.scoreImpacted,
+        impactReason: task.scoreImpacted ? 'Date extension with score impact' : null
+      });
+      await scoreLog.save();
+    } catch (logError) {
+      console.error('Error saving score log:', logError);
+      // Don't fail the completion if logging fails
+    }
 
     const populatedTask = await Task.findById(task._id)
       .populate('assignedBy', 'username email phoneNumber')

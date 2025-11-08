@@ -40,5 +40,7 @@ export interface Task {
   completionScore?: number;
   phoneNumber?: string;
   department?: string;
+  isOnHold?: boolean;
+  isTerminated?: boolean;
 }
   

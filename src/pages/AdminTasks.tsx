@@ -18,6 +18,8 @@ interface Task {
   priority: string;
   status: string;
   createdAt: string;
+  isOnHold?: boolean;
+  isTerminated?: boolean;
 }
 
 const AdminTasks: React.FC = () => {
@@ -191,12 +193,12 @@ const AdminTasks: React.FC = () => {
                     <Users size={14} className="inline mr-1" />
                     Assigned By:
                   </span>
-                  <span className="font-medium text-[var(--color-text)]">{task.assignedBy.username}</span>
+                  <span className="font-medium text-[var(--color-text)]">{task.assignedBy?.username || 'Unknown User'}</span>
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-[var(--color-textSecondary)]">Status:</span>
-                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(task.status)}`}>
-                    {task.status}
+                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${task.isOnHold ? 'bg-orange-100 text-orange-800' : getStatusColor(task.status)}`}>
+                    {task.isOnHold ? 'HOLD' : task.status}
                   </span>
                 </div>
                 <div className="flex items-center justify-between">
@@ -213,7 +215,7 @@ const AdminTasks: React.FC = () => {
                     <Users size={14} className="inline mr-1" />
                     Assigned To:
                   </span>
-                  <span className="font-medium text-[var(--color-text)]">{task.assignedTo.username}</span>
+                  <span className="font-medium text-[var(--color-text)]">{task.assignedTo?.username || 'Unknown User'}</span>
                 </div>
               </div>
 

@@ -222,10 +222,10 @@ export const EditTaskModal: React.FC<EditTaskModalProps> = ({
                 <span className="font-medium">Status:</span> {task.status}
               </div>
               <div>
-                <span className="font-medium">Assigned By:</span> {task.assignedBy.username}
+                <span className="font-medium">Assigned By:</span> {task.assignedBy?.username || 'Unknown User'}
               </div>
               <div>
-                <span className="font-medium">Current Assignee:</span> {task.assignedTo.username}
+                <span className="font-medium">Current Assignee:</span> {task.assignedTo?.username || 'Unknown User'}
               </div>
             </div>
           </div>

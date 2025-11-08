@@ -21,6 +21,8 @@ interface Task {
   dueDate: string;
   assignedTo: { username: string; email: string };
   objections: Objection[];
+  isOnHold?: boolean;
+  isTerminated?: boolean;
 }
 
 interface FMSTask {
@@ -105,7 +107,7 @@ const ObjectionApprovals: React.FC = () => {
                   <div key={key} className="bg-[--color-surface] rounded-xl p-6 border border-[--color-border]">
                     <h3 className="font-semibold text-[--color-text] mb-2">{task.title}</h3>
                     <p className="text-sm text-[--color-textSecondary] mb-2">
-                      Assigned to: {task.assignedTo.username}
+                      Assigned to: {task.assignedTo?.username || 'Unknown User'}
                     </p>
                     <p className="text-sm text-[--color-textSecondary] mb-2">
                       Current Due Date: {new Date(task.dueDate).toLocaleDateString('en-GB')}
@@ -121,7 +123,7 @@ const ObjectionApprovals: React.FC = () => {
                       )}
                       <p className="text-sm text-[--color-textSecondary]">Remarks: {objection.remarks}</p>
                       <p className="text-xs text-[--color-textSecondary] mt-2">
-                        Requested by: {objection.requestedBy.username} on {new Date(objection.requestedAt).toLocaleDateString('en-GB')}
+                        Requested by: {objection.requestedBy?.username || 'Unknown User'} on {new Date(objection.requestedAt).toLocaleDateString('en-GB')}
                       </p>
                     </div>
                     <div className="space-y-4">

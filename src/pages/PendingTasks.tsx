@@ -534,9 +534,9 @@ const PendingTasks: React.FC = () => {
                 <td>${idx + 1}</td>
                 <td>${task.title}</td>
                 <td>${task.description.substring(0, 40)}...</td>
-                <td>${task.assignedTo.username}</td>
+                <td>${task.assignedTo?.username || 'Unknown User'}</td>
                 <td><span class="badge badge-${task.priority}">${task.priority.toUpperCase()}</span></td>
-                <td><span class="badge badge-${task.status}">${task.status.toUpperCase()}</span></td>
+                <td><span class="badge badge-${task.isOnHold ? 'hold' : task.status}">${task.isOnHold ? 'HOLD' : task.status.toUpperCase()}</span></td>
                 <td>${task.dueDate ? new Date(task.dueDate).toLocaleDateString('en-GB') : 'N/A'}</td>
               </tr>
             `).join('')}
@@ -735,14 +735,14 @@ const PendingTasks: React.FC = () => {
                     <Users size={14} className="mr-1" />
                     Assigned By:
                   </span>
-                  <span className="font-medium text-[--color-text]">{task.assignedBy.username}</span>
+                  <span className="font-medium text-[--color-text]">{task.assignedBy?.username || 'Unknown User'}</span>
                 </div>
                 <div className={`flex items-center justify-between p-2 rounded-lg ${theme === 'light' ? 'bg-gray-50' : 'bg-[--color-background]'}`}>
                   <span className="flex items-center text-[--color-textSecondary]">
                     <Users size={14} className="mr-1" />
                     Assigned To:
                   </span>
-                  <span className="font-medium text-[--color-text]">{task.assignedTo.username}</span>
+                  <span className="font-medium text-[--color-text]">{task.assignedTo?.username || 'Unknown User'}</span>
                 </div>
                 <div className={`flex items-center justify-between p-2 rounded-lg ${theme === 'light' ? 'bg-gray-50' : 'bg-[--color-background]'}`}>
                   <span className="flex items-center text-[--color-textSecondary]">
@@ -884,21 +884,21 @@ const PendingTasks: React.FC = () => {
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center">
                       <div className="w-8 h-8 rounded-full flex items-center justify-center text-white text-sm font-medium mr-3 bg-[--color-secondary] text-[--color-background]">
-                        {task.assignedBy.username.charAt(0).toUpperCase()}
+                        {task.assignedBy?.username?.charAt(0).toUpperCase() || '?'}
                       </div>
                       <div>
-                        <div className="text-sm text-[--color-text]">{task.assignedBy.username}</div>
+                        <div className="text-sm text-[--color-text]">{task.assignedBy?.username || 'Unknown User'}</div>
                       </div>
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center">
                       <div className="w-8 h-8 rounded-full flex items-center justify-center text-white text-sm font-medium mr-3 bg-[--color-primary-dark] text-[--color-background]">
-                        {task.assignedTo.username.charAt(0).toUpperCase()}
+                        {task.assignedTo?.username?.charAt(0).toUpperCase() || '?'}
                       </div>
                       <div>
-                        <div className="text-sm text-[--color-text]">{task.assignedTo.username}</div>
-                        <div className="text-sm text-[--color-textSecondary]">{task.phoneNumber || task.assignedTo.phoneNumber || task.assignedTo.email}</div>
+                        <div className="text-sm text-[--color-text]">{task.assignedTo?.username || 'Unknown User'}</div>
+                        <div className="text-sm text-[--color-textSecondary]">{task.phoneNumber || task.assignedTo?.phoneNumber || task.assignedTo?.email || ''}</div>
                       </div>
                     </div>
                   </td>
@@ -1084,21 +1084,6 @@ const PendingTasks: React.FC = () => {
               </div>
             )}
 
-            <div>
-              <label className="block text-sm font-medium mb-1 text-[--color-textSecondary]">
-                Sort by Due Date
-              </label>
-              <button
-                onClick={toggleSort}
-                className="w-full text-sm px-1 py-1 border border-[--color-border] rounded-lg focus:ring-2 focus:ring-[--color-primary] focus:border-[--color-primary] transition-colors flex items-center justify-between hover:bg-[--color-background] bg-[--color-surface] text-[--color-text]"
-              >
-                <span>
-                  {sortOrder === 'none' ? 'No sorting' :
-                    sortOrder === 'asc' ? 'Earliest first' : 'Latest first'}
-                </span>
-                {getSortIcon()}
-              </button>
-            </div>
 
             <div>
               <label className="block text-sm font-medium mb-1 text-[--color-textSecondary]">

@@ -241,6 +241,9 @@ router.get('/', async (req, res) => {
       query.dueDate = { $gte: new Date(startDate), $lte: new Date(endDate) };
     }
 
+    // Only fetch active tasks (exclude soft-deleted tasks)
+    query.isActive = true;
+
     const tasks = await Task.find(query)
       .populate('assignedBy', 'username email phoneNumber')
       .populate('assignedTo', 'username email phoneNumber')

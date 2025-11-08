@@ -77,6 +77,9 @@ router.post('/task/:taskId/objection/:objectionIndex/respond', async (req, res) 
     objection.approvalRemarks = approvalRemarks;
     objection.impactScore = impactScore !== undefined ? impactScore : true;
 
+    // Mark objections array as modified to ensure Mongoose saves the nested changes
+    task.markModified('objections');
+
     if (status === 'approved') {
       if (objection.type === 'date_change') {
         task.dueDate = objection.requestedDate;
@@ -179,7 +182,7 @@ router.get('/pending/:userId', async (req, res) => {
   try {
     const { userId } = req.params;
 
-    // Get regular tasks where user is the assigner
+    // Get regular tasks where user is the assigner and has at least one pending objection
     const tasks = await Task.find({
       assignedBy: userId,
       'objections.status': 'pending',
@@ -189,6 +192,21 @@ router.get('/pending/:userId', async (req, res) => {
       .populate('assignedBy', 'username email phoneNumber')
       .populate('objections.requestedBy', 'username email phoneNumber');
 
+    // Filter tasks to only include those with at least one pending objection
+    // and filter objections array to only include pending ones
+    const filteredTasks = tasks
+      .map(task => {
+        const pendingObjections = task.objections.filter(obj => obj.status === 'pending');
+        if (pendingObjections.length === 0) {
+          return null;
+        }
+        return {
+          ...task.toObject(),
+          objections: pendingObjections
+        };
+      })
+      .filter(task => task !== null);
+
     // Get FMS projects where user is the first step assignee
     const fmsProjects = await Project.find({
       'tasks.objections.status': 'pending'
@@ -196,14 +214,40 @@ router.get('/pending/:userId', async (req, res) => {
       .populate('tasks.who', 'username email phoneNumber')
       .populate('tasks.objections.requestedBy', 'username email phoneNumber');
 
-    const fmsObjections = fmsProjects.filter(project => {
-      // Check if user is in the first step's 'who' array
-      return project.tasks[0]?.who.some(person => person._id.toString() === userId);
-    });
+    const fmsObjections = fmsProjects
+      .filter(project => {
+        // Check if user is in the first step's 'who' array
+        return project.tasks[0]?.who.some(person => person._id.toString() === userId);
+      })
+      .map(project => {
+        // Filter tasks to only include those with pending objections
+        const filteredTasks = project.tasks
+          .map(task => {
+            const pendingObjections = task.objections?.filter(obj => obj.status === 'pending') || [];
+            if (pendingObjections.length === 0) {
+              return null;
+            }
+            return {
+              ...task.toObject(),
+              objections: pendingObjections
+            };
+          })
+          .filter(task => task !== null);
+        
+        if (filteredTasks.length === 0) {
+          return null;
+        }
+        
+        return {
+          ...project.toObject(),
+          tasks: filteredTasks
+        };
+      })
+      .filter(project => project !== null);
 
     res.json({
       success: true,
-      regularTasks: tasks,
+      regularTasks: filteredTasks,
       fmsTasks: fmsObjections
     });
   } catch (error) {
@@ -238,6 +282,9 @@ router.post('/fms/:projectId/task/:taskIndex/objection/:objectionIndex/respond',
     objection.approvedAt = new Date();
     objection.approvalRemarks = approvalRemarks;
     objection.impactScore = impactScore !== undefined ? impactScore : true;
+
+    // Mark tasks array as modified to ensure Mongoose saves the nested changes
+    project.markModified('tasks');
 
     if (status === 'approved') {
       if (objection.type === 'date_change') {

@@ -187,7 +187,7 @@ const MasterTasks: React.FC = () => {
 
       const response = await axios.get(`${address}/api/tasks?${params}`);
 
-      let tasks = response.data.tasks.filter((task: Task) => task.taskType === 'one-time');
+      let tasks = response.data.tasks.filter((task: Task) => task.taskType === 'one-time' && (task.isActive !== false));
 
       setAllTasks(tasks);
     } catch (error) {
@@ -216,12 +216,15 @@ const MasterTasks: React.FC = () => {
 
     try {
       await axios.delete(`${address}/api/tasks/${taskIdToDelete}`);
-      fetchTasks();
-    } catch (error) {
-      console.error("Error deleting task:", error);
-    } finally {
       setShowDeleteModal(false);
       setTaskIdToDelete(null);
+      fetchTasks();
+      // Trigger event to refresh sidebar counts
+      window.dispatchEvent(new Event('taskDeleted'));
+      alert('Task deleted successfully');
+    } catch (error: any) {
+      console.error("Error deleting task:", error);
+      alert(error.response?.data?.message || 'Failed to delete task. Please try again.');
     }
   };
 
@@ -392,7 +395,7 @@ const MasterTasks: React.FC = () => {
               </div>
 
               <div className="flex flex-wrap gap-2 mb-4">
-                <StatusBadge status={task.status} />
+                <StatusBadge status={task.status} isOnHold={task.isOnHold} />
                 <PriorityBadge priority={task.priority} />
                 {task.revisionCount > 0 && (
                   <span className={`px-2 py-1 text-xs font-medium rounded-full ${isDark ? 'bg-orange-700 text-orange-200 border-orange-600' : 'bg-orange-100 text-orange-800 border border-orange-200'}`}>
@@ -425,14 +428,14 @@ const MasterTasks: React.FC = () => {
                     <Users size={14} className="mr-2" />
                     Assigned by:
                   </span>
-                  <span className={`font-medium ${isDark ? 'text-white' : 'text-gray-900'}`}>{task.assignedBy.username}</span>
+                  <span className={`font-medium ${isDark ? 'text-white' : 'text-gray-900'}`}>{task.assignedBy?.username || 'Unknown User'}</span>
                 </div>
                 <div className={`flex items-center justify-between p-2 rounded-lg ${isDark ? 'bg-blue-900' : 'bg-blue-50'}`}>
                   <span className={`flex items-center ${isDark ? 'text-blue-300' : 'text-gray-500'}`}>
                     <Eye size={14} className="mr-2" />
                     Assigned to:
                   </span>
-                  <span className={`font-medium ${isDark ? 'text-blue-100' : 'text-blue-900'}`}>{task.assignedTo.username}</span>
+                  <span className={`font-medium ${isDark ? 'text-blue-100' : 'text-blue-900'}`}>{task.assignedTo?.username || 'Unknown User'}</span>
                 </div>
                 <div className={`flex items-center justify-between p-2 rounded-lg ${isDark ? 'bg-gray-700' : 'bg-gray-50'}`}>
                   <span className={`flex items-center ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
@@ -625,7 +628,7 @@ const MasterTasks: React.FC = () => {
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <StatusBadge status={task.status} />
+                    <StatusBadge status={task.status} isOnHold={task.isOnHold} />
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <PriorityBadge priority={task.priority} />
@@ -633,22 +636,21 @@ const MasterTasks: React.FC = () => {
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center">
                       <div className="w-8 h-8 bg-gradient-to-r from-blue-400 to-purple-500 rounded-full flex items-center justify-center text-white text-sm font-medium mr-3">
-                        {task.assignedBy.username.charAt(0).toUpperCase()}
+                        {task.assignedBy?.username?.charAt(0).toUpperCase() || '?'}
                       </div>
                       <div>
-                        <div className={`text-sm font-medium ${isDark ? 'text-white' : 'text-gray-900'}`}>{task.assignedBy.username}</div>
-                        <div className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>{task.phoneNumber || task.assignedBy.phoneNumber || task.assignedBy.email}</div>
+                        <div className={`text-sm font-medium ${isDark ? 'text-white' : 'text-gray-900'}`}>{task.assignedBy?.username || 'Unknown User'}</div>
                       </div>
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center">
                       <div className="w-8 h-8 bg-gradient-to-r from-blue-400 to-purple-500 rounded-full flex items-center justify-center text-white text-sm font-medium mr-3">
-                        {task.assignedTo.username.charAt(0).toUpperCase()}
+                        {task.assignedTo?.username?.charAt(0).toUpperCase() || '?'}
                       </div>
                       <div>
-                        <div className={`text-sm font-medium ${isDark ? 'text-white' : 'text-gray-900'}`}>{task.assignedTo.username}</div>
-                        <div className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>{task.phoneNumber || task.assignedTo.phoneNumber || task.assignedTo.email}</div>
+                        <div className={`text-sm font-medium ${isDark ? 'text-white' : 'text-gray-900'}`}>{task.assignedTo?.username || 'Unknown User'}</div>
+                        <div className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>{task.phoneNumber || task.assignedTo?.phoneNumber || task.assignedTo?.email || ''}</div>
                       </div>
                     </div>
                   </td>
@@ -1125,7 +1127,7 @@ const MasterTasks: React.FC = () => {
                         </div>
                         <div className="text-right">
                           <div className={`text-sm font-medium ${isDark ? 'text-white' : 'text-gray-900'}`}>
-                            {revision.revisedBy.username}
+                            {revision.revisedBy?.username || 'Unknown User'}
                           </div>
                           <div className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
                             {new Date(revision.revisedAt).toLocaleDateString('en-US', {

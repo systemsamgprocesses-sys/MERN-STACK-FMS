@@ -33,6 +33,8 @@ interface Task {
   lastCompletedDate?: string;
   createdAt: string;
   attachments: Attachment[]; // Added attachments property
+  isOnHold?: boolean;
+  isTerminated?: boolean;
 }
 
 interface User {
@@ -362,12 +364,12 @@ const PendingRecurringTasks: React.FC = () => {
               <div className="space-y-3 text-sm">
                 <div className="flex justify-between items-center py-2 px-3 bg-[var(--color-surface)] rounded-lg">
                   <span className="text-[var(--color-textSecondary)]">Assigned by:</span>
-                  <span className="font-medium text-[var(--color-text)]">{task.assignedBy.username}</span>
+                  <span className="font-medium text-[var(--color-text)]">{task.assignedBy?.username || 'Unknown User'}</span>
                 </div>
                 {isAdmin && (
                   <div className="flex justify-between items-center py-2 px-3 bg-[var(--color-primary)]/10 rounded-lg">
                     <span className="text-[var(--color-textSecondary)]">Assigned to:</span>
-                    <span className="font-medium text-[var(--color-primary)]">{task.assignedTo.username}</span>
+                    <span className="font-medium text-[var(--color-primary)]">{task.assignedTo?.username || 'Unknown User'}</span>
                   </div>
                 )}
                 <div className="flex justify-between items-center py-2 px-3 bg-[var(--color-accent)]/10 rounded-lg">
@@ -489,8 +491,8 @@ const PendingRecurringTasks: React.FC = () => {
                   <td className="px-6 py-4 whitespace-nowrap"><PriorityBadge priority={task.priority} /></td>
                   {isAdmin && (
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-[var(--color-text)]">{task.assignedTo.username}</div>
-                      <div className="text-sm text-[var(--color-textSecondary)]">{task.phoneNumber || task.assignedTo.phoneNumber || task.assignedTo.email}</div>
+                      <div className="text-sm text-[var(--color-text)]">{task.assignedTo?.username || 'Unknown User'}</div>
+                      <div className="text-sm text-[var(--color-textSecondary)]">{task.phoneNumber || task.assignedTo?.phoneNumber || task.assignedTo?.email || ''}</div>
                     </td>
                   )}
                   {/* Attachments in Table View */}

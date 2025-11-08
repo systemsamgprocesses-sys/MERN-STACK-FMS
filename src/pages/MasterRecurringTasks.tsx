@@ -46,6 +46,8 @@ interface Task {
   createdAt: string;
   attachments: Attachment[];
   completionAttachments?: Attachment[];
+  isOnHold?: boolean;
+  isTerminated?: boolean;
 }
 
 interface User {
@@ -307,7 +309,7 @@ const MasterRecurringTasks: React.FC = () => {
       const response = await axios.get(`${address}/api/tasks?${params}`);
 
       let tasks = response.data.tasks.filter((task: Task) =>
-        ['daily', 'weekly', 'monthly', 'quarterly', 'yearly'].includes(task.taskType)
+        ['daily', 'weekly', 'monthly', 'quarterly', 'yearly'].includes(task.taskType) && (task.isActive !== false)
       );
 
       setAllTasks(tasks);
@@ -592,12 +594,12 @@ const MasterRecurringTasks: React.FC = () => {
               <div className="space-y-2 text-sm text-[--color-textSecondary]">
                 <div className="flex justify-between">
                   <span>Assigned by:</span>
-                  <span className="font-medium">{masterTask.assignedBy.username}</span>
+                  <span className="font-medium">{masterTask.assignedBy?.username || 'Unknown User'}</span>
                 </div>
                 {isAdmin && (
                   <div className="flex justify-between">
                     <span>Assigned to:</span>
-                    <span className="font-medium">{masterTask.assignedTo.username}</span>
+                    <span className="font-medium">{masterTask.assignedTo?.username || 'Unknown User'}</span>
                   </div>
                 )}
                 <div className="flex justify-between">
@@ -723,8 +725,8 @@ const MasterRecurringTasks: React.FC = () => {
                   </td>
                   {isAdmin && (
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-[--color-text]">{masterTask.assignedTo.username}</div>
-                      <div className="text-sm text-[--color-textSecondary]">{masterTask.assignedTo.email}</div>
+                      <div className="text-sm text-[--color-text]">{masterTask.assignedTo?.username || 'Unknown User'}</div>
+                      <div className="text-sm text-[--color-textSecondary]">{masterTask.assignedTo?.email || ''}</div>
                     </td>
                   )}
                   <td className="px-6 py-4 whitespace-nowrap text-sm">
@@ -820,7 +822,7 @@ const MasterRecurringTasks: React.FC = () => {
 
             <div className="flex flex-wrap gap-2 mb-4">
               <TaskTypeBadge taskType={task.taskType} />
-              <StatusBadge status={task.status} />
+              <StatusBadge status={task.status} isOnHold={task.isOnHold} />
               <PriorityBadge priority={task.priority} />
               {task.parentTaskInfo?.isForever && (
                 <span className="px-2 py-1 text-xs font-medium rounded-full bg-[--color-primary-light] text-[--color-primary]">
@@ -834,12 +836,12 @@ const MasterRecurringTasks: React.FC = () => {
             <div className="space-y-2 text-sm text-[--color-textSecondary]">
               <div className="flex justify-between">
                 <span>Assigned by:</span>
-                <span className="font-medium">{task.assignedBy.username}</span>
+                <span className="font-medium">{task.assignedBy?.username || 'Unknown User'}</span>
               </div>
               {isAdmin && (
                 <div className="flex justify-between">
                   <span>Assigned to:</span>
-                  <span className="font-medium">{task.assignedTo.username}</span>
+                  <span className="font-medium">{task.assignedTo?.username || 'Unknown User'}</span>
                 </div>
               )}
               <div className="flex justify-between">
@@ -999,15 +1001,15 @@ const MasterRecurringTasks: React.FC = () => {
                   <TaskTypeBadge taskType={task.taskType} />
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
-                  <StatusBadge status={task.status} />
+                  <StatusBadge status={task.status} isOnHold={task.isOnHold} />
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
                   <PriorityBadge priority={task.priority} />
                 </td>
                 {isAdmin && (
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-[--color-text]">{task.assignedTo.username}</div>
-                    <div className="text-sm text-[--color-textSecondary]">{task.assignedTo.email}</div>
+                    <div className="text-sm text-[--color-text]">{task.assignedTo?.username || 'Unknown User'}</div>
+                    <div className="text-sm text-[--color-textSecondary]">{task.assignedTo?.email || ''}</div>
                   </td>
                 )}
                 <td className="px-6 py-4 whitespace-nowrap text-sm">
@@ -1609,12 +1611,15 @@ const MasterRecurringTasks: React.FC = () => {
                     } else if (deleteConfig.type === "single" && deleteConfig.taskId) {
                       await axios.delete(`${address}/api/tasks/${deleteConfig.taskId}`);
                     }
-                    fetchTasks();
                     setShowDeleteModal(false);
                     setDeleteConfig(null);
+                    fetchTasks();
+                    // Trigger event to refresh sidebar counts
+                    window.dispatchEvent(new Event('taskDeleted'));
                     toast.success("Deleted Successfully");
-                  } catch (error) {
+                  } catch (error: any) {
                     console.error("Error deleting task:", error);
+                    toast.error(error.response?.data?.message || 'Failed to delete task. Please try again.');
                   }
                 }}
                 className="px-4 py-2 rounded bg-red-500 text-white hover:bg-red-600"

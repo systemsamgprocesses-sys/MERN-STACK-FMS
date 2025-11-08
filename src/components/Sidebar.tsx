@@ -1,6 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { NavLink } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import axios from 'axios';
+import { address } from '../../utils/ipAddress';
 import {
   LayoutDashboard,
   CheckSquare,
@@ -88,23 +90,143 @@ interface SidebarProps {
 
 const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
   const { user } = useAuth();
-  const [isCollapsed, setIsCollapsed] = useState(true); // Default collapsed state
+  const [isCollapsed, setIsCollapsed] = useState(false); // Default expanded state
+  const [counts, setCounts] = useState({
+    pendingTasks: 0,
+    pendingRepetitive: 0,
+    masterTasks: 0,
+    masterRepetitive: 0,
+    myTasks: 0,
+    objections: 0,
+  });
 
   const menuItems = [
     { icon: LayoutDashboard, label: 'Dashboard', path: '/dashboard' },
-    { icon: CheckSquare, label: 'Pending Tasks', path: '/pending-tasks' },
-    { icon: RefreshCw, label: 'Pending Recurring', path: '/pending-recurring' },
-    { icon: Archive, label: 'Master Tasks', path: '/master-tasks' },
-    { icon: RotateCcw, label: 'Master Recurring', path: '/master-recurring' },
+    { icon: CheckSquare, label: 'Pending Tasks', path: '/pending-tasks', countKey: 'pendingTasks' },
+    { icon: RefreshCw, label: 'Pending Repetitive', path: '/pending-recurring', countKey: 'pendingRepetitive' },
+    { icon: Archive, label: 'Master Tasks', path: '/master-tasks', countKey: 'masterTasks' },
+    { icon: RotateCcw, label: 'Master Repetitive', path: '/master-recurring', countKey: 'masterRepetitive' },
     { icon: UserPlus, label: 'Assign Task', path: '/assign-task', permission: 'canAssignTasks' },
     { icon: Zap, label: 'Performance', path: '/performance' },
     { icon: Settings, label: 'FMS Templates', path: '/fms-templates', permission: 'canAssignTasks' },
     { icon: Settings, label: 'Start Project', path: '/start-project' },
     { icon: Settings, label: 'FMS Progress', path: '/fms-progress' },
-    { icon: User, label: 'My Tasks', path: '/admin-tasks', requireAdmin: true },
+    { icon: User, label: 'My Tasks', path: '/admin-tasks', requireAdmin: true, countKey: 'myTasks' },
     { icon: Settings, label: 'Admin Panel', path: '/admin', requireAdmin: true },
-    { icon: AlertCircle, label: 'Objection Approvals', path: '/objection-approvals' },
+    { icon: AlertCircle, label: 'Objection Approvals', path: '/objection-approvals', countKey: 'objections' },
   ];
+
+  useEffect(() => {
+    if (user?.id) {
+      fetchCounts();
+      // Refresh counts every 30 seconds
+      const interval = setInterval(fetchCounts, 30000);
+      
+      // Listen for task deletion/update events to refresh counts immediately
+      const handleTaskUpdate = () => {
+        fetchCounts();
+      };
+      
+      window.addEventListener('taskDeleted', handleTaskUpdate);
+      window.addEventListener('taskUpdated', handleTaskUpdate);
+      
+      return () => {
+        clearInterval(interval);
+        window.removeEventListener('taskDeleted', handleTaskUpdate);
+        window.removeEventListener('taskUpdated', handleTaskUpdate);
+      };
+    }
+  }, [user]);
+
+  const fetchCounts = async () => {
+    try {
+      // Fetch pending tasks (including FMS)
+      const pendingParams = new URLSearchParams({ taskType: 'one-time' });
+      if (!user?.permissions?.canViewAllTeamTasks && user?.id) {
+        pendingParams.append('userId', user.id);
+      }
+      const pendingResponse = await axios.get(`${address}/api/tasks/pending?${pendingParams}`);
+      const pendingTasksCount = pendingResponse.data.length || 0;
+      
+      // Fetch FMS pending tasks
+      let fmsTasksCount = 0;
+      if (user?.id) {
+        try {
+          const fmsResponse = await axios.get(`${address}/api/projects/pending-fms-tasks/${user.id}`);
+          fmsTasksCount = fmsResponse.data.tasks?.length || 0;
+        } catch (e) {
+          console.error('Error fetching FMS tasks:', e);
+        }
+      }
+
+      // Fetch pending repetitive tasks
+      const recurringParams = new URLSearchParams();
+      if (!user?.permissions?.canViewAllTeamTasks && user?.id) {
+        recurringParams.append('userId', user.id);
+      }
+      const recurringResponse = await axios.get(`${address}/api/tasks/pending-recurring?${recurringParams}`);
+      const pendingRepetitiveCount = Array.isArray(recurringResponse.data) ? recurringResponse.data.length : 0;
+
+      // Fetch master tasks count
+      const masterParams = new URLSearchParams({ taskType: 'one-time', page: '1', limit: '1000000' });
+      if (!user?.permissions?.canViewAllTeamTasks && user?.id) {
+        masterParams.append('assignedTo', user.id);
+      }
+      const masterResponse = await axios.get(`${address}/api/tasks?${masterParams}`);
+      const masterTasksCount = masterResponse.data.tasks?.filter((t: any) => t.taskType === 'one-time' && (t.isActive !== false)).length || 0;
+
+      // Fetch master repetitive tasks count
+      const masterRecurringParams = new URLSearchParams({ taskType: 'daily,weekly,monthly,quarterly,yearly', page: '1', limit: '1000000' });
+      if (!user?.permissions?.canViewAllTeamTasks && user?.id) {
+        masterRecurringParams.append('assignedTo', user.id);
+      }
+      const masterRecurringResponse = await axios.get(`${address}/api/tasks?${masterRecurringParams}`);
+      const masterRepetitiveCount = masterRecurringResponse.data.tasks?.filter((t: any) => 
+        ['daily', 'weekly', 'monthly', 'quarterly', 'yearly'].includes(t.taskType) && (t.isActive !== false)
+      ).length || 0;
+
+      // Fetch my tasks count (admin-tasks)
+      let myTasksCount = 0;
+      if (user?.role === 'admin') {
+        try {
+          const myTasksResponse = await axios.get(`${address}/api/tasks?${new URLSearchParams({ assignedTo: user.id })}`);
+          myTasksCount = myTasksResponse.data.tasks?.filter((t: any) => t.isActive !== false).length || 0;
+        } catch (e) {
+          console.error('Error fetching my tasks:', e);
+        }
+      }
+
+      // Fetch objection approvals count
+      let objectionsCount = 0;
+      try {
+        const objectionsResponse = await axios.get(`${address}/api/objections/pending/${user?.id}`);
+        // Count pending objections in regular tasks
+        const regularObjectionsCount = objectionsResponse.data.regularTasks?.reduce((acc: number, task: any) => {
+          return acc + (task.objections?.filter((obj: any) => obj.status === 'pending').length || 0);
+        }, 0) || 0;
+        // Count pending objections in FMS tasks
+        const fmsObjectionsCount = objectionsResponse.data.fmsTasks?.reduce((acc: number, project: any) => {
+          return acc + (project.tasks?.reduce((taskAcc: number, task: any) => {
+            return taskAcc + (task.objections?.filter((obj: any) => obj.status === 'pending').length || 0);
+          }, 0) || 0);
+        }, 0) || 0;
+        objectionsCount = regularObjectionsCount + fmsObjectionsCount;
+      } catch (e) {
+        console.error('Error fetching objections:', e);
+      }
+
+      setCounts({
+        pendingTasks: pendingTasksCount + fmsTasksCount,
+        pendingRepetitive: pendingRepetitiveCount,
+        masterTasks: masterTasksCount,
+        masterRepetitive: masterRepetitiveCount,
+        myTasks: myTasksCount,
+        objections: objectionsCount,
+      });
+    } catch (error) {
+      console.error('Error fetching counts:', error);
+    }
+  };
 
   const filteredMenuItems = menuItems.filter(item => {
     if (item.requireAdmin && user?.role !== 'admin') return false;
@@ -207,6 +329,11 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
                   {!isCollapsed && (
                     <span className="transition-opacity duration-200 flex-1">
                       {item.label}
+                    </span>
+                  )}
+                  {item.countKey && counts[item.countKey as keyof typeof counts] > 0 && (
+                    <span className="ml-auto bg-red-500 text-white text-xs font-bold rounded-full px-2 py-0.5 min-w-[1.5rem] text-center">
+                      {counts[item.countKey as keyof typeof counts]}
                     </span>
                   )}
                 </NavLink>

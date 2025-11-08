@@ -96,7 +96,8 @@ const AssignTask: React.FC = () => {
         return;
       }
       
-      const filteredUsers = response.data.filter((u: User) => u._id !== user?.id);
+      // Allow everyone to assign tasks to themselves as well
+      const filteredUsers = response.data;
       console.log(`✅ Filtered users (${filteredUsers.length}):`, filteredUsers);
       setUsers(filteredUsers);
     } catch (error) {

@@ -40,6 +40,7 @@
     "react-datepicker": "^4.25.0",
     "react-dom": "^18.3.1",
     "react-router-dom": "^6.8.1",
+    "react-select": "^5.10.2",
     "react-toastify": "^11.0.5",
     "recharts": "^2.12.7",
     "sweetalert2": "^11.22.0",

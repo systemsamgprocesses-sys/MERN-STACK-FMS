@@ -46,7 +46,8 @@ const fmsSchema = new mongoose.Schema({
     default: 'one-time'
   },
   frequencySettings: {
-    includeSunday: { type: Boolean, default: false },
+    includeSunday: { type: Boolean, default: true },
+    shiftSundayToMonday: { type: Boolean, default: false },
     weeklyDays: [Number],
     monthlyDay: Number,
     yearlyDuration: Number

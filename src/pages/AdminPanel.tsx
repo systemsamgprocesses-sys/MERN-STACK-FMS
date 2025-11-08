@@ -80,7 +80,8 @@ const AdminPanel: React.FC = () => {
     employee: ['canViewTasks', 'canAssignTasks'],
     manager: ['canViewTasks', 'canViewAllTeamTasks', 'canAssignTasks', 'canDeleteTasks', 'canEditTasks', 'canEditRecurringTaskSchedules'],
     admin: ['canViewTasks', 'canViewAllTeamTasks', 'canAssignTasks', 'canDeleteTasks', 'canEditTasks', 'canManageUsers', 'canEditRecurringTaskSchedules'],
-    pc: ['canViewTasks', 'canAssignTasks', 'canCompleteAnyTask'] // Added PC role permissions
+    superadmin: ['canViewTasks', 'canViewAllTeamTasks', 'canAssignTasks', 'canDeleteTasks', 'canEditTasks', 'canManageUsers', 'canEditRecurringTaskSchedules'],
+    pc: ['canViewTasks', 'canViewAllTeamTasks', 'canCompleteTasksOnBehalf']
   };
   const [passwordUser, setPasswordUser] = useState<User | null>(null);
   const [newPassword, setNewPassword] = useState("");

@@ -301,7 +301,10 @@ router.get('/assigned-by-me', async (req, res) => {
 
     const query = {
       isActive: true,
-      assignedBy: userId
+      $or: [
+        { assignedBy: userId },
+        { assignedTo: userId, assignedBy: userId }
+      ]
     };
 
     if (status) {
@@ -311,6 +314,8 @@ router.get('/assigned-by-me', async (req, res) => {
     const tasks = await Task.find(query)
       .populate('assignedBy', 'username email phoneNumber')
       .populate('assignedTo', 'username email phoneNumber')
+      .populate('completedBy', 'username email')
+      .populate('completedOnBehalfBy', 'username email')
       .sort({ createdAt: -1 })
       .limit(limit * 1)
       .skip((page - 1) * limit);
@@ -516,10 +521,10 @@ router.put('/:id', async (req, res) => {
   }
 });
 
-// Complete task - UPDATED TO HANDLE COMPLETION ATTACHMENTS AND SCORING
+// Complete task - UPDATED TO HANDLE COMPLETION ATTACHMENTS, SCORING, AND PC ROLE
 router.post('/:id/complete', async (req, res) => {
   try {
-    const { completionRemarks, completionAttachments } = req.body;
+    const { completionRemarks, completionAttachments, completedBy, completedOnBehalfBy, pcConfirmationAttachment } = req.body;
     const task = await Task.findById(req.params.id);
 
     if (!task) {
@@ -544,6 +549,17 @@ router.post('/:id/complete', async (req, res) => {
     
     if (completionAttachments && completionAttachments.length > 0) {
       task.completionAttachments = completionAttachments;
+    }
+
+    // Handle PC role completion
+    if (completedOnBehalfBy) {
+      task.completedOnBehalfBy = completedOnBehalfBy;
+      task.completedBy = completedBy;
+      if (pcConfirmationAttachment) {
+        task.pcConfirmationAttachment = pcConfirmationAttachment;
+      }
+    } else if (completedBy) {
+      task.completedBy = completedBy;
     }
     
     task.lastCompletedDate = new Date();

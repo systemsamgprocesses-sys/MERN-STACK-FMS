@@ -291,14 +291,23 @@ const PendingTasks: React.FC = () => {
     setShowFMSObjectionModal({ projectId, taskIndex });
   };
 
-  const handleFMSTaskCompletion = async (projectId: string, taskIndex: number, remarks: string, attachments: File[]) => {
+  const handleFMSTaskCompletion = async (projectId: string, taskIndex: number, remarks: string, attachments: File[], completedOnBehalfBy?: string, pcConfirmation?: File) => {
     try {
       const formData = new FormData();
       formData.append('remarks', remarks);
-      formData.append('completedBy', user?.id || '');
+      formData.append('completedBy', completedOnBehalfBy || user?.id || '');
+      
+      if (completedOnBehalfBy) {
+        formData.append('completedOnBehalfBy', user?.id || '');
+      }
+
       attachments.forEach((file) => {
         formData.append('files', file);
       });
+
+      if (pcConfirmation) {
+        formData.append('pcConfirmation', pcConfirmation);
+      }
 
       await axios.post(`${address}/api/projects/${projectId}/complete-task/${taskIndex}`, formData, {
         headers: { 'Content-Type': 'multipart/form-data' }

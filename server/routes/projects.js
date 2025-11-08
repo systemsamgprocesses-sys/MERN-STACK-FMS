@@ -117,7 +117,7 @@ router.get('/', async (req, res) => {
 router.put('/:projectId/tasks/:taskIndex', async (req, res) => {
   try {
     const { projectId, taskIndex } = req.params;
-    const { status, completedBy, notes, attachments, checklistItems, plannedDueDate } = req.body;
+    const { status, completedBy, notes, attachments, checklistItems, plannedDueDate, completedOnBehalfBy, pcConfirmationAttachment } = req.body;
 
     const project = await Project.findOne({ projectId }).populate('fmsId');
     if (!project) {
@@ -137,6 +137,14 @@ router.put('/:projectId/tasks/:taskIndex', async (req, res) => {
     }
     if (checklistItems) {
       task.checklistItems = checklistItems;
+    }
+
+    // Handle PC role completion
+    if (completedOnBehalfBy) {
+      task.completedOnBehalfBy = completedOnBehalfBy;
+      if (pcConfirmationAttachment) {
+        task.pcConfirmationAttachment = pcConfirmationAttachment;
+      }
     }
 
     // Handle ask-on-completion date assignment
@@ -188,6 +196,98 @@ router.put('/:projectId/tasks/:taskIndex', async (req, res) => {
           const totalHours = (currentStep.whenDays || 0) * 24 + (currentStep.whenHours || 0);
           dueDate.setHours(dueDate.getHours() + totalHours);
         }
+
+
+
+// Complete FMS task from pending tasks page
+router.post('/:projectId/complete-task/:taskIndex', async (req, res) => {
+  try {
+    const { projectId, taskIndex } = req.params;
+    const { completedBy, remarks, completedOnBehalfBy, pcConfirmationAttachment } = req.body;
+
+    const project = await Project.findOne({ projectId }).populate('fmsId');
+    if (!project) {
+      return res.status(404).json({ success: false, message: 'Project not found' });
+    }
+
+    const task = project.tasks[taskIndex];
+    if (!task) {
+      return res.status(404).json({ success: false, message: 'Task not found' });
+    }
+
+    // Upload attachments if any
+    let uploadedAttachments = [];
+    if (req.files && req.files.length > 0) {
+      uploadedAttachments = req.files.map(file => ({
+        filename: file.filename,
+        originalName: file.originalname,
+        path: file.path,
+        size: file.size,
+        uploadedBy: completedBy,
+        uploadedAt: new Date()
+      }));
+    }
+
+    task.status = 'Done';
+    task.completedAt = new Date();
+    task.actualCompletedOn = new Date();
+    task.completedBy = completedBy;
+    task.notes = remarks || '';
+    
+    if (uploadedAttachments.length > 0) {
+      task.attachments = [...(task.attachments || []), ...uploadedAttachments];
+    }
+
+    // Handle PC completion
+    if (completedOnBehalfBy) {
+      task.completedOnBehalfBy = completedOnBehalfBy;
+      if (pcConfirmationAttachment) {
+        task.pcConfirmationAttachment = pcConfirmationAttachment;
+      }
+    }
+
+    // Calculate score
+    if (task.plannedDueDate) {
+      const creationDate = new Date(task.creationDate || project.startDate);
+      const completionDate = new Date(task.completedAt);
+      const actualDays = Math.ceil((completionDate - creationDate) / (1000 * 60 * 60 * 24));
+      task.actualCompletionDays = actualDays;
+
+      const plannedDate = new Date(task.originalPlannedDate || task.plannedDueDate);
+      const plannedDays = Math.ceil((plannedDate - creationDate) / (1000 * 60 * 60 * 24));
+      
+      const isOnTime = completionDate <= plannedDate;
+      if (isOnTime) {
+        project.tasksOnTime = (project.tasksOnTime || 0) + 1;
+      } else {
+        project.tasksLate = (project.tasksLate || 0) + 1;
+      }
+
+      const completedTasks = project.tasks.filter(t => t.status === 'Done').length;
+      if (completedTasks > 0) {
+        project.totalScore = Math.round((project.tasksOnTime / completedTasks) * 100);
+      }
+    }
+
+    // Activate next step if current step is done
+    const nextTaskIndex = parseInt(taskIndex) + 1;
+    if (nextTaskIndex < project.tasks.length) {
+      const nextTask = project.tasks[nextTaskIndex];
+      if (nextTask.whenType === 'ask-on-completion') {
+        nextTask.status = 'Awaiting Date';
+        nextTask.plannedDateAsked = false;
+      } else if (nextTask.status === 'Not Started' || nextTask.status === 'Awaiting Date') {
+        nextTask.status = 'Pending';
+      }
+    }
+
+    await project.save();
+    res.json({ success: true, message: 'Task completed successfully' });
+  } catch (error) {
+    console.error('Error completing FMS task:', error);
+    res.status(500).json({ success: false, message: 'Server error', error: error.message });
+  }
+});
 
         nextTask.plannedDueDate = dueDate;
         nextTask.status = 'Pending';

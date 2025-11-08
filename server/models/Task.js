@@ -120,6 +120,10 @@ const taskSchema = new mongoose.Schema({
       default: Date.now
     }
   }],
+  completedBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User'
+  },
   completedOnBehalfBy: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User'

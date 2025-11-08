@@ -170,12 +170,22 @@ const TaskCompletionModal: React.FC<TaskCompletionModalProps> = ({
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
   };
 
-  // Placeholder for fetching users - replace with actual API call or prop
-  const users = [
-    { id: 'user1', name: 'Alice' },
-    { id: 'user2', name: 'Bob' },
-    { id: 'user3', name: 'Charlie' },
-  ];
+  const [users, setUsers] = useState<Array<{ id: string; name: string }>>([]);
+
+  useEffect(() => {
+    const fetchUsers = async () => {
+      try {
+        const response = await axios.get(`${address}/api/users`);
+        setUsers(response.data.map((u: any) => ({ id: u._id, name: u.username })));
+      } catch (error) {
+        console.error('Error fetching users:', error);
+      }
+    };
+
+    if (user?.role === 'pc') {
+      fetchUsers();
+    }
+  }, [user]);
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">

@@ -301,10 +301,7 @@ router.get('/assigned-by-me', async (req, res) => {
 
     const query = {
       isActive: true,
-      $or: [
-        { assignedBy: userId },
-        { assignedTo: userId, assignedBy: userId }
-      ]
+      assignedBy: userId
     };
 
     if (status) {
@@ -369,6 +366,8 @@ router.post('/create-scheduled', async (req, res) => {
   try {
     const taskData = req.body;
     const createdTasks = [];
+    const requiresAttachments = taskData.requireAttachments === true || taskData.requireAttachments === 'true';
+    const mandatoryAttachments = taskData.mandatoryAttachments === true || taskData.mandatoryAttachments === 'true';
     let taskDates = [];
 
     if (taskData.taskType === 'one-time') {
@@ -440,6 +439,8 @@ router.post('/create-scheduled', async (req, res) => {
         status: 'pending', // New tasks are always pending
         taskGroupId: taskGroupId, // Link to the recurring task series
         sequenceNumber: i + 1, // Order within the series
+        requireAttachments: requiresAttachments,
+        mandatoryAttachments: requiresAttachments ? mandatoryAttachments : false,
         // Store the full parent task info for calculating subsequent occurrences
         parentTaskInfo: {
           originalStartDate: taskData.startDate,
@@ -473,6 +474,8 @@ router.post('/create-scheduled', async (req, res) => {
 router.post('/', async (req, res) => {
   try {
     const taskData = req.body;
+    const requiresAttachments = taskData.requireAttachments === true || taskData.requireAttachments === 'true';
+    const mandatoryAttachments = taskData.mandatoryAttachments === true || taskData.mandatoryAttachments === 'true';
     
     // If 'isForever' is true for a non-scheduled endpoint, set an arbitrary end date
     // This part might need re-evaluation if this endpoint is only for one-time tasks
@@ -485,7 +488,9 @@ router.post('/', async (req, res) => {
 
     const task = new Task({
       ...taskData,
-      attachments: taskData.attachments || [] // Pass attachments here
+      attachments: taskData.attachments || [], // Pass attachments here
+      requireAttachments: requiresAttachments,
+      mandatoryAttachments: requiresAttachments ? mandatoryAttachments : false
     });
     await task.save();
 

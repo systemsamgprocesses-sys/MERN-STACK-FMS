@@ -40,7 +40,14 @@ const upload = multer({
 // Create FMS Template
 router.post('/', upload.array('files', 10), async (req, res) => {
   try {
-    const { fmsName, steps, createdBy, frequency, frequencySettings } = req.body;
+    const {
+      fmsName,
+      steps,
+      createdBy,
+      frequency,
+      frequencySettings,
+      shiftSundayToMonday
+    } = req.body;
     
     // Validate required fields
     if (!fmsName || !fmsName.trim()) {
@@ -52,6 +59,17 @@ router.post('/', upload.array('files', 10), async (req, res) => {
     
     // Parse steps if sent as string
     let parsedSteps = typeof steps === 'string' ? JSON.parse(steps) : steps;
+    let parsedFrequencySettings = typeof frequencySettings === 'string'
+      ? JSON.parse(frequencySettings || '{}')
+      : (frequencySettings || {});
+
+    parsedFrequencySettings = {
+      includeSunday: parsedFrequencySettings.includeSunday ?? true,
+      shiftSundayToMonday: parsedFrequencySettings.shiftSundayToMonday ?? (shiftSundayToMonday === 'true' || shiftSundayToMonday === true),
+      weeklyDays: parsedFrequencySettings.weeklyDays || [],
+      monthlyDay: parsedFrequencySettings.monthlyDay,
+      yearlyDuration: parsedFrequencySettings.yearlyDuration
+    };
     
     if (!Array.isArray(parsedSteps) || parsedSteps.length === 0) {
       return res.status(400).json({ success: false, message: 'At least one step is required' });
@@ -82,6 +100,26 @@ router.post('/', upload.array('files', 10), async (req, res) => {
         delete step.triggersFMSId; // Remove invalid triggersFMSId
       }
       
+      // Default whenType if missing
+      if (!step.whenType) {
+        step.whenType = index === 0 ? 'fixed' : 'dependent';
+      }
+
+      if (!['fixed', 'dependent', 'ask-on-completion'].includes(step.whenType)) {
+        throw new Error(`Step ${index + 1}: Invalid whenType`);
+      }
+
+      if (step.whenType === 'ask-on-completion') {
+        // For ask-on-completion we expect scheduling information later, so clear duration fields
+        step.when = 0;
+        step.whenDays = 0;
+        step.whenHours = 0;
+        step.whenUnit = 'days';
+      }
+
+      step.requireAttachments = step.requireAttachments === true || step.requireAttachments === 'true';
+      step.mandatoryAttachments = step.mandatoryAttachments === true || step.mandatoryAttachments === 'true';
+
       return step;
     });
     
@@ -112,14 +150,6 @@ router.post('/', upload.array('files', 10), async (req, res) => {
       });
     }
     
-    // Helper function to shift Sunday to Monday
-    const shiftSundayToMonday = (date) => {
-      if (date.getDay() === 0) { // 0 is Sunday
-        date.setDate(date.getDate() + 1);
-      }
-      return date;
-    };
-
     const fms = new FMS({
       fmsId,
       fmsName,
@@ -127,7 +157,7 @@ router.post('/', upload.array('files', 10), async (req, res) => {
       createdBy,
       status: 'Active',
       frequency: frequency || 'one-time',
-      frequencySettings: frequencySettings || {}
+      frequencySettings: parsedFrequencySettings
     });
     
     await fms.save();

@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { CheckSquare, Clock, AlertCircle, Upload, RotateCcw } from 'lucide-react';
+import { CheckSquare, Clock, AlertCircle, Upload, RotateCcw, Printer } from 'lucide-react';
 import axios from 'axios';
 import { address } from '../../utils/ipAddress';
 
@@ -25,6 +25,7 @@ const ViewFMSProgress: React.FC = () => {
   const [taskStatus, setTaskStatus] = useState('');
   const [taskNotes, setTaskNotes] = useState('');
   const [files, setFiles] = useState<File[]>([]);
+  const [taskPlannedDate, setTaskPlannedDate] = useState('');
 
   useEffect(() => {
     fetchProjects();
@@ -51,6 +52,19 @@ const ViewFMSProgress: React.FC = () => {
       const allCompleted = selectedTask.checklistItems.every((item: any) => item.completed);
       if (!allCompleted && taskStatus === 'Done') {
         alert('Please complete all checklist items before marking task as Done');
+        return;
+      }
+    }
+
+    if (selectedTask.status === 'Awaiting Date' && !taskPlannedDate) {
+      alert('Please select a planned date before proceeding.');
+      return;
+    }
+
+    if (taskStatus === 'Done' && selectedTask.requireAttachments && selectedTask.mandatoryAttachments) {
+      const existingAttachments = Array.isArray(selectedTask.attachments) ? selectedTask.attachments.length : 0;
+      if (existingAttachments + files.length === 0) {
+        alert('Attachments are mandatory for this step. Please upload at least one file.');
         return;
       }
     }
@@ -88,7 +102,8 @@ const ViewFMSProgress: React.FC = () => {
           completedBy: user?.id,
           notes: taskNotes,
           attachments: uploadedFiles,
-          checklistItems: selectedTask.checklistItems
+          checklistItems: selectedTask.checklistItems,
+          plannedDueDate: taskPlannedDate || undefined
         }
       );
 
@@ -99,6 +114,7 @@ const ViewFMSProgress: React.FC = () => {
         setTaskStatus('');
         setTaskNotes('');
         setFiles([]);
+        setTaskPlannedDate('');
       }
     } catch (error) {
       console.error('Error updating task:', error);
@@ -143,8 +159,8 @@ const ViewFMSProgress: React.FC = () => {
     <div className="min-h-screen p-4 sm:p-6 lg:p-8" style={{ backgroundColor: 'var(--color-background)' }}>
       <div className="max-w-7xl mx-auto">
         {/* Header Section */}
-        <div className="mb-8">
-          <div className="flex items-center gap-4 mb-2">
+        <div className="mb-8 flex flex-wrap items-center justify-between gap-4">
+          <div className="flex items-center gap-4">
             <div className="p-3 rounded-2xl" style={{ backgroundColor: 'var(--color-primary)10' }}>
               <RotateCcw size={28} style={{ color: 'var(--color-primary)' }} />
             </div>
@@ -153,6 +169,13 @@ const ViewFMSProgress: React.FC = () => {
               <p className="text-[var(--color-textSecondary)] text-sm mt-1">Track and manage project tasks seamlessly</p>
             </div>
           </div>
+          <button
+            onClick={() => window.print()}
+            className="px-4 py-2 bg-[var(--color-primary)] text-white rounded-lg hover:opacity-90 flex items-center gap-2 print:hidden"
+          >
+            <Printer size={18} />
+            Print
+          </button>
         </div>
 
         {projects.length === 0 ? (
@@ -299,7 +322,8 @@ const ViewFMSProgress: React.FC = () => {
                                 <button
                                   onClick={() => {
                                     setSelectedTask({ ...task, index });
-                                    setTaskStatus(task.status);
+                                    setTaskStatus(task.status === 'Awaiting Date' ? 'Pending' : task.status);
+                                    setTaskPlannedDate(task.plannedDueDate ? new Date(task.plannedDueDate).toISOString().split('T')[0] : '');
                                   }}
                                   className="px-4 py-2 rounded-lg text-white font-semibold hover:shadow-lg hover:scale-105 transition-all text-sm ml-4 flex-shrink-0"
                                   style={{ backgroundColor: 'var(--color-primary)' }}
@@ -412,6 +436,24 @@ const ViewFMSProgress: React.FC = () => {
                   </select>
                 </div>
 
+                {selectedTask.whenType === 'ask-on-completion' && selectedTask.status === 'Awaiting Date' && (
+                  <div>
+                    <label className="block text-sm font-medium text-[var(--color-text)] mb-2">
+                      Planned Date <span className="text-[var(--color-error)]">*</span>
+                    </label>
+                    <input
+                      type="date"
+                      value={taskPlannedDate}
+                      onChange={(e) => setTaskPlannedDate(e.target.value)}
+                      className="w-full px-4 py-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] text-[var(--color-text)]"
+                      min={new Date().toISOString().split('T')[0]}
+                    />
+                    <p className="text-xs text-[var(--color-textSecondary)] mt-1">
+                      Select the new target date for this step. Sundays will automatically shift to Monday.
+                    </p>
+                  </div>
+                )}
+
                 <div>
                   <label className="block text-sm font-medium text-[var(--color-text)] mb-2">Notes</label>
                   <textarea
@@ -427,6 +469,13 @@ const ViewFMSProgress: React.FC = () => {
                   <label className="block text-sm font-medium text-[var(--color-text)] mb-2">
                     Attachments (Max 3 files, 2MB each)
                   </label>
+                  {selectedTask.requireAttachments && (
+                    <p className="text-xs mb-2" style={{ color: selectedTask.mandatoryAttachments ? 'var(--color-error)' : 'var(--color-textSecondary)' }}>
+                      {selectedTask.mandatoryAttachments
+                        ? 'Attachments are required to complete this step.'
+                        : 'Attachments are recommended for this step.'}
+                    </p>
+                  )}
                   <input
                     type="file"
                     multiple
@@ -461,6 +510,7 @@ const ViewFMSProgress: React.FC = () => {
                     setTaskStatus('');
                     setTaskNotes('');
                     setFiles([]);
+                    setTaskPlannedDate('');
                   }}
                   className="px-4 py-2 border border-[var(--color-border)] text-[var(--color-text)] rounded-lg hover:bg-[var(--color-background)]"
                 >

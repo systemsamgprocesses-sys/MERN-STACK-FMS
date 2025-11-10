@@ -3,6 +3,7 @@ import { CheckSquare, Paperclip, X, Upload, File } from 'lucide-react';
 import axios from 'axios';
 import { address } from '../../utils/ipAddress';
 import { toast } from 'react-toastify';
+import { useAuth } from '../contexts/AuthContext';
 
 interface TaskCompletionModalProps {
   taskId: string;
@@ -13,15 +14,13 @@ interface TaskCompletionModalProps {
   mandatoryRemarks: boolean;
   onClose: () => void;
   onComplete: () => void;
-  // Assuming user and settings are passed down or fetched here
-  user?: { id: string; role: string };
-  settings?: {
-    allowAttachments: boolean;
-    mandatoryAttachments: boolean;
-    mandatoryRemarks: boolean;
-  };
-  task: { _id: string }; // Assuming task object with _id is passed
-  isDark?: boolean; // To determine toast theme
+  onSubmitOverride?: (details: {
+    remarks: string;
+    attachments: File[];
+    selectedUserId?: string;
+    pcConfirmationFile?: File | null;
+  }) => Promise<void>;
+  isDark?: boolean;
 }
 
 const TaskCompletionModal: React.FC<TaskCompletionModalProps> = ({
@@ -33,11 +32,10 @@ const TaskCompletionModal: React.FC<TaskCompletionModalProps> = ({
   mandatoryRemarks,
   onClose,
   onComplete,
-  user,
-  settings,
-  task,
+  onSubmitOverride,
   isDark = false,
 }) => {
+  const { user } = useAuth();
   const [completionRemarks, setCompletionRemarks] = useState('');
   const [attachments, setAttachments] = useState<File[]>([]);
   const [uploading, setUploading] = useState(false);
@@ -130,6 +128,19 @@ const TaskCompletionModal: React.FC<TaskCompletionModalProps> = ({
 
     setSubmitting(true);
     try {
+      if (onSubmitOverride) {
+        await onSubmitOverride({
+          remarks: completionRemarks.trim(),
+          attachments,
+          selectedUserId: user?.role === 'pc' ? selectedUserId : undefined,
+          pcConfirmationFile: user?.role === 'pc' ? pcConfirmationFile : null
+        });
+        onComplete();
+        onClose();
+        toast.success('Task completed successfully!', { theme: isDark ? 'dark' : 'light' });
+        return;
+      }
+
       let uploadedAttachments: any[] = [];
       let pcConfirmationAttachment: any = null;
 

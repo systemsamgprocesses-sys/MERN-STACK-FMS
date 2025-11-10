@@ -101,6 +101,10 @@ const StartProject: React.FC = () => {
   };
 
   const selectedTemplate = fmsList.find(fms => fms._id === selectedFMS);
+  const filteredTemplates = fmsList.filter(template =>
+    template.fmsName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    template.fmsId.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
   if (fetchingTemplates) {
     return (
@@ -128,6 +132,15 @@ const StartProject: React.FC = () => {
                 <label className="block text-sm font-medium text-[var(--color-text)] mb-2">
                   Select FMS Template *
                 </label>
+                <div className="mb-2">
+                  <input
+                    type="text"
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    placeholder="Search by FMS name or ID..."
+                    className="w-full px-3 py-2 border border-[var(--color-border)] rounded-lg bg-[var(--color-background)] text-[var(--color-text)] text-sm"
+                  />
+                </div>
                 <select
                   value={selectedFMS}
                   onChange={(e) => setSelectedFMS(e.target.value)}
@@ -135,10 +148,10 @@ const StartProject: React.FC = () => {
                   className="w-full px-4 py-3 rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] text-[var(--color-text)] disabled:opacity-50"
                 >
                   <option value="">Choose an FMS template</option>
-                  {fmsList.length === 0 ? (
+                  {filteredTemplates.length === 0 ? (
                     <option disabled>No FMS templates available</option>
                   ) : (
-                    fmsList.map((fms) => (
+                    filteredTemplates.map((fms) => (
                       <option key={fms._id} value={fms._id}>
                         {fms.fmsName} ({fms.fmsId}) - {fms.stepCount} steps
                       </option>

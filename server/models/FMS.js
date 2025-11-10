@@ -37,6 +37,7 @@ const stepSchema = new mongoose.Schema({
 const fmsSchema = new mongoose.Schema({
   fmsId: { type: String, required: true, unique: true },
   fmsName: { type: String, required: true },
+  category: { type: String, required: true, default: 'General' },
   steps: [stepSchema],
   createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
   status: { type: String, enum: ['Active', 'Inactive'], default: 'Active' },
@@ -47,7 +48,7 @@ const fmsSchema = new mongoose.Schema({
   },
   frequencySettings: {
     includeSunday: { type: Boolean, default: true },
-    shiftSundayToMonday: { type: Boolean, default: false },
+    shiftSundayToMonday: { type: Boolean, default: true },
     weeklyDays: [Number],
     monthlyDay: Number,
     yearlyDuration: Number

@@ -154,9 +154,29 @@ const Dashboard: React.FC = () => {
   const { theme } = useTheme();
   const navigate = useNavigate();
   useTheme();
-  const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
-  const [taskCounts, setTaskCounts] = useState<TaskCounts | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [dashboardData, setDashboardData] = useState<DashboardData | null>(() => {
+    const cached = localStorage.getItem('dashboardData');
+    if (cached) {
+      const { data, timestamp } = JSON.parse(cached);
+      // Cache for 5 minutes
+      if (Date.now() - timestamp < 5 * 60 * 1000) {
+        return data;
+      }
+    }
+    return null;
+  });
+  const [taskCounts, setTaskCounts] = useState<TaskCounts | null>(() => {
+    const cached = localStorage.getItem('taskCounts');
+    if (cached) {
+      const { data, timestamp } = JSON.parse(cached);
+      // Cache for 5 minutes
+      if (Date.now() - timestamp < 5 * 60 * 1000) {
+        return data;
+      }
+    }
+    return null;
+  });
+  const [loading, setLoading] = useState(!dashboardData || !taskCounts);
   const [selectedMonth, setSelectedMonth] = useState(new Date());
   const [showMonthFilter, setShowMonthFilter] = useState(false);
   const [viewMode, setViewMode] = useState<'current' | 'all-time'>('all-time');
@@ -338,6 +358,85 @@ const Dashboard: React.FC = () => {
       </ThemeCard>
     );
   };
+  // Team Member Selector Component
+  const TeamMemberSelector = () => {
+    const [teamMembers, setTeamMembers] = useState<Array<{id: string, username: string}>>([]);
+    
+    useEffect(() => {
+      const fetchTeamMembers = async () => {
+        try {
+          const response = await axios.get(`${address}/api/users`);
+          setTeamMembers(response.data.map((user: any) => ({
+            id: user._id,
+            username: user.username
+          })));
+        } catch (error) {
+          console.error('Error fetching team members:', error);
+        }
+      };
+      
+      fetchTeamMembers();
+    }, []);
+
+    return (
+      <div className="relative">
+        <button
+          onClick={() => setShowTeamMemberFilter(!showTeamMemberFilter)}
+          className="px-4 py-2 text-sm font-medium rounded-lg border shadow-sm"
+          style={{
+            backgroundColor: 'var(--color-surface)',
+            borderColor: 'var(--color-border)',
+            color: 'var(--color-text)'
+          }}
+        >
+          <div className="flex items-center">
+            <Users size={16} className="mr-2" />
+            <span>{selectedTeamMember === 'all' ? 'All Team Members' : 
+              teamMembers.find(m => m.id === selectedTeamMember)?.username || 'Select Member'}</span>
+            <ChevronDown size={16} className="ml-2" />
+          </div>
+        </button>
+
+        {showTeamMemberFilter && (
+          <div
+            className="absolute z-10 mt-2 w-56 rounded-md shadow-lg"
+            style={{
+              backgroundColor: 'var(--color-surface)',
+              borderColor: 'var(--color-border)',
+              color: 'var(--color-text)'
+            }}
+          >
+            <div className="rounded-md ring-1 ring-black ring-opacity-5">
+              <div className="py-1">
+                <button
+                  onClick={() => {
+                    setSelectedTeamMember('all');
+                    setShowTeamMemberFilter(false);
+                  }}
+                  className="block w-full px-4 py-2 text-sm text-left hover:bg-gray-100"
+                >
+                  All Team Members
+                </button>
+                {teamMembers.map((member) => (
+                  <button
+                    key={member.id}
+                    onClick={() => {
+                      setSelectedTeamMember(member.id);
+                      setShowTeamMemberFilter(false);
+                    }}
+                    className="block w-full px-4 py-2 text-sm text-left hover:bg-gray-100"
+                  >
+                    {member.username}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  };
+
   // --- CustomTooltip Component (kept as is, good utility component) ---
   const CustomTooltip = ({ active, payload, label }: any) => {
     if (active && payload && payload.length) {
@@ -360,8 +459,10 @@ const Dashboard: React.FC = () => {
   const fetchDashboardAnalytics = useCallback(async (startDate?: string, endDate?: string) => {
     try {
       const params: any = {
-        userId: user?.id,
-        isAdmin: (user?.role === 'admin' || user?.role === 'manager') ? 'true' : 'false',
+        userId: selectedTeamMember === 'all' ? undefined : selectedTeamMember,
+        isAdmin: (user?.role === 'admin' || user?.role === 'superadmin' || user?.role === 'manager') ? 'true' : 'false',
+        includeTeam: 'true',
+        includeAllTimeMetrics: viewMode === 'all-time' ? 'true' : 'false'
       };
       if (startDate && endDate) {
         params.startDate = startDate;
@@ -369,18 +470,27 @@ const Dashboard: React.FC = () => {
       }
 
       const response = await axios.get(`${address}/api/dashboard/analytics`, { params });
+      
+      // Cache the response
+      localStorage.setItem('dashboardData', JSON.stringify({
+        data: response.data,
+        timestamp: Date.now()
+      }));
+      
       return response.data;
     } catch (error) {
       console.error('Error fetching dashboard analytics:', error);
       return null;
     }
-  }, [user]);
+  }, [user, selectedTeamMember, viewMode]);
 
   const fetchTaskCounts = useCallback(async (startDate?: string, endDate?: string) => {
     try {
       const params: any = {
-        userId: user?.id,
-        isAdmin: (user?.role === 'admin' || user?.role === 'manager') ? 'true' : 'false'
+        userId: selectedTeamMember === 'all' ? undefined : selectedTeamMember,
+        isAdmin: (user?.role === 'admin' || user?.role === 'superadmin' || user?.role === 'manager') ? 'true' : 'false',
+        includeTeam: 'true',
+        includeAllTimeMetrics: viewMode === 'all-time' ? 'true' : 'false'
       };
       if (startDate && endDate) {
         params.startDate = startDate;
@@ -388,12 +498,19 @@ const Dashboard: React.FC = () => {
       }
 
       const response = await axios.get(`${address}/api/dashboard/counts`, { params });
+      
+      // Cache the response
+      localStorage.setItem('taskCounts', JSON.stringify({
+        data: response.data,
+        timestamp: Date.now()
+      }));
+      
       return response.data;
     } catch (error) {
       console.error('Error fetching task counts:', error);
       return null;
     }
-  }, [user]);
+  }, [user, selectedTeamMember, viewMode]);
 
   // New function to fetch individual member trend data
   const fetchMemberTrendData = useCallback(async (memberUsername: string, startDate?: string, endDate?: string) => {

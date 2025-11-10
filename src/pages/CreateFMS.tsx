@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Trash2, Save, Eye, FileText, Check, X } from 'lucide-react';
+import { Plus, Trash2, Save, Eye, X, Calendar, Filter } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
@@ -20,11 +20,13 @@ interface Step {
   whenUnit: 'days' | 'hours' | 'days+hours';
   whenDays?: number;
   whenHours?: number;
-  whenType: 'fixed' | 'dependent';
+  whenType: 'fixed' | 'dependent' | 'ask-on-completion';
   requiresChecklist: boolean;
   checklistItems: ChecklistItem[];
   attachments: File[];
   triggersFMSId?: string;
+  requireAttachments: boolean;
+  mandatoryAttachments: boolean;
 }
 
 const CreateFMS: React.FC = () => {
@@ -41,12 +43,23 @@ const CreateFMS: React.FC = () => {
     whenType: 'fixed',
     requiresChecklist: false,
     checklistItems: [],
-    attachments: []
+    attachments: [],
+    requireAttachments: false,
+    mandatoryAttachments: false
   }]);
   const [users, setUsers] = useState<any[]>([]);
   const [fmsList, setFmsList] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<any>({});
+  const [userSearchTerms, setUserSearchTerms] = useState<string[]>(['']);
+  const [frequency, setFrequency] = useState<'one-time' | 'daily' | 'weekly' | 'monthly' | 'quarterly' | 'yearly'>('one-time');
+  const [frequencySettings, setFrequencySettings] = useState({
+    includeSunday: true,
+    shiftSundayToMonday: true,
+    weeklyDays: [] as number[],
+    monthlyDay: 1,
+    yearlyDuration: 3
+  });
 
   useEffect(() => {
     fetchUsers();
@@ -73,7 +86,7 @@ const CreateFMS: React.FC = () => {
   };
 
   const addStep = () => {
-    setSteps([...steps, {
+    const updatedSteps = [...steps, {
       stepNo: steps.length + 1,
       what: '',
       who: [],
@@ -83,8 +96,12 @@ const CreateFMS: React.FC = () => {
       whenType: 'fixed',
       requiresChecklist: false,
       checklistItems: [],
-      attachments: []
-    }]);
+      attachments: [],
+      requireAttachments: false,
+      mandatoryAttachments: false
+    }];
+    setSteps(updatedSteps);
+    setUserSearchTerms(prev => [...prev, '']);
   };
 
   const removeStep = (index: number) => {
@@ -93,12 +110,40 @@ const CreateFMS: React.FC = () => {
       step.stepNo = i + 1;
     });
     setSteps(newSteps);
+    setUserSearchTerms(prev => prev.filter((_, i) => i !== index));
   };
 
   const updateStep = (index: number, field: string, value: any) => {
     const newSteps = [...steps];
     (newSteps[index] as any)[field] = value;
+
+    if (field === 'whenType') {
+      if (value === 'ask-on-completion') {
+        newSteps[index].when = 0;
+        newSteps[index].whenDays = 0;
+        newSteps[index].whenHours = 0;
+      } else if (value === 'fixed' && index === 0) {
+        newSteps[index].whenUnit = 'days';
+        newSteps[index].when = 1;
+      }
+    }
+
     setSteps(newSteps);
+  };
+
+  const updateUserSearchTerm = (index: number, value: string) => {
+    const updated = [...userSearchTerms];
+    updated[index] = value;
+    setUserSearchTerms(updated);
+  };
+
+  const toggleWeeklyDay = (day: number) => {
+    setFrequencySettings(prev => ({
+      ...prev,
+      weeklyDays: prev.weeklyDays.includes(day)
+        ? prev.weeklyDays.filter(d => d !== day)
+        : [...prev.weeklyDays, day]
+    }));
   };
 
   const addChecklistItem = (stepIndex: number) => {
@@ -151,7 +196,26 @@ const CreateFMS: React.FC = () => {
       if (step.requiresChecklist && step.checklistItems.length === 0) {
         newErrors[`step${index}_checklist`] = 'At least one checklist item is required';
       }
+      if (step.whenType !== 'ask-on-completion') {
+        if (step.whenUnit === 'days' || step.whenUnit === 'hours') {
+          if (!Number.isFinite(step.when) || step.when < 0) {
+            newErrors[`step${index}_when`] = 'Please provide a valid duration';
+          }
+        }
+        if (step.whenUnit === 'days+hours') {
+          if (!Number.isFinite(step.whenDays) || (step.whenDays ?? 0) < 0) {
+            newErrors[`step${index}_whenDays`] = 'Enter valid number of days';
+          }
+          if (!Number.isFinite(step.whenHours) || (step.whenHours ?? 0) < 0) {
+            newErrors[`step${index}_whenHours`] = 'Enter valid number of hours';
+          }
+        }
+      }
     });
+
+    if (frequency === 'weekly' && frequencySettings.weeklyDays.length === 0) {
+      newErrors.frequency = 'Select at least one weekday for weekly frequency';
+    }
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -168,11 +232,16 @@ const CreateFMS: React.FC = () => {
       const formData = new FormData();
       formData.append('fmsName', fmsName);
       formData.append('createdBy', user?.id || '');
+      formData.append('frequency', frequency);
+      formData.append('frequencySettings', JSON.stringify(frequencySettings));
 
       // Prepare steps for submission
       const stepsData = steps.map(step => ({
         ...step,
-        attachments: [] // Will be populated by backend
+        attachments: [], // Will be populated by backend
+        when: step.whenType === 'ask-on-completion' ? 0 : step.when,
+        whenDays: step.whenType === 'ask-on-completion' ? 0 : step.whenDays,
+        whenHours: step.whenType === 'ask-on-completion' ? 0 : step.whenHours
       }));
       formData.append('steps', JSON.stringify(stepsData));
 
@@ -210,6 +279,121 @@ const CreateFMS: React.FC = () => {
           <p className="text-[var(--color-textSecondary)]">Define workflow steps for repeatable processes</p>
         </div>
 
+        <div className="mb-6 p-6 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)]">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="p-2 rounded-lg" style={{ backgroundColor: 'var(--color-primary)12' }}>
+              <Calendar size={20} style={{ color: 'var(--color-primary)' }} />
+            </div>
+            <div>
+              <h2 className="text-lg font-semibold text-[var(--color-text)]">FMS Frequency</h2>
+              <p className="text-xs text-[var(--color-textSecondary)]">Configure how often this FMS should run</p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-[var(--color-text)] mb-2">Frequency</label>
+              <select
+                value={frequency}
+                onChange={(e) => setFrequency(e.target.value as typeof frequency)}
+                className="w-full px-4 py-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] text-[var(--color-text)]"
+              >
+                <option value="one-time">One Time</option>
+                <option value="daily">Daily</option>
+                <option value="weekly">Weekly</option>
+                <option value="monthly">Monthly</option>
+                <option value="quarterly">Quarterly</option>
+                <option value="yearly">Yearly</option>
+              </select>
+              {errors.frequency && <p className="text-[var(--color-error)] text-sm mt-1">{errors.frequency}</p>}
+            </div>
+
+            <div>
+              <label className="flex items-center gap-2 text-sm font-medium text-[var(--color-text)]">
+                <input
+                  type="checkbox"
+                  checked={frequencySettings.shiftSundayToMonday}
+                  onChange={(e) => setFrequencySettings(prev => ({ ...prev, shiftSundayToMonday: e.target.checked }))}
+                  className="rounded"
+                />
+                Shift Sunday planned dates to Monday
+              </label>
+              <p className="text-xs text-[var(--color-textSecondary)] mt-1">
+                When enabled, any step that lands on Sunday automatically moves to Monday.
+              </p>
+            </div>
+          </div>
+
+          {(frequency === 'daily' || frequency === 'weekly' || frequency === 'monthly' || frequency === 'quarterly' || frequency === 'yearly') && (
+            <div className="mt-4 space-y-4">
+              <label className="flex items-center gap-2 text-sm font-medium text-[var(--color-text)]">
+                <input
+                  type="checkbox"
+                  checked={frequencySettings.includeSunday}
+                  onChange={(e) => setFrequencySettings(prev => ({ ...prev, includeSunday: e.target.checked }))}
+                  className="rounded"
+                />
+                Include Sundays in scheduling
+              </label>
+
+              {frequency === 'weekly' && (
+                <div>
+                  <p className="text-sm font-medium text-[var(--color-text)] mb-2">Select days of the week</p>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2">
+                    {[{ value: 1, label: 'Mon' }, { value: 2, label: 'Tue' }, { value: 3, label: 'Wed' }, { value: 4, label: 'Thu' }, { value: 5, label: 'Fri' }, { value: 6, label: 'Sat' }, { value: 0, label: 'Sun' }].map(day => (
+                      <button
+                        type="button"
+                        key={day.value}
+                        onClick={() => toggleWeeklyDay(day.value)}
+                        className={`px-3 py-2 rounded-lg border text-sm font-semibold ${
+                          frequencySettings.weeklyDays.includes(day.value)
+                            ? 'bg-[var(--color-primary)] text-white border-transparent'
+                            : 'bg-[var(--color-background)] text-[var(--color-text)] border-[var(--color-border)]'
+                        }`}
+                      >
+                        {day.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {frequency === 'monthly' && (
+                <div>
+                  <label className="block text-sm font-medium text-[var(--color-text)] mb-2">Day of the month</label>
+                  <select
+                    value={frequencySettings.monthlyDay}
+                    onChange={(e) => setFrequencySettings(prev => ({ ...prev, monthlyDay: parseInt(e.target.value, 10) }))}
+                    className="w-full px-4 py-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] text-[var(--color-text)]"
+                  >
+                    {Array.from({ length: 31 }, (_, i) => i + 1).map(day => (
+                      <option key={day} value={day}>
+                        {day}{day === 1 ? 'st' : day === 2 ? 'nd' : day === 3 ? 'rd' : 'th'}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
+              {frequency === 'yearly' && (
+                <div>
+                  <label className="block text-sm font-medium text-[var(--color-text)] mb-2">Years to pre-schedule</label>
+                  <select
+                    value={frequencySettings.yearlyDuration}
+                    onChange={(e) => setFrequencySettings(prev => ({ ...prev, yearlyDuration: parseInt(e.target.value, 10) }))}
+                    className="w-full px-4 py-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] text-[var(--color-text)]"
+                  >
+                    <option value={1}>1 year</option>
+                    <option value={3}>3 years</option>
+                    <option value={5}>5 years</option>
+                    <option value={10}>10 years</option>
+                  </select>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
         <div className="mb-6">
           <label className="block text-sm font-medium text-[var(--color-text)] mb-2">
             FMS Template Name *
@@ -224,7 +408,15 @@ const CreateFMS: React.FC = () => {
           {errors.fmsName && <p className="text-[var(--color-error)] text-sm mt-1">{errors.fmsName}</p>}
         </div>
 
-        {steps.map((step, index) => (
+        {steps.map((step, index) => {
+          const searchTerm = (userSearchTerms[index] || '').toLowerCase();
+          const filteredUsers = users.filter((u: any) =>
+            u.username.toLowerCase().includes(searchTerm) ||
+            (u.email || '').toLowerCase().includes(searchTerm) ||
+            (u.phoneNumber ? String(u.phoneNumber).toLowerCase().includes(searchTerm) : false)
+          );
+
+          return (
           <div key={index} className="mb-6 p-6 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)]">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-bold text-[var(--color-text)]">Step {step.stepNo}</h3>
@@ -253,6 +445,19 @@ const CreateFMS: React.FC = () => {
 
               <div>
                 <label className="block text-sm font-medium text-[var(--color-text)] mb-2">Who (Assignees) *</label>
+                <div className="mb-2">
+                  <div className="flex items-center gap-2 text-xs text-[var(--color-textSecondary)]">
+                    <Filter size={14} />
+                    <span>Search teammates</span>
+                  </div>
+                  <input
+                    type="text"
+                    value={userSearchTerms[index] || ''}
+                    onChange={(e) => updateUserSearchTerm(index, e.target.value)}
+                    className="mt-1 w-full px-3 py-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] text-[var(--color-text)] text-sm"
+                    placeholder="Start typing a name, email or phone..."
+                  />
+                </div>
                 <select
                   multiple
                   value={step.who}
@@ -260,7 +465,7 @@ const CreateFMS: React.FC = () => {
                   className="w-full px-4 py-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] text-[var(--color-text)]"
                   size={4}
                 >
-                  {users.map(u => (
+                  {filteredUsers.map((u: any) => (
                     <option key={u._id} value={u._id}>{u.username}</option>
                   ))}
                 </select>
@@ -284,76 +489,90 @@ const CreateFMS: React.FC = () => {
                 <select
                   value={step.whenType}
                   onChange={(e) => updateStep(index, 'whenType', e.target.value)}
-                  disabled={index === 0 || (index > 0 && steps[index - 1].who.length > 1)}
+                  disabled={index === 0}
                   className="w-full px-4 py-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] text-[var(--color-text)]"
                 >
                   <option value="fixed">Fixed (from start date)</option>
-                  <option value="dependent">Dependent (after previous step)</option>
+                  <option value="dependent">Dependent (after previous step completion)</option>
+                  <option value="ask-on-completion">Ask planned date after previous step completes</option>
                 </select>
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-[var(--color-text)] mb-2">Duration Unit</label>
-                <select
-                  value={step.whenUnit}
-                  onChange={(e) => updateStep(index, 'whenUnit', e.target.value)}
-                  className="w-full px-4 py-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] text-[var(--color-text)]"
-                >
-                  <option value="days">Days</option>
-                  <option value="hours">Hours</option>
-                  <option value="days+hours">Days + Hours</option>
-                </select>
-              </div>
-
-              {step.whenUnit === 'days' && (
-                <div>
-                  <label className="block text-sm font-medium text-[var(--color-text)] mb-2">Days</label>
-                  <input
-                    type="number"
-                    value={step.when}
-                    onChange={(e) => updateStep(index, 'when', parseInt(e.target.value) || 0)}
-                    className="w-full px-4 py-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] text-[var(--color-text)]"
-                    min="0"
-                  />
-                </div>
-              )}
-
-              {step.whenUnit === 'hours' && (
-                <div>
-                  <label className="block text-sm font-medium text-[var(--color-text)] mb-2">Hours</label>
-                  <input
-                    type="number"
-                    value={step.when}
-                    onChange={(e) => updateStep(index, 'when', parseInt(e.target.value) || 0)}
-                    className="w-full px-4 py-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] text-[var(--color-text)]"
-                    min="0"
-                  />
-                </div>
-              )}
-
-              {step.whenUnit === 'days+hours' && (
+              {step.whenType !== 'ask-on-completion' && (
                 <>
                   <div>
-                    <label className="block text-sm font-medium text-[var(--color-text)] mb-2">Days</label>
-                    <input
-                      type="number"
-                      value={step.whenDays || 0}
-                      onChange={(e) => updateStep(index, 'whenDays', parseInt(e.target.value) || 0)}
+                    <label className="block text-sm font-medium text-[var(--color-text)] mb-2">Duration Unit</label>
+                    <select
+                      value={step.whenUnit}
+                      onChange={(e) => updateStep(index, 'whenUnit', e.target.value)}
                       className="w-full px-4 py-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] text-[var(--color-text)]"
-                      min="0"
-                    />
+                    >
+                      <option value="days">Days</option>
+                      <option value="hours">Hours</option>
+                      <option value="days+hours">Days + Hours</option>
+                    </select>
                   </div>
-                  <div>
-                    <label className="block text-sm font-medium text-[var(--color-text)] mb-2">Hours</label>
-                    <input
-                      type="number"
-                      value={step.whenHours || 0}
-                      onChange={(e) => updateStep(index, 'whenHours', parseInt(e.target.value) || 0)}
-                      className="w-full px-4 py-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] text-[var(--color-text)]"
-                      min="0"
-                    />
-                  </div>
+
+                  {step.whenUnit === 'days' && (
+                    <div>
+                      <label className="block text-sm font-medium text-[var(--color-text)] mb-2">Days</label>
+                      <input
+                        type="number"
+                        value={step.when}
+                        onChange={(e) => updateStep(index, 'when', parseInt(e.target.value) || 0)}
+                        className="w-full px-4 py-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] text-[var(--color-text)]"
+                        min="0"
+                      />
+                      {errors[`step${index}_when`] && <p className="text-[var(--color-error)] text-sm mt-1">{errors[`step${index}_when`]}</p>}
+                    </div>
+                  )}
+
+                  {step.whenUnit === 'hours' && (
+                    <div>
+                      <label className="block text-sm font-medium text-[var(--color-text)] mb-2">Hours</label>
+                      <input
+                        type="number"
+                        value={step.when}
+                        onChange={(e) => updateStep(index, 'when', parseInt(e.target.value) || 0)}
+                        className="w-full px-4 py-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] text-[var(--color-text)]"
+                        min="0"
+                      />
+                      {errors[`step${index}_when`] && <p className="text-[var(--color-error)] text-sm mt-1">{errors[`step${index}_when`]}</p>}
+                    </div>
+                  )}
+
+                  {step.whenUnit === 'days+hours' && (
+                    <>
+                      <div>
+                        <label className="block text-sm font-medium text-[var(--color-text)] mb-2">Days</label>
+                        <input
+                          type="number"
+                          value={step.whenDays || 0}
+                          onChange={(e) => updateStep(index, 'whenDays', parseInt(e.target.value) || 0)}
+                          className="w-full px-4 py-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] text-[var(--color-text)]"
+                          min="0"
+                        />
+                        {errors[`step${index}_whenDays`] && <p className="text-[var(--color-error)] text-sm mt-1">{errors[`step${index}_whenDays`]}</p>}
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-[var(--color-text)] mb-2">Hours</label>
+                        <input
+                          type="number"
+                          value={step.whenHours || 0}
+                          onChange={(e) => updateStep(index, 'whenHours', parseInt(e.target.value) || 0)}
+                          className="w-full px-4 py-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] text-[var(--color-text)]"
+                          min="0"
+                        />
+                        {errors[`step${index}_whenHours`] && <p className="text-[var(--color-error)] text-sm mt-1">{errors[`step${index}_whenHours`]}</p>}
+                      </div>
+                    </>
+                  )}
                 </>
+              )}
+              {step.whenType === 'ask-on-completion' && (
+                <div className="md:col-span-2 p-3 rounded-lg border border-dashed border-[var(--color-border)] bg-[var(--color-background)]/60 text-sm text-[var(--color-textSecondary)]">
+                  Planned date will be requested automatically when Step {index} is completed. No fixed duration needed.
+                </div>
               )}
 
               <div className="md:col-span-2">
@@ -399,6 +618,29 @@ const CreateFMS: React.FC = () => {
               )}
 
               <div className="md:col-span-2">
+                <label className="flex items-center space-x-2">
+                  <input
+                    type="checkbox"
+                    checked={step.requireAttachments}
+                    onChange={(e) => updateStep(index, 'requireAttachments', e.target.checked)}
+                    className="rounded"
+                  />
+                  <span className="text-sm text-[var(--color-text)]">Ask for attachments when completing this step</span>
+                </label>
+                {step.requireAttachments && (
+                  <label className="flex items-center space-x-2 mt-2 ml-6">
+                    <input
+                      type="checkbox"
+                      checked={step.mandatoryAttachments}
+                      onChange={(e) => updateStep(index, 'mandatoryAttachments', e.target.checked)}
+                      className="rounded"
+                    />
+                    <span className="text-sm text-[var(--color-text)]">Make attachments mandatory for completion</span>
+                  </label>
+                )}
+              </div>
+
+              <div className="md:col-span-2">
                 <label className="block text-sm font-medium text-[var(--color-text)] mb-2">Attachments (Max 10 files, 10MB each)</label>
                 <input
                   type="file"
@@ -436,7 +678,7 @@ const CreateFMS: React.FC = () => {
               </div>
             </div>
           </div>
-        ))}
+        );})}
 
         <div className="flex items-center justify-between mt-8">
           <button

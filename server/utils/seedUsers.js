@@ -5,6 +5,7 @@ import User from '../models/User.js';
 
 // Complete user data with phone numbers
 const usersData = [
+  { username: 'System Admin', email: 'superadmin@system.com', password: 'SuperAdmin@123', phone: '9999999999', role: 'superadmin' },
   { username: 'Ajay Kumar Jha', email: 'ajay@123', password: 'Ajay@123', phone: '6280758617', role: 'employee' },
   { username: 'Sanjiv Mittal', email: 'sanjiv@123', password: 'Sanjiv@123', phone: '9915982900', role: 'employee' },
   { username: 'Pratibha Bedi', email: 'pratibha@123', password: 'Pratibha@123', phone: '9668624803', role: 'employee' },
@@ -76,10 +77,20 @@ export async function seedUsers() {
     const existingCount = await User.countDocuments({});
     if (existingCount > 0) {
       console.log(`⚠️  Found ${existingCount} existing users in database`);
-      console.log('❓ Do you want to:');
-      console.log('  1. Keep existing users and add new ones');
-      console.log('  2. Delete all and reseed (not recommended)\n');
-      console.log('⚠️  Running in "add new users" mode...\n');
+      
+      // Check if --force flag is present
+      const forceReseed = process.argv.includes('--force');
+      
+      if (forceReseed) {
+        console.log('⚠️  Force flag detected. Deleting all existing users...');
+        await User.deleteMany({});
+        console.log('✅ All existing users deleted\n');
+      } else {
+        console.log('❓ Do you want to:');
+        console.log('  1. Keep existing users and add new ones');
+        console.log('  2. Delete all and reseed (not recommended)\n');
+        console.log('⚠️  Running in "add new users" mode...\n');
+      }
     }
 
     let created = 0;

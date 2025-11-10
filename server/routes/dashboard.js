@@ -10,11 +10,15 @@ const router = express.Router();
 // Get dashboard analytics
 router.get('/analytics', async (req, res) => {
   try {
-    const { userId, isAdmin, startDate, endDate } = req.query;
+    const { userId, isAdmin, startDate, endDate, includeTeam, includeAllTimeMetrics } = req.query;
 
     // Convert userId to ObjectId for proper MongoDB queries
     const userObjectId = userId ? new mongoose.Types.ObjectId(userId) : null;
     const now = new Date();
+    
+    // For team-wide metrics when user is admin/superadmin
+    const isAdminOrSuperAdmin = isAdmin === 'true';
+    const shouldIncludeTeam = includeTeam === 'true' && isAdminOrSuperAdmin;
 
     let baseQuery = {};
     if (isAdmin !== 'true' && userObjectId) {
@@ -31,6 +35,122 @@ router.get('/analytics', async (req, res) => {
         ]
       };
     }
+
+    // Get FMS metrics
+    const fmsMetrics = await Project.aggregate([
+      {
+        $match: {
+          ...(isAdminOrSuperAdmin ? {} : { assignedTo: userObjectId }),
+          ...dateRangeQueryForStats
+        }
+      },
+      {
+        $group: {
+          _id: null,
+          activeProjects: {
+            $sum: { $cond: [{ $eq: ["$status", "active"] }, 1, 0] }
+          },
+          completedProjects: {
+            $sum: { $cond: [{ $eq: ["$status", "completed"] }, 1, 0] }
+          },
+          totalProjects: { $sum: 1 },
+          totalFMSTasks: { $sum: { $size: "$tasks" } },
+          pendingFMSTasks: {
+            $sum: {
+              $size: {
+                $filter: {
+                  input: "$tasks",
+                  as: "task",
+                  cond: { $eq: ["$$task.status", "pending"] }
+                }
+              }
+            }
+          },
+          completedFMSTasks: {
+            $sum: {
+              $size: {
+                $filter: {
+                  input: "$tasks",
+                  as: "task",
+                  cond: { $eq: ["$$task.status", "completed"] }
+                }
+              }
+            }
+          },
+          avgProgress: { $avg: "$progress" }
+        }
+      }
+    ]);
+
+    // Get team performance metrics if admin/superadmin
+    const overallTeamPerformance = shouldIncludeTeam ? await Task.aggregate([
+      {
+        $match: {
+          ...dateRangeQueryForStats
+        }
+      },
+      {
+        $group: {
+          _id: "$assignedTo",
+          totalTasks: { $sum: 1 },
+          completedTasks: {
+            $sum: { $cond: [{ $eq: ["$status", "completed"] }, 1, 0] }
+          },
+          pendingTasks: {
+            $sum: { $cond: [{ $in: ["$status", ["pending", "in-progress"]] }, 1, 0] }
+          },
+          oneTimeCompleted: {
+            $sum: {
+              $cond: [
+                { $and: [
+                  { $eq: ["$status", "completed"] },
+                  { $eq: ["$taskType", "one-time"] }
+                ]},
+                1,
+                0
+              ]
+            }
+          },
+          recurringCompleted: {
+            $sum: {
+              $cond: [
+                { $and: [
+                  { $eq: ["$status", "completed"] },
+                  { $ne: ["$taskType", "one-time"] }
+                ]},
+                1,
+                0
+              ]
+            }
+          }
+        }
+      },
+      {
+        $lookup: {
+          from: "users",
+          localField: "_id",
+          foreignField: "_id",
+          as: "userInfo"
+        }
+      },
+      {
+        $project: {
+          username: { $arrayElemAt: ["$userInfo.username", 0] },
+          totalTasks: 1,
+          completedTasks: 1,
+          pendingTasks: 1,
+          oneTimeCompleted: 1,
+          recurringCompleted: 1,
+          completionRate: {
+            $multiply: [
+              { $divide: ["$completedTasks", { $max: ["$totalTasks", 1] }] },
+              100
+            ]
+          }
+        }
+      },
+      { $sort: { completionRate: -1 } }
+    ]) : [];
 
     // Status stats - filtered by user if not admin
     const statusStats = await Task.aggregate([
@@ -121,7 +241,7 @@ router.get('/analytics', async (req, res) => {
       { $sort: { '_id.year': 1, '_id.month': 1 } }
     ]);
 
-    let teamPerformance = [];
+    const userTeamPerformance = [];
     let userPerformanceData = null; // Renamed from userPerformance to userPerformanceData for clarity
 
     if (isAdmin === 'true') {
@@ -225,7 +345,7 @@ router.get('/analytics', async (req, res) => {
         const onTimeRate = completedTasksForRate > 0 ? Math.min((onTimeCompletedTasks + onTimeCompletedRecurringTasks) / completedTasksForRate * 100, 100) : 0;
 
         if (totalTasks > 0 || completedTasks > 0 || pendingTasks > 0) {
-          teamPerformance.push({
+          userTeamPerformance.push({
             username: user.username,
             totalTasks,
             completedTasks,
@@ -258,7 +378,7 @@ router.get('/analytics', async (req, res) => {
           });
         }
       }
-      teamPerformance.sort((a, b) => b.completionRate - a.completionRate);
+      userTeamPerformance.sort((a, b) => b.completionRate - a.completionRate);
     } else {
       // Non-admin: Get individual user performance
       if (userObjectId) {
@@ -579,7 +699,6 @@ router.get('/analytics', async (req, res) => {
     };
 
     // FMS Metrics (for admin/manager only)
-    let fmsMetrics = null;
     // Define dateFilter for Project.find
     let dateFilter = {};
     if (startDate && endDate) {
@@ -629,7 +748,7 @@ router.get('/analytics', async (req, res) => {
       priorityStats,
       completionTrend,
       plannedTrend,
-      teamPerformance,
+      teamPerformance: userTeamPerformance,
       recentActivity,
       performanceMetrics,
       userPerformance: isAdmin ? null : userPerformanceData,

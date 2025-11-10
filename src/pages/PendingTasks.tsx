@@ -114,6 +114,10 @@ const PendingTasks: React.FC = () => {
   const [selectedImagePreview, setSelectedImagePreview] = useState<string | null>(null);
   const [downloading, setDownloading] = useState<{ [key: string]: boolean }>({});
 
+  const activeFmsTask = showFMSCompleteModal
+    ? fmsTasks.find(t => t.projectId === showFMSCompleteModal.projectId && t.taskIndex === showFMSCompleteModal.taskIndex)
+    : null;
+
   // Calculate pagination
   const totalPages = Math.ceil(tasks.length / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
@@ -292,34 +296,27 @@ const PendingTasks: React.FC = () => {
   };
 
   const handleFMSTaskCompletion = async (projectId: string, taskIndex: number, remarks: string, attachments: File[], completedOnBehalfBy?: string, pcConfirmation?: File) => {
-    try {
-      const formData = new FormData();
-      formData.append('remarks', remarks);
-      formData.append('completedBy', completedOnBehalfBy || user?.id || '');
-      
-      if (completedOnBehalfBy) {
-        formData.append('completedOnBehalfBy', user?.id || '');
-      }
-
-      attachments.forEach((file) => {
-        formData.append('files', file);
-      });
-
-      if (pcConfirmation) {
-        formData.append('pcConfirmation', pcConfirmation);
-      }
-
-      await axios.post(`${address}/api/projects/${projectId}/complete-task/${taskIndex}`, formData, {
-        headers: { 'Content-Type': 'multipart/form-data' }
-      });
-
-      setShowFMSCompleteModal(null);
-      fetchTasks();
-      alert('FMS task completed successfully!');
-    } catch (error) {
-      console.error('Error completing FMS task:', error);
-      alert('Failed to complete FMS task');
+    const formData = new FormData();
+    formData.append('remarks', remarks);
+    formData.append('completedBy', completedOnBehalfBy || user?.id || '');
+    
+    if (completedOnBehalfBy) {
+      formData.append('completedOnBehalfBy', user?.id || '');
     }
+
+    attachments.forEach((file) => {
+      formData.append('files', file);
+    });
+
+    if (pcConfirmation) {
+      formData.append('pcConfirmation', pcConfirmation);
+    }
+
+    await axios.post(`${address}/api/projects/${projectId}/complete-task/${taskIndex}`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    });
+
+    fetchTasks();
   };
 
   const handleRaiseFMSObjection = async () => {
@@ -1460,18 +1457,28 @@ const PendingTasks: React.FC = () => {
       )}
 
       {/* FMS Task Completion Modal */}
-      {showFMSCompleteModal && (
+      {showFMSCompleteModal && activeFmsTask && (
         <TaskCompletionModal
           taskId={`${showFMSCompleteModal.projectId}-${showFMSCompleteModal.taskIndex}`}
-          taskTitle={fmsTasks.find(t => t.projectId === showFMSCompleteModal.projectId && t.taskIndex === showFMSCompleteModal.taskIndex)?.task.what || 'FMS Task'}
+          taskTitle={activeFmsTask.task.what || 'FMS Task'}
           isRecurring={false}
-          allowAttachments={taskSettings.pendingTasks.allowAttachments}
-          mandatoryAttachments={taskSettings.pendingTasks.mandatoryAttachments}
+          allowAttachments
+          mandatoryAttachments={activeFmsTask.task.requireAttachments ? activeFmsTask.task.mandatoryAttachments : false}
           mandatoryRemarks={taskSettings.pendingTasks.mandatoryRemarks}
           onClose={() => setShowFMSCompleteModal(null)}
-          onComplete={async (remarks, attachments) => {
-            await handleFMSTaskCompletion(showFMSCompleteModal.projectId, showFMSCompleteModal.taskIndex, remarks, attachments);
+          onComplete={() => {}}
+          onSubmitOverride={async ({ remarks, attachments, selectedUserId, pcConfirmationFile }) => {
+            const completedBy = user?.role === 'pc' ? selectedUserId || undefined : undefined;
+            await handleFMSTaskCompletion(
+              showFMSCompleteModal.projectId,
+              showFMSCompleteModal.taskIndex,
+              remarks,
+              attachments,
+              completedBy,
+              pcConfirmationFile || undefined
+            );
           }}
+          isDark={theme === 'dark'}
         />
       )}
 

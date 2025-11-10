@@ -15,6 +15,7 @@ import userRoutes from './routes/users.js';
 import dashboardRoutes from './routes/dashboard.js';
 import settingsRoutes from './routes/settings.js';
 import fmsRoutes from './routes/fms.js';
+import fmsCategoryRoutes from './routes/fmsCategories.js';
 import projectRoutes from './routes/projects.js';
 import leadsRoutes from './routes/leads.js';
 import objectionRoutes from './routes/objections.js';
@@ -126,6 +127,7 @@ app.use('/api/users', userRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/settings', settingsRoutes);
 app.use('/api/fms', fmsRoutes);
+app.use('/api/fms/categories', fmsCategoryRoutes);
 app.use('/api/projects', projectRoutes);
 app.use('/api/leads', leadsRoutes);
 app.use('/api/objections', objectionRoutes);
@@ -174,6 +176,32 @@ mongoose.connect(config.mongoURI, mongoOptions)
         }
       })
       .catch(err => console.error('Error checking for admin user:', err));
+
+    User.findOne({ role: 'superadmin' })
+      .then(existingSuperAdmin => {
+        if (!existingSuperAdmin) {
+          const superAdmin = new User({
+            username: 'Super Admin',
+            email: 'superadmin@taskmanagement.com',
+            password: 'Super123!',
+            role: 'superadmin',
+            permissions: {
+              canViewTasks: true,
+              canViewAllTeamTasks: true,
+              canAssignTasks: true,
+              canDeleteTasks: true,
+              canEditTasks: true,
+              canManageUsers: true,
+              canEditRecurringTaskSchedules: true,
+              canCompleteTasksOnBehalf: true
+            }
+          });
+          superAdmin.save()
+            .then(() => console.log('✅ Super admin user created with default credentials'))
+            .catch(err => console.error('Error creating super admin user:', err));
+        }
+      })
+      .catch(err => console.error('Error checking for super admin user:', err));
 
     // Start server
     app.listen(PORT, '0.0.0.0', () => {

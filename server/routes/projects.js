@@ -2,8 +2,47 @@ import express from 'express';
 import Project from '../models/Project.js';
 import FMS from '../models/FMS.js';
 import User from '../models/User.js';
+import multer from 'multer';
+import path from 'path';
+import { fileURLToPath } from 'url';
 
 const router = express.Router();
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+const storage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    cb(null, path.join(__dirname, '../uploads'));
+  },
+  filename: function (req, file, cb) {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    cb(null, file.fieldname + '-' + uniqueSuffix + path.extname(file.originalname));
+  }
+});
+
+const upload = multer({
+  storage,
+  limits: { fileSize: 10 * 1024 * 1024 },
+  fileFilter: (req, file, cb) => {
+    const allowedTypes = /jpeg|jpg|png|pdf|docx|xlsx|webm|mp3|wav/;
+    const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
+    const mimetype = allowedTypes.test(file.mimetype);
+    if (extname && mimetype) {
+      return cb(null, true);
+    }
+    cb(new Error('Invalid file type'));
+  }
+});
+
+const shiftSundayForward = (date, frequencySettings = {}) => {
+  if (!date) return null;
+  const result = new Date(date);
+  if (frequencySettings.shiftSundayToMonday && result.getDay() === 0) {
+    result.setDate(result.getDate() + 1);
+  }
+  return result;
+};
 
 // Create project from FMS template
 router.post('/', async (req, res) => {
@@ -50,12 +89,14 @@ router.post('/', async (req, res) => {
         status = 'Awaiting Date';
       }
 
+      const normalizedDueDate = shiftSundayForward(plannedDueDate, fms.frequencySettings);
+
       return {
         stepNo: step.stepNo,
         what: step.what,
         who: step.who.map(u => u._id),
         how: step.how,
-        plannedDueDate,
+        plannedDueDate: normalizedDueDate,
         status,
         requiresChecklist: step.requiresChecklist,
         checklistItems: step.checklistItems.map(item => ({
@@ -64,7 +105,10 @@ router.post('/', async (req, res) => {
           completed: false
         })),
         attachments: [],
-        whenType: step.whenType
+        whenType: step.whenType,
+        requireAttachments: step.requireAttachments || false,
+        mandatoryAttachments: step.mandatoryAttachments || false,
+        originalPlannedDate: normalizedDueDate
       };
     });
 
@@ -149,9 +193,10 @@ router.put('/:projectId/tasks/:taskIndex', async (req, res) => {
 
     // Handle ask-on-completion date assignment
     if (plannedDueDate && task.whenType === 'ask-on-completion') {
-      task.plannedDueDate = new Date(plannedDueDate);
+      task.plannedDueDate = shiftSundayForward(plannedDueDate, project.fmsId?.frequencySettings);
       task.plannedDateAsked = true;
       task.status = 'Pending'; // Move to pending once date is set
+      task.originalPlannedDate = task.plannedDueDate;
     }
 
     if (status === 'Done') {
@@ -200,10 +245,13 @@ router.put('/:projectId/tasks/:taskIndex', async (req, res) => {
 
 
 // Complete FMS task from pending tasks page
-router.post('/:projectId/complete-task/:taskIndex', async (req, res) => {
+router.post('/:projectId/complete-task/:taskIndex', upload.fields([
+  { name: 'files', maxCount: 10 },
+  { name: 'pcConfirmation', maxCount: 1 }
+]), async (req, res) => {
   try {
     const { projectId, taskIndex } = req.params;
-    const { completedBy, remarks, completedOnBehalfBy, pcConfirmationAttachment } = req.body;
+    const { completedBy, remarks, completedOnBehalfBy } = req.body;
 
     const project = await Project.findOne({ projectId }).populate('fmsId');
     if (!project) {
@@ -217,8 +265,9 @@ router.post('/:projectId/complete-task/:taskIndex', async (req, res) => {
 
     // Upload attachments if any
     let uploadedAttachments = [];
-    if (req.files && req.files.length > 0) {
-      uploadedAttachments = req.files.map(file => ({
+    const filesArray = Array.isArray(req.files?.files) ? req.files.files : [];
+    if (filesArray.length > 0) {
+      uploadedAttachments = filesArray.map(file => ({
         filename: file.filename,
         originalName: file.originalname,
         path: file.path,
@@ -227,6 +276,8 @@ router.post('/:projectId/complete-task/:taskIndex', async (req, res) => {
         uploadedAt: new Date()
       }));
     }
+
+    const pcConfirmationFile = Array.isArray(req.files?.pcConfirmation) ? req.files.pcConfirmation[0] : undefined;
 
     task.status = 'Done';
     task.completedAt = new Date();
@@ -238,11 +289,22 @@ router.post('/:projectId/complete-task/:taskIndex', async (req, res) => {
       task.attachments = [...(task.attachments || []), ...uploadedAttachments];
     }
 
+    // Validate mandatory attachments
+    if (task.requireAttachments && task.mandatoryAttachments && (task.attachments?.length || 0) === 0) {
+      return res.status(400).json({ success: false, message: 'Attachments are required to complete this step.' });
+    }
+
     // Handle PC completion
     if (completedOnBehalfBy) {
       task.completedOnBehalfBy = completedOnBehalfBy;
-      if (pcConfirmationAttachment) {
-        task.pcConfirmationAttachment = pcConfirmationAttachment;
+      if (pcConfirmationFile) {
+        task.pcConfirmationAttachment = {
+          filename: pcConfirmationFile.filename,
+          originalName: pcConfirmationFile.originalname,
+          path: pcConfirmationFile.path,
+          size: pcConfirmationFile.size,
+          uploadedAt: new Date()
+        };
       }
     }
 
@@ -289,7 +351,8 @@ router.post('/:projectId/complete-task/:taskIndex', async (req, res) => {
   }
 });
 
-        nextTask.plannedDueDate = dueDate;
+        nextTask.plannedDueDate = shiftSundayForward(dueDate, project.fmsId?.frequencySettings);
+        nextTask.originalPlannedDate = nextTask.plannedDueDate;
         nextTask.status = 'Pending';
       } else if (nextTask.whenType === 'ask-on-completion') {
         // For ask-on-completion, keep status as Awaiting Date until user provides date
@@ -321,12 +384,12 @@ router.post('/:projectId/complete-task/:taskIndex', async (req, res) => {
               if (idx === 0) {
                 taskStatus = 'Pending';
                 if (step.whenUnit === 'days') {
-                  plannedDueDate = new Date(triggerDate.getTime() + step.when * 24 * 60 * 60 * 1000);
+                plannedDueDate = new Date(triggerDate.getTime() + step.when * 24 * 60 * 60 * 1000);
                 } else if (step.whenUnit === 'hours') {
-                  plannedDueDate = new Date(triggerDate.getTime() + step.when * 60 * 60 * 1000);
+                plannedDueDate = new Date(triggerDate.getTime() + step.when * 60 * 60 * 1000);
                 } else if (step.whenUnit === 'days+hours') {
                   const totalHours = (step.whenDays || 0) * 24 + (step.whenHours || 0);
-                  plannedDueDate = new Date(triggerDate.getTime() + totalHours * 60 * 60 * 1000);
+                plannedDueDate = new Date(triggerDate.getTime() + totalHours * 60 * 60 * 1000);
                 }
               } else if (step.whenType === 'fixed') {
                 let totalHours = 0;
@@ -342,12 +405,14 @@ router.post('/:projectId/complete-task/:taskIndex', async (req, res) => {
                 taskStatus = 'Awaiting Date';
               }
 
+              const normalizedTriggeredDueDate = shiftSundayForward(plannedDueDate, triggeredFMS.frequencySettings);
+
               return {
                 stepNo: step.stepNo,
                 what: step.what,
                 who: step.who,
                 how: step.how,
-                plannedDueDate,
+                plannedDueDate: normalizedTriggeredDueDate,
                 status: taskStatus,
                 requiresChecklist: step.requiresChecklist,
                 checklistItems: step.checklistItems.map(item => ({
@@ -356,7 +421,10 @@ router.post('/:projectId/complete-task/:taskIndex', async (req, res) => {
                   completed: false
                 })),
                 attachments: [],
-                whenType: step.whenType
+                whenType: step.whenType,
+                requireAttachments: step.requireAttachments || false,
+                mandatoryAttachments: step.mandatoryAttachments || false,
+                originalPlannedDate: normalizedTriggeredDueDate
               };
             });
 

@@ -37,7 +37,9 @@ const AssignTask: React.FC = () => {
     includeSunday: false,
     weeklyDays: [] as number[],
     monthlyDay: 1,
-    yearlyDuration: 3
+    yearlyDuration: 3,
+    requireAttachments: false,
+    mandatoryAttachments: false
   });
   const [attachments, setAttachments] = useState<File[]>([]);
   const [loading, setLoading] = useState(false);
@@ -114,9 +116,23 @@ const AssignTask: React.FC = () => {
     const { name, value, type } = e.target;
     setFormData(prev => ({
       ...prev,
-      [name]: type === 'checkbox' ? (e.target as HTMLInputElement).checked :
-              name === 'monthlyDay' ? parseInt(value) : 
-              name === 'yearlyDuration' ? parseInt(value) : value
+      ...(type === 'checkbox'
+        ? name === 'requireAttachments'
+          ? {
+              requireAttachments: (e.target as HTMLInputElement).checked,
+              mandatoryAttachments: (e.target as HTMLInputElement).checked ? prev.mandatoryAttachments : false
+            }
+          : name === 'mandatoryAttachments'
+            ? {
+                mandatoryAttachments: (e.target as HTMLInputElement).checked,
+                requireAttachments: (e.target as HTMLInputElement).checked ? true : prev.requireAttachments
+              }
+            : { [name]: (e.target as HTMLInputElement).checked }
+        : name === 'monthlyDay'
+          ? { monthlyDay: parseInt(value, 10) }
+          : name === 'yearlyDuration'
+            ? { yearlyDuration: parseInt(value, 10) }
+            : { [name]: value })
     }));
   };
 
@@ -295,6 +311,8 @@ const AssignTask: React.FC = () => {
           assignedTo: assignedUserId, // Single user per task
           assignedBy: user?.id,
           attachments: uploadedAttachments,
+          requireAttachments: formData.requireAttachments,
+          mandatoryAttachments: formData.requireAttachments ? formData.mandatoryAttachments : false,
           // For yearly and quarterly tasks, ensure proper date handling
           ...((formData.taskType === 'yearly' || formData.taskType === 'quarterly') && !formData.isForever && {
             endDate: formData.startDate
@@ -387,7 +405,9 @@ const AssignTask: React.FC = () => {
       includeSunday: false,
       weeklyDays: [],
       monthlyDay: 1,
-      yearlyDuration: 3
+      yearlyDuration: 3,
+      requireAttachments: false,
+      mandatoryAttachments: false
     });
     setAttachments([]);
     setMessage({ type: '', text: '' });
@@ -1106,6 +1126,31 @@ const AssignTask: React.FC = () => {
                   Attachments (Max 10MB per file)
                 </h2>
               </div>
+
+            <div className="flex flex-col gap-3 mb-5">
+              <label className="flex items-center gap-2 text-sm font-medium" style={{ color: 'var(--color-text)' }}>
+                <input
+                  type="checkbox"
+                  name="requireAttachments"
+                  checked={formData.requireAttachments}
+                  onChange={handleInputChange}
+                  className="w-4 h-4 rounded accent-blue-500"
+                />
+                Require attachments when the task is completed
+              </label>
+              {formData.requireAttachments && (
+                <label className="flex items-center gap-2 text-sm font-medium pl-6" style={{ color: 'var(--color-text)' }}>
+                  <input
+                    type="checkbox"
+                    name="mandatoryAttachments"
+                    checked={formData.mandatoryAttachments}
+                    onChange={handleInputChange}
+                    className="w-4 h-4 rounded accent-blue-500"
+                  />
+                  Make attachments mandatory before completion
+                </label>
+              )}
+            </div>
               
               {/* Centered File Upload Area */}
               <div className="flex flex-col items-center justify-center">

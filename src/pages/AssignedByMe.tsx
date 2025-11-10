@@ -36,15 +36,26 @@ const AssignedByMe: React.FC = () => {
   }, [user, filterStatus]);
 
   const fetchTasks = async () => {
+    if (!user?.id) return;
+    
     try {
       setLoading(true);
-      const params: any = { userId: user?.id };
-      if (filterStatus !== 'all') {
-        params.status = filterStatus;
-      }
+      const params: any = { 
+        userId: user.id,
+        status: filterStatus !== 'all' ? filterStatus : undefined
+      };
 
       const response = await axios.get(`${address}/api/tasks/assigned-by-me`, { params });
-      setTasks(response.data.tasks || []);
+      
+      if (response.data.tasks) {
+        // Sort tasks by creation date descending
+        const sortedTasks = [...response.data.tasks].sort((a: Task, b: Task) => 
+          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+        );
+        setTasks(sortedTasks);
+      } else {
+        setTasks([]);
+      }
     } catch (error) {
       console.error('Error fetching assigned by me tasks:', error);
     } finally {

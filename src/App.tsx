@@ -23,6 +23,12 @@ import ScoreLogs from './pages/ScoreLogs';
 import AdminTasks from './pages/AdminTasks';
 import ObjectionApprovals from './pages/ObjectionApprovals';
 import ErrorBoundary from './components/ErrorBoundary';
+import Checklists from './pages/Checklists';
+import CreateChecklist from './pages/CreateChecklist';
+import ChecklistDetail from './pages/ChecklistDetail';
+import ChecklistDashboard from './pages/ChecklistDashboard';
+import HelpTickets from './pages/HelpTickets';
+import AdminHelpTickets from './pages/AdminHelpTickets';
 
 function App() {
   return (
@@ -46,6 +52,12 @@ function App() {
                   <Route path="create-fms" element={<ProtectedRoute><CreateFMS /></ProtectedRoute>} />
                   <Route path="start-project" element={<ProtectedRoute><StartProject /></ProtectedRoute>} />
                   <Route path="fms-progress" element={<ProtectedRoute><ViewFMSProgress /></ProtectedRoute>} />
+                  <Route path="/checklists" element={<ProtectedRoute><Checklists /></ProtectedRoute>} />
+                  <Route path="/checklists/create" element={<ProtectedRoute><CreateChecklist /></ProtectedRoute>} />
+                  <Route path="/checklists/:id" element={<ProtectedRoute><ChecklistDetail /></ProtectedRoute>} />
+                  <Route path="/checklist-dashboard" element={<ProtectedRoute><ChecklistDashboard /></ProtectedRoute>} />
+                  <Route path="/help-tickets" element={<ProtectedRoute><HelpTickets /></ProtectedRoute>} />
+                  <Route path="/admin-help-tickets" element={<ProtectedRoute><AdminHelpTickets /></ProtectedRoute>} />
                   <Route path="assigned-by-me" element={<ProtectedRoute><AssignedByMe /></ProtectedRoute>} />
                   <Route path="audit-logs" element={<ProtectedRoute><AuditLogs /></ProtectedRoute>} />
                   <Route path="score-logs" element={<ProtectedRoute><ScoreLogs /></ProtectedRoute>} />

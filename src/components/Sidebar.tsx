@@ -20,6 +20,8 @@ import {
   UserCheck,
   Shield,
   Award,
+  HelpCircle, // Added HelpCircle
+  BarChart2, // Added BarChart2
 } from 'lucide-react';
 
 // Clean and Professional AMG Logo Component
@@ -121,6 +123,11 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
     { icon: AlertCircle, label: 'Objection Approvals', path: '/objection-approvals', countKey: 'objections' },
     { icon: Shield, label: 'Audit Logs', path: '/audit-logs', requireAdmin: true }, // Added Audit Logs
     { icon: Award, label: 'Score Logs', path: '/score-logs', requireAdmin: true }, // Added Score Logs
+    // Added Checklist and Help Ticket navigation items
+    { icon: CheckSquare, label: 'Checklists', path: '/checklists' },
+    { icon: BarChart2, label: 'Checklist Dashboard', path: '/checklist-dashboard' },
+    { icon: HelpCircle, label: 'Help Tickets', path: '/help-tickets' },
+    { icon: HelpCircle, label: 'Manage Tickets', path: '/admin-help-tickets', requireAdmin: true }, // Added Manage Tickets for Admin/Super Admin
   ];
 
   useEffect(() => {

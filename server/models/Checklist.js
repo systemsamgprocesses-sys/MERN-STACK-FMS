@@ -13,7 +13,7 @@ const checklistSchema = new mongoose.Schema({
   parentTaskId: { type: mongoose.Schema.Types.ObjectId, ref: 'Task' },
   parentChecklistId: { type: mongoose.Schema.Types.ObjectId, ref: 'Checklist' },
   createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
-  assignedTo: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
+  assignedTo: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
   recurrence: {
     type: { 
       type: String, 

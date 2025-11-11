@@ -9,7 +9,8 @@ const adminRemarkSchema = new mongoose.Schema({
 
 const helpTicketSchema = new mongoose.Schema({
   raisedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
-  subject: { type: String, required: true },
+  title: { type: String, required: true },
+  subject: { type: String },
   description: { type: String, required: true },
   relatedTaskId: { type: mongoose.Schema.Types.ObjectId, ref: 'Task' },
   priority: { 

@@ -9,7 +9,7 @@ const router = express.Router();
 // Get all checklists with filters
 router.get('/', async (req, res) => {
   try {
-    const { assignedTo, status, recurrenceType, startDate, endDate, userId, role } = req.query;
+    const { assignedTo, status, recurrence, dateFrom, dateTo, userId, role } = req.query;
     
     let query = {};
     
@@ -20,11 +20,11 @@ router.get('/', async (req, res) => {
     
     if (assignedTo) query.assignedTo = assignedTo;
     if (status) query.status = status;
-    if (recurrenceType) query['recurrence.type'] = recurrenceType;
-    if (startDate || endDate) {
+    if (recurrence) query['recurrence.type'] = recurrence;
+    if (dateFrom || dateTo) {
       query.startDate = {};
-      if (startDate) query.startDate.$gte = new Date(startDate);
-      if (endDate) query.startDate.$lte = new Date(endDate);
+      if (dateFrom) query.startDate.$gte = new Date(dateFrom);
+      if (dateTo) query.startDate.$lte = new Date(dateTo);
     }
     
     const checklists = await Checklist.find(query)
@@ -34,10 +34,10 @@ router.get('/', async (req, res) => {
       .populate('parentChecklistId', 'title')
       .sort({ createdAt: -1 });
     
-    res.json({ success: true, checklists });
+    res.json(checklists);
   } catch (error) {
     console.error('Error fetching checklists:', error);
-    res.status(500).json({ success: false, message: 'Server error', error: error.message });
+    res.status(500).json({ error: 'Server error' });
   }
 });
 
@@ -51,13 +51,13 @@ router.get('/:id', async (req, res) => {
       .populate('parentChecklistId', 'title');
     
     if (!checklist) {
-      return res.status(404).json({ success: false, message: 'Checklist not found' });
+      return res.status(404).json({ error: 'Checklist not found' });
     }
     
-    res.json({ success: true, checklist });
+    res.json(checklist);
   } catch (error) {
     console.error('Error fetching checklist:', error);
-    res.status(500).json({ success: false, message: 'Server error', error: error.message });
+    res.status(500).json({ error: 'Server error' });
   }
 });
 
@@ -79,15 +79,15 @@ router.post('/', async (req, res) => {
     
     await checklist.populate('createdBy assignedTo parentTaskId parentChecklistId');
     
-    res.json({ success: true, checklist });
+    res.json(checklist);
   } catch (error) {
     console.error('Error creating checklist:', error);
-    res.status(500).json({ success: false, message: 'Server error', error: error.message });
+    res.status(500).json({ error: 'Server error' });
   }
 });
 
 // Update checklist
-router.put('/:id', async (req, res) => {
+router.patch('/:id', async (req, res) => {
   try {
     const checklist = await Checklist.findByIdAndUpdate(
       req.params.id,
@@ -96,13 +96,13 @@ router.put('/:id', async (req, res) => {
     ).populate('createdBy assignedTo parentTaskId parentChecklistId');
     
     if (!checklist) {
-      return res.status(404).json({ success: false, message: 'Checklist not found' });
+      return res.status(404).json({ error: 'Checklist not found' });
     }
     
-    res.json({ success: true, checklist });
+    res.json(checklist);
   } catch (error) {
     console.error('Error updating checklist:', error);
-    res.status(500).json({ success: false, message: 'Server error', error: error.message });
+    res.status(500).json({ error: 'Server error' });
   }
 });
 
@@ -112,7 +112,7 @@ router.post('/:id/submit', async (req, res) => {
     const checklist = await Checklist.findById(req.params.id);
     
     if (!checklist) {
-      return res.status(404).json({ success: false, message: 'Checklist not found' });
+      return res.status(404).json({ error: 'Checklist not found' });
     }
     
     checklist.status = 'Submitted';
@@ -126,26 +126,26 @@ router.post('/:id/submit', async (req, res) => {
     
     await checklist.populate('createdBy assignedTo parentTaskId parentChecklistId');
     
-    res.json({ success: true, checklist });
+    res.json(checklist);
   } catch (error) {
     console.error('Error submitting checklist:', error);
-    res.status(500).json({ success: false, message: 'Server error', error: error.message });
+    res.status(500).json({ error: 'Server error' });
   }
 });
 
 // Update checklist item
-router.put('/:id/items/:itemId', async (req, res) => {
+router.patch('/:id/items/:itemId', async (req, res) => {
   try {
     const { isDone, remarks } = req.body;
     
     const checklist = await Checklist.findById(req.params.id);
     if (!checklist) {
-      return res.status(404).json({ success: false, message: 'Checklist not found' });
+      return res.status(404).json({ error: 'Checklist not found' });
     }
     
     const item = checklist.items.id(req.params.itemId);
     if (!item) {
-      return res.status(404).json({ success: false, message: 'Item not found' });
+      return res.status(404).json({ error: 'Item not found' });
     }
     
     if (isDone !== undefined) {
@@ -157,21 +157,25 @@ router.put('/:id/items/:itemId', async (req, res) => {
     await checklist.save();
     await checklist.populate('createdBy assignedTo parentTaskId parentChecklistId');
     
-    res.json({ success: true, checklist });
+    res.json(checklist);
   } catch (error) {
     console.error('Error updating checklist item:', error);
-    res.status(500).json({ success: false, message: 'Server error', error: error.message });
+    res.status(500).json({ error: 'Server error' });
   }
 });
 
 // Get checklist dashboard metrics
-router.get('/dashboard/metrics', async (req, res) => {
+router.get('/dashboard', async (req, res) => {
   try {
-    const { userId, role } = req.query;
+    const { assignedTo, role, userId } = req.query;
     
     let query = {};
+    
+    // Filter based on role
     if (role === 'employee' && userId) {
       query.assignedTo = userId;
+    } else if (assignedTo) {
+      query.assignedTo = assignedTo;
     }
     
     const now = new Date();
@@ -187,19 +191,30 @@ router.get('/dashboard/metrics', async (req, res) => {
       })
     ]);
     
+    // Get recurrence breakdown
+    const allChecklists = await Checklist.find(query);
+    const byRecurrence = allChecklists.reduce((acc, cl) => {
+      const type = cl.recurrence.type;
+      acc[type] = (acc[type] || 0) + 1;
+      return acc;
+    }, {});
+    
     const recentSubmissions = await Checklist.find({ ...query, status: 'Submitted' })
       .populate('createdBy assignedTo')
       .sort({ submittedAt: -1 })
       .limit(10);
     
     res.json({
-      success: true,
-      metrics: { total, completed, pending, overdue },
+      total,
+      completed,
+      pending,
+      overdue,
+      byRecurrence,
       recentSubmissions
     });
   } catch (error) {
     console.error('Error fetching dashboard metrics:', error);
-    res.status(500).json({ success: false, message: 'Server error', error: error.message });
+    res.status(500).json({ error: 'Server error' });
   }
 });
 

@@ -1,149 +1,123 @@
-
 import express from 'express';
 import HelpTicket from '../models/HelpTicket.js';
 
 const router = express.Router();
 
-// Get all help tickets (Super Admin only)
+// Get all help tickets for employee (their own)
 router.get('/', async (req, res) => {
   try {
-    const { status, priority, role, userId } = req.query;
-    
-    // Only super admins can view all tickets
-    if (role !== 'superadmin') {
-      // Employees can only see their own tickets
-      const query = { raisedBy: userId };
-      if (status) query.status = status;
-      
-      const tickets = await HelpTicket.find(query)
-        .populate('raisedBy', 'username email')
-        .populate('assignedTo', 'username email')
-        .populate('relatedTaskId', 'title')
-        .populate('adminRemarks.by', 'username')
-        .sort({ createdAt: -1 });
-      
-      return res.json({ success: true, tickets });
-    }
-    
+    const { userId, role } = req.query;
+
     let query = {};
-    if (status) query.status = status;
-    if (priority) query.priority = priority;
-    
+
+    // Employees see only their own tickets
+    if (role !== 'superadmin' && role !== 'admin') {
+      query.raisedBy = userId;
+    }
+
     const tickets = await HelpTicket.find(query)
       .populate('raisedBy', 'username email')
       .populate('assignedTo', 'username email')
       .populate('relatedTaskId', 'title')
       .populate('adminRemarks.by', 'username')
       .sort({ createdAt: -1 });
-    
-    res.json({ success: true, tickets });
+
+    res.json(tickets);
   } catch (error) {
     console.error('Error fetching help tickets:', error);
-    res.status(500).json({ success: false, message: 'Server error', error: error.message });
+    res.status(500).json({ error: 'Server error' });
   }
 });
 
-// Get ticket by ID
-router.get('/:id', async (req, res) => {
+// Get all tickets for admin/superadmin
+router.get('/admin', async (req, res) => {
   try {
-    const ticket = await HelpTicket.findById(req.params.id)
+    const { status, priority } = req.query;
+
+    let query = {};
+    if (status) query.status = status;
+    if (priority) query.priority = priority;
+
+    const tickets = await HelpTicket.find(query)
       .populate('raisedBy', 'username email')
       .populate('assignedTo', 'username email')
       .populate('relatedTaskId', 'title')
-      .populate('adminRemarks.by', 'username');
-    
-    if (!ticket) {
-      return res.status(404).json({ success: false, message: 'Ticket not found' });
-    }
-    
-    res.json({ success: true, ticket });
+      .populate('adminRemarks.by', 'username')
+      .sort({ createdAt: -1 });
+
+    res.json(tickets);
   } catch (error) {
-    console.error('Error fetching ticket:', error);
-    res.status(500).json({ success: false, message: 'Server error', error: error.message });
+    console.error('Error fetching admin tickets:', error);
+    res.status(500).json({ error: 'Server error' });
   }
 });
 
 // Create help ticket
 router.post('/', async (req, res) => {
   try {
-    const ticket = new HelpTicket(req.body);
+    const { title, description, priority, relatedTaskId, raisedBy } = req.body;
+
+    const ticket = new HelpTicket({
+      raisedBy,
+      subject: title,
+      description,
+      priority,
+      relatedTaskId: relatedTaskId || undefined,
+      status: 'Open',
+      adminRemarks: []
+    });
+
     await ticket.save();
-    
-    await ticket.populate('raisedBy assignedTo relatedTaskId adminRemarks.by');
-    
-    res.json({ success: true, ticket });
+    await ticket.populate('raisedBy assignedTo relatedTaskId');
+
+    res.json(ticket);
   } catch (error) {
     console.error('Error creating help ticket:', error);
-    res.status(500).json({ success: false, message: 'Server error', error: error.message });
+    res.status(500).json({ error: 'Failed to create ticket' });
   }
 });
 
 // Add admin remark
-router.post('/:id/remarks', async (req, res) => {
+router.post('/:id/remark', async (req, res) => {
   try {
-    const { by, remark } = req.body;
-    
+    const { remark, by } = req.body;
+
     const ticket = await HelpTicket.findById(req.params.id);
     if (!ticket) {
-      return res.status(404).json({ success: false, message: 'Ticket not found' });
+      return res.status(404).json({ error: 'Ticket not found' });
     }
-    
+
     ticket.adminRemarks.push({ by, remark, at: new Date() });
     await ticket.save();
-    
+
     await ticket.populate('raisedBy assignedTo relatedTaskId adminRemarks.by');
-    
-    res.json({ success: true, ticket });
+
+    res.json(ticket);
   } catch (error) {
     console.error('Error adding remark:', error);
-    res.status(500).json({ success: false, message: 'Server error', error: error.message });
-  }
-});
-
-// Close ticket
-router.put('/:id/close', async (req, res) => {
-  try {
-    const { by, finalRemark } = req.body;
-    
-    const ticket = await HelpTicket.findById(req.params.id);
-    if (!ticket) {
-      return res.status(404).json({ success: false, message: 'Ticket not found' });
-    }
-    
-    if (finalRemark) {
-      ticket.adminRemarks.push({ by, remark: finalRemark, at: new Date() });
-    }
-    ticket.status = 'Closed';
-    await ticket.save();
-    
-    await ticket.populate('raisedBy assignedTo relatedTaskId adminRemarks.by');
-    
-    res.json({ success: true, ticket });
-  } catch (error) {
-    console.error('Error closing ticket:', error);
-    res.status(500).json({ success: false, message: 'Server error', error: error.message });
+    res.status(500).json({ error: 'Failed to add remark' });
   }
 });
 
 // Update ticket status
-router.put('/:id/status', async (req, res) => {
+router.patch('/:id', async (req, res) => {
   try {
     const { status } = req.body;
-    
+
     const ticket = await HelpTicket.findByIdAndUpdate(
       req.params.id,
       { status, updatedAt: new Date() },
       { new: true }
     ).populate('raisedBy assignedTo relatedTaskId adminRemarks.by');
-    
+
     if (!ticket) {
-      return res.status(404).json({ success: false, message: 'Ticket not found' });
+      return res.status(404).json({ error: 'Ticket not found' });
     }
-    
-    res.json({ success: true, ticket });
+
+    res.json(ticket);
   } catch (error) {
     console.error('Error updating ticket status:', error);
-    res.status(500).json({ success: false, message: 'Server error', error: error.message });
+    res.status(500).json({ error: 'Failed to update status' });
   }
 });
 

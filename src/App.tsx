@@ -29,6 +29,8 @@ import ChecklistDetail from './pages/ChecklistDetail';
 import ChecklistDashboard from './pages/ChecklistDashboard';
 import HelpTickets from './pages/HelpTickets';
 import AdminHelpTickets from './pages/AdminHelpTickets';
+import PurchaseDashboard from './pages/PurchaseDashboard';
+import SalesDashboard from './pages/SalesDashboard';
 
 function App() {
   return (
@@ -58,6 +60,8 @@ function App() {
                   <Route path="/checklist-dashboard" element={<ProtectedRoute><ChecklistDashboard /></ProtectedRoute>} />
                   <Route path="/help-tickets" element={<ProtectedRoute><HelpTickets /></ProtectedRoute>} />
                   <Route path="/admin-help-tickets" element={<ProtectedRoute><AdminHelpTickets /></ProtectedRoute>} />
+                  <Route path="/purchase-dashboard" element={<ProtectedRoute><PurchaseDashboard /></ProtectedRoute>} />
+                  <Route path="/sales-dashboard" element={<ProtectedRoute><SalesDashboard /></ProtectedRoute>} />
                   <Route path="assigned-by-me" element={<ProtectedRoute><AssignedByMe /></ProtectedRoute>} />
                   <Route path="audit-logs" element={<ProtectedRoute><AuditLogs /></ProtectedRoute>} />
                   <Route path="score-logs" element={<ProtectedRoute><ScoreLogs /></ProtectedRoute>} />

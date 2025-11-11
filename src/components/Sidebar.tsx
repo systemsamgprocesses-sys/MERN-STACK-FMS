@@ -127,7 +127,9 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
     { icon: CheckSquare, label: 'Checklists', path: '/checklists' },
     { icon: BarChart2, label: 'Checklist Dashboard', path: '/checklist-dashboard' },
     { icon: HelpCircle, label: 'Help Tickets', path: '/help-tickets' },
-    { icon: HelpCircle, label: 'Manage Tickets', path: '/admin-help-tickets', requireAdmin: true }, // Added Manage Tickets for Admin/Super Admin
+    { icon: HelpCircle, label: 'Manage Tickets', path: '/admin-help-tickets', requireAdmin: true },
+    { icon: BarChart2, label: 'Purchase Dashboard', path: '/purchase-dashboard' },
+    { icon: BarChart2, label: 'Sales Dashboard', path: '/sales-dashboard' },
   ];
 
   useEffect(() => {

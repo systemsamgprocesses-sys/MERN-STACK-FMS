@@ -9,7 +9,7 @@ import {
   CheckSquare, Clock, AlertTriangle, TrendingUp, Calendar,
   Target, Activity, CheckCircle, XCircle, Timer,
   ChevronDown, Star, Zap, BarChart3,
-  PieChart as PieChartIcon, Users, RotateCcw, UserCheck,
+  PieChart as PieChartIcon, Users, RotateCcw, UserCheck, RefreshCw
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import axios from 'axios';
@@ -123,6 +123,22 @@ interface DashboardData {
     onTimeRate: number;
     onTimeCompletedTasks: number;
     onTimeRecurringCompleted: number;
+  };
+  totalTasks: number;
+  completedTasks: number;
+  pendingTasks: number;
+  totalUsers: number;
+  recurringTasks: number;
+  recurringPending: number;
+  recentTasks: any[];
+  inProgressTasks?: number;
+  overdueTasks?: number;
+  todayTasks?: number;
+  assignedByMe?: {
+    total: number;
+    pending: number;
+    completed: number;
+    inProgress: number;
   };
 }
 
@@ -388,7 +404,7 @@ const Dashboard: React.FC = () => {
   // Team Member Selector Component
   const TeamMemberSelector = () => {
     const [teamMembers, setTeamMembers] = useState<Array<{id: string, username: string}>>([]);
-    
+
     useEffect(() => {
       const fetchTeamMembers = async () => {
         try {
@@ -401,7 +417,7 @@ const Dashboard: React.FC = () => {
           console.error('Error fetching team members:', error);
         }
       };
-      
+
       fetchTeamMembers();
     }, []);
 
@@ -418,7 +434,7 @@ const Dashboard: React.FC = () => {
         >
           <div className="flex items-center">
             <Users size={16} className="mr-2" />
-            <span>{selectedTeamMember === 'all' ? 'All Team Members' : 
+            <span>{selectedTeamMember === 'all' ? 'All Team Members' :
               teamMembers.find(m => m.id === selectedTeamMember)?.username || 'Select Member'}</span>
             <ChevronDown size={16} className="ml-2" />
           </div>
@@ -497,13 +513,13 @@ const Dashboard: React.FC = () => {
       }
 
       const response = await axios.get(`${address}/api/dashboard/analytics`, { params });
-      
+
       // Cache the response
       localStorage.setItem('dashboardData', JSON.stringify({
         data: response.data,
         timestamp: Date.now()
       }));
-      
+
       return response.data;
     } catch (error) {
       console.error('Error fetching dashboard analytics:', error);
@@ -528,13 +544,13 @@ const Dashboard: React.FC = () => {
       }
 
       const response = await axios.get(`${address}/api/dashboard/counts`, { params });
-      
+
       // Cache the response
       localStorage.setItem('taskCounts', JSON.stringify({
         data: response.data,
         timestamp: Date.now()
       }));
-      
+
       return response.data;
     } catch (error) {
       console.error('Error fetching task counts:', error);
@@ -909,8 +925,8 @@ const Dashboard: React.FC = () => {
               </div>
             </div>
 
-            {/* Additional Quick Stats Row */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6 mt-6">
+            {/* Additional Metrics Row */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mt-6">
               <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-purple-500 to-purple-600 dark:from-purple-950 dark:to-purple-900 p-6 border border-purple-300 dark:border-purple-800">
                 <div className="flex items-start justify-between mb-4">
                   <div className="p-3 rounded-xl bg-white/20">
@@ -947,7 +963,7 @@ const Dashboard: React.FC = () => {
               <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-indigo-500 to-indigo-600 dark:from-indigo-950 dark:to-indigo-900 p-6 border border-indigo-300 dark:border-indigo-800">
                 <div className="flex items-start justify-between mb-4">
                   <div className="p-3 rounded-xl bg-white/20">
-                    <Target size={24} className="text-white" />
+                    <Activity size={24} className="text-white" />
                   </div>
                 </div>
                 <p className="text-white/80 text-sm font-medium mb-2">FMS Tasks</p>

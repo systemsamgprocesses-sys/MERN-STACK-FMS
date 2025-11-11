@@ -21,6 +21,8 @@ import leadsRoutes from './routes/leads.js';
 import objectionRoutes from './routes/objections.js';
 import auditLogRoutes from './routes/auditLogs.js';
 import scoreLogRoutes from './routes/scoreLogs.js';
+import checklistRoutes from './routes/checklists.js';
+import helpTicketRoutes from './routes/helpTickets.js';
 
 dotenv.config();
 
@@ -136,6 +138,8 @@ app.use('/api/leads', leadsRoutes);
 app.use('/api/objections', objectionRoutes);
 app.use('/api/audit-logs', auditLogRoutes);
 app.use('/api/score-logs', scoreLogRoutes);
+app.use('/api/checklists', checklistRoutes);
+app.use('/api/help-tickets', helpTicketRoutes);
 
 // Serve frontend in production
 if (config.nodeEnv === 'production') {

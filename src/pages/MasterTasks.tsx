@@ -181,6 +181,11 @@ const MasterTasks: React.FC = () => {
         limit: '1000000' // Fetch all tasks to handle filtering on frontend
       });
 
+      // Add status filter for in-progress tasks
+      if (filter.status === 'in-progress') {
+        params.append('status', 'in-progress');
+      }
+
       if (!user?.permissions.canViewAllTeamTasks && user?.id) {
         params.append('assignedTo', user.id);
       }

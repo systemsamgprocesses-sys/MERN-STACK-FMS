@@ -24,6 +24,7 @@ const StartProject: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [fetchingTemplates, setFetchingTemplates] = useState(true);
   const [errors, setErrors] = useState<any>({});
+  const [searchTerm, setSearchTerm] = useState('');
 
   useEffect(() => {
     fetchFMSTemplates();

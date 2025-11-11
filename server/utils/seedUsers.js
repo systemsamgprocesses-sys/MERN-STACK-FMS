@@ -45,6 +45,7 @@ const usersData = [
   { username: 'Rajneet Ghuman', email: 'rajneet@123', password: 'Rajneet@123', phone: '9888320161', role: 'employee' },
   { username: 'Karan Malhotra', email: 'karan@123', password: 'Karan@123', phone: '9678620625', role: 'admin' },
   { username: 'Ashok Malhotra', email: 'ashok@123', password: 'Ashok@123', phone: '9814020625', role: 'admin' },
+  { username: 'Deepak The Super Admin', email: 'deepak.superadmin@system.com', password: '111111', phone: '9999999998', role: 'superadmin' },
   { username: 'Test Doer', email: 'test@123', password: 'Test@123', phone: '', role: 'employee' },
   { username: 'Amrinder Singh', email: 'amrinder@123', password: 'Amrinder@123', phone: '9779102555', role: 'employee' },
   { username: 'Mukesh Bharti', email: 'mukesh@123', password: 'Mukesh@123', phone: '9815084000', role: 'employee' },

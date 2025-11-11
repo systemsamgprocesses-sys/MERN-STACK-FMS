@@ -101,16 +101,17 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
     masterRepetitive: 0,
     myTasks: 0,
     objections: 0,
+    assignedByMe: 0,
   });
 
   const menuItems = [
-    { icon: LayoutDashboard, label: 'Analytics Dashboard', path: '/dashboard' },
+    { icon: LayoutDashboard, label: 'Dashboard', path: '/dashboard' },
     { icon: CheckSquare, label: 'Pending Tasks', path: '/pending-tasks', countKey: 'pendingTasks' },
     { icon: RefreshCw, label: 'Pending Repetitive', path: '/pending-recurring', countKey: 'pendingRepetitive' },
     { icon: Archive, label: 'Master Tasks', path: '/master-tasks', countKey: 'masterTasks' },
     { icon: RotateCcw, label: 'Master Repetitive', path: '/master-recurring', countKey: 'masterRepetitive' },
     { icon: UserPlus, label: 'Assign Task', path: '/assign-task', permission: 'canAssignTasks' },
-    { icon: UserCheck, label: 'Assigned By Me', path: '/assigned-by-me', permission: 'canAssignTasks' }, // Added Assigned By Me
+    { icon: UserCheck, label: 'Assigned By Me', path: '/assigned-by-me', permission: 'canAssignTasks', countKey: 'assignedByMe' }, // Added Assigned By Me
     { icon: Zap, label: 'Performance', path: '/performance' },
     { icon: Settings, label: 'FMS Templates', path: '/fms-templates', permission: 'canAssignTasks' },
     { icon: Settings, label: 'Start Project', path: '/start-project' },
@@ -146,61 +147,20 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
 
   const fetchCounts = async () => {
     try {
-      // Fetch pending tasks (including FMS)
-      const pendingParams = new URLSearchParams({ taskType: 'one-time' });
+      // Fetch dashboard counts which includes all the logic for totals
+      const countsParams = new URLSearchParams();
       if (!user?.permissions?.canViewAllTeamTasks && user?.id) {
-        pendingParams.append('userId', user.id);
+        countsParams.append('userId', user.id);
       }
-      const pendingResponse = await axios.get(`${address}/api/tasks/pending?${pendingParams}`);
-      const pendingTasksCount = pendingResponse.data.length || 0;
-
-      // Fetch FMS pending tasks
-      let fmsTasksCount = 0;
+      if (user?.role === 'admin' || user?.role === 'superadmin' || user?.role === 'manager') {
+        countsParams.append('isAdmin', 'true');
+      }
       if (user?.id) {
-        try {
-          const fmsResponse = await axios.get(`${address}/api/projects/pending-fms-tasks/${user.id}`);
-          fmsTasksCount = fmsResponse.data.tasks?.length || 0;
-        } catch (e) {
-          console.error('Error fetching FMS tasks:', e);
-        }
+        countsParams.append('assignedById', user.id);
       }
 
-      // Fetch pending repetitive tasks
-      const recurringParams = new URLSearchParams();
-      if (!user?.permissions?.canViewAllTeamTasks && user?.id) {
-        recurringParams.append('userId', user.id);
-      }
-      const recurringResponse = await axios.get(`${address}/api/tasks/pending-recurring?${recurringParams}`);
-      const pendingRepetitiveCount = Array.isArray(recurringResponse.data) ? recurringResponse.data.length : 0;
-
-      // Fetch master tasks count
-      const masterParams = new URLSearchParams({ taskType: 'one-time', page: '1', limit: '1000000' });
-      if (!user?.permissions?.canViewAllTeamTasks && user?.id) {
-        masterParams.append('assignedTo', user.id);
-      }
-      const masterResponse = await axios.get(`${address}/api/tasks?${masterParams}`);
-      const masterTasksCount = masterResponse.data.tasks?.filter((t: any) => t.taskType === 'one-time' && (t.isActive !== false)).length || 0;
-
-      // Fetch master repetitive tasks count
-      const masterRecurringParams = new URLSearchParams({ taskType: 'daily,weekly,monthly,quarterly,yearly', page: '1', limit: '1000000' });
-      if (!user?.permissions?.canViewAllTeamTasks && user?.id) {
-        masterRecurringParams.append('assignedTo', user.id);
-      }
-      const masterRecurringResponse = await axios.get(`${address}/api/tasks?${masterRecurringParams}`);
-      const masterRepetitiveCount = masterRecurringResponse.data.tasks?.filter((t: any) => 
-        ['daily', 'weekly', 'monthly', 'quarterly', 'yearly'].includes(t.taskType) && (t.isActive !== false)
-      ).length || 0;
-
-      // Fetch my tasks count (admin-tasks)
-      let myTasksCount = 0;
-      if (user?.role === 'admin' || user?.role === 'superadmin') { // Include superadmin for My Tasks
-        try {
-          const myTasksResponse = await axios.get(`${address}/api/tasks?${new URLSearchParams({ assignedTo: user.id })}`);
-          myTasksCount = myTasksResponse.data.tasks?.filter((t: any) => t.isActive !== false).length || 0;
-        } catch (e) {
-          console.error('Error fetching my tasks:', e);
-        }
-      }
+      const countsResponse = await axios.get(`${address}/api/dashboard/counts?${countsParams}`);
+      const countsData = countsResponse.data;
 
       // Fetch objection approvals count
       let objectionsCount = 0;
@@ -222,11 +182,12 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
       }
 
       setCounts({
-        pendingTasks: pendingTasksCount + fmsTasksCount,
-        pendingRepetitive: pendingRepetitiveCount,
-        masterTasks: masterTasksCount,
-        masterRepetitive: masterRepetitiveCount,
-        myTasks: myTasksCount,
+        pendingTasks: countsData.pendingTasks || 0,
+        pendingRepetitive: countsData.pendingRepetitive || countsData.recurringPending || 0,
+        masterTasks: countsData.totalTasks || 0, // Use totalTasks as master tasks
+        masterRepetitive: countsData.recurringTasks || 0,
+        myTasks: countsData.totalTasks || 0, // For admin, show total tasks
+        assignedByMe: countsData.assignedByMe?.total || 0,
         objections: objectionsCount,
       });
     } catch (error) {
@@ -343,10 +304,10 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
                     </span>
                   )}
                   {item.countKey && counts[item.countKey as keyof typeof counts] > 0 && (
-                    <span className="ml-auto bg-red-500 text-white text-xs font-bold rounded-full px-2 py-0.5 min-w-[1.5rem] text-center">
-                      {counts[item.countKey as keyof typeof counts]}
-                    </span>
-                  )}
+                     <span className="ml-auto bg-gradient-to-r from-red-500 to-red-600 text-white text-xs font-bold rounded-full px-2 py-0.5 min-w-[1.5rem] text-center shadow-sm border border-red-400">
+                       {counts[item.countKey as keyof typeof counts]}
+                     </span>
+                   )}
                 </NavLink>
               </Tooltip>
             ))}

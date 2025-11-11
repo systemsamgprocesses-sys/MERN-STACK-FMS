@@ -596,12 +596,10 @@ const MasterRecurringTasks: React.FC = () => {
                   <span>Assigned by:</span>
                   <span className="font-medium">{masterTask.assignedBy?.username || 'Unknown User'}</span>
                 </div>
-                {isAdmin && (
-                  <div className="flex justify-between">
-                    <span>Assigned to:</span>
-                    <span className="font-medium">{masterTask.assignedTo?.username || 'Unknown User'}</span>
-                  </div>
-                )}
+                <div className="flex justify-between">
+                  <span>Assigned to:</span>
+                  <span className="font-medium">{masterTask.assignedTo?.username || 'Unknown User'}</span>
+                </div>
                 <div className="flex justify-between">
                   <span className="flex items-center">
                     <Paperclip size={14} className="mr-1" />
@@ -664,11 +662,12 @@ const MasterRecurringTasks: React.FC = () => {
               <th className="px-6 py-3 text-left text-xs font-medium text-[--color-textSecondary] uppercase tracking-wider">
                 Instances
               </th>
-              {isAdmin && (
-                <th className="px-6 py-3 text-left text-xs font-medium text-[--color-textSecondary] uppercase tracking-wider">
-                  Assigned To
-                </th>
-              )}
+              <th className="px-6 py-3 text-left text-xs font-medium text-[--color-textSecondary] uppercase tracking-wider">
+                Assigned By
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-[--color-textSecondary] uppercase tracking-wider">
+                Assigned To
+              </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-[--color-textSecondary] uppercase tracking-wider">
                 Task Attachments
               </th>
@@ -723,12 +722,14 @@ const MasterRecurringTasks: React.FC = () => {
                       Pending: {masterTask.pendingCount}
                     </div>
                   </td>
-                  {isAdmin && (
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-[--color-text]">{masterTask.assignedTo?.username || 'Unknown User'}</div>
-                      <div className="text-sm text-[--color-textSecondary]">{masterTask.assignedTo?.email || ''}</div>
-                    </td>
-                  )}
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="text-sm text-[--color-text]">{masterTask.assignedBy?.username || 'Unknown User'}</div>
+                    <div className="text-sm text-[--color-textSecondary]">{masterTask.assignedBy?.phoneNumber || ''}</div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="text-sm text-[--color-text]">{masterTask.assignedTo?.username || 'Unknown User'}</div>
+                    <div className="text-sm text-[--color-textSecondary]">{masterTask.assignedTo?.phoneNumber || ''}</div>
+                  </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm">
                     {masterTask.attachments && masterTask.attachments.length > 0 ? (
                       <button

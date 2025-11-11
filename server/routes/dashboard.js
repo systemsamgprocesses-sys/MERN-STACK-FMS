@@ -686,6 +686,33 @@ router.get('/analytics', async (req, res) => {
       }
     ]);
 
+    // Calculate overall score
+    let overallScore = 0;
+    if (isAdmin === 'true') {
+      const allScoreLogs = await ScoreLog.find({
+        ...(userObjectId ? { userId: userObjectId } : {})
+      });
+      if (allScoreLogs.length > 0) {
+        overallScore = allScoreLogs.reduce((sum, log) => sum + log.scorePercentage, 0) / allScoreLogs.length;
+      }
+    }
+
+    // Calculate current month score
+    let currentMonthScore = 0;
+    if (isAdmin === 'true') {
+      const currentMonth = new Date();
+      const startOfMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1);
+      const endOfMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 0, 23, 59, 59, 999);
+
+      const currentMonthScoreLogs = await ScoreLog.find({
+        completedAt: { $gte: startOfMonth, $lte: endOfMonth },
+        ...(userObjectId ? { userId: userObjectId } : {})
+      });
+      if (currentMonthScoreLogs.length > 0) {
+        currentMonthScore = currentMonthScoreLogs.reduce((sum, log) => sum + log.scorePercentage, 0) / currentMonthScoreLogs.length;
+      }
+    }
+
     const performanceMetrics = {
       onTimeCompletion: completedTasksCount > 0 ? Math.round(((onTimeCompletedOneTimeOverall + onTimeCompletedRecurringOverall) / completedTasksCount) * 100) : 0,
       averageCompletionTime: completionTimes.length > 0 ? Math.round(completionTimes[0].avgDays) : 0,
@@ -742,6 +769,20 @@ router.get('/analytics', async (req, res) => {
       };
     }
 
+    // Get upcoming tasks
+    const upcomingTasks = await Task.find({
+      isActive: true,
+      status: { $in: ['pending', 'in-progress'] },
+      $or: [
+        { dueDate: { $gt: now, $lte: new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000) } },
+        { nextDueDate: { $gt: now, $lte: new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000) } }
+      ]
+    })
+    .populate('assignedBy', 'username email phoneNumber')
+    .populate('assignedTo', 'username email phoneNumber')
+    .sort({ dueDate: 1, nextDueDate: 1 })
+    .limit(20);
+
     res.json({
       statusStats,
       typeStats,
@@ -752,7 +793,10 @@ router.get('/analytics', async (req, res) => {
       recentActivity,
       performanceMetrics,
       userPerformance: isAdmin ? null : userPerformanceData,
-      fmsMetrics
+      fmsMetrics,
+      overallScore: Math.round(overallScore * 10) / 10,
+      currentMonthScore: Math.round(currentMonthScore * 10) / 10,
+      upcomingTasks
     });
   } catch (error) {
     console.error('Dashboard analytics error:', error);
@@ -885,15 +929,24 @@ router.get('/member-trend', async (req, res) => {
 // Get task counts with trends
 router.get('/counts', async (req, res) => {
   try {
-    const { userId, isAdmin, startDate, endDate } = req.query;
+    const { userId, isAdmin, startDate, endDate, assignedById } = req.query;
 
     // Convert userId to ObjectId for proper MongoDB queries
     const userObjectId = userId ? new mongoose.Types.ObjectId(userId) : null;
+    const assignedByObjectId = assignedById ? new mongoose.Types.ObjectId(assignedById) : null;
+
+    const statusVariants = {
+      pending: ['pending', 'Pending'],
+      completed: ['completed', 'Completed'],
+      inProgress: ['in-progress', 'in progress', 'In Progress'],
+    };
 
     let baseQuery = {};
     if (isAdmin !== 'true' && userObjectId) {
       baseQuery.assignedTo = userObjectId;
     }
+
+    let dateRangeQuery = {};
 
     // For all-time view (no startDate/endDate), get all data
     if (startDate && endDate) {
@@ -925,16 +978,16 @@ router.get('/counts', async (req, res) => {
       };
     } else {
       // For all-time view, compare this year with last year
-      const now = new Date();
-      const currentYear = now.getFullYear();
+      const currentDate = new Date();
+      const currentYear = currentDate.getFullYear();
       const previousYear = currentYear - 1;
-
+  
       const currentYearStart = new Date(currentYear, 0, 1);
       const currentYearEnd = new Date(currentYear, 11, 31, 23, 59, 59, 999);
-
+  
       const previousYearStart = new Date(previousYear, 0, 1);
       const previousYearEnd = new Date(previousYear, 11, 31, 23, 59, 59, 999);
-
+  
       // Set dateRangeQuery for this year's data for trend comparison
       const thisYearDateRangeQuery = {
         $or: [
@@ -942,7 +995,7 @@ router.get('/counts', async (req, res) => {
           { nextDueDate: { $gte: currentYearStart, $lte: currentYearEnd } }
         ]
       };
-
+  
       // But we compare this year vs last year for trends
       previousDateRangeQuery = {
         $or: [
@@ -950,7 +1003,7 @@ router.get('/counts', async (req, res) => {
           { nextDueDate: { $gte: previousYearStart, $lte: previousYearEnd } }
         ]
       };
-
+  
       // Get this year's data for trend comparison
       const [
         thisYearTotalTasks,
@@ -959,19 +1012,19 @@ router.get('/counts', async (req, res) => {
         thisYearOverdueTasks
       ] = await Promise.all([
         Task.countDocuments({ ...baseQuery, ...thisYearDateRangeQuery }),
-        Task.countDocuments({ ...baseQuery, ...thisYearDateRangeQuery, status: 'pending' }),
-        Task.countDocuments({ ...baseQuery, ...thisYearDateRangeQuery, status: 'completed' }),
+        Task.countDocuments({ ...baseQuery, ...thisYearDateRangeQuery, status: { $in: statusVariants.pending } }),
+        Task.countDocuments({ ...baseQuery, ...thisYearDateRangeQuery, status: { $in: statusVariants.completed } }),
         Task.countDocuments({
           ...baseQuery,
           ...thisYearDateRangeQuery,
-          status: { $ne: 'completed' },
+          status: { $nin: statusVariants.completed },
           $or: [
-            { dueDate: { $lt: now } },
-            { nextDueDate: { $lt: now } }
+            { dueDate: { $lt: currentDate } },
+            { nextDueDate: { $lt: currentDate } }
           ]
         })
       ]);
-
+  
       // Get previous year's data for trend comparison
       const [
         prevYearTotalTasks,
@@ -980,19 +1033,19 @@ router.get('/counts', async (req, res) => {
         prevYearOverdueTasks
       ] = await Promise.all([
         Task.countDocuments({ ...baseQuery, ...previousDateRangeQuery }),
-        Task.countDocuments({ ...baseQuery, ...previousDateRangeQuery, status: 'pending' }),
-        Task.countDocuments({ ...baseQuery, ...previousDateRangeQuery, status: 'completed' }),
+        Task.countDocuments({ ...baseQuery, ...previousDateRangeQuery, status: { $in: statusVariants.pending } }),
+        Task.countDocuments({ ...baseQuery, ...previousDateRangeQuery, status: { $in: statusVariants.completed } }),
         Task.countDocuments({
           ...baseQuery,
           ...previousDateRangeQuery,
-          status: { $ne: 'completed' },
+          status: { $nin: statusVariants.completed },
           $or: [
-            { dueDate: { $lt: now } },
-            { nextDueDate: { $lt: now } }
+            { dueDate: { $lt: currentDate } },
+            { nextDueDate: { $lt: currentDate } }
           ]
         })
       ]);
-
+  
       // Calculate trends for all-time view
       const calculateTrend = (current, previous) => {
         if (previous === 0 && current === 0) return { value: 0, direction: 'up' };
@@ -1003,13 +1056,19 @@ router.get('/counts', async (req, res) => {
           direction: change >= 0 ? 'up' : 'down'
         };
       };
+  
+      const now = new Date();
+      const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      const isAdminOrSuperAdmin = isAdmin === 'true';
 
-      // Get all-time data (no date filters) - including quarterly
+      // Get all-time data (no date filters) - including quarterly and new metrics
       const [
         totalTasks,
-        pendingTasks,
+        pendingTasks, // <= Today
+        upcomingTasks, // > Today
+        overdueTasks, // < Today and not completed
         completedTasks,
-        overdueTasks,
+        inProgressTasks,
         oneTimeTasks,
         oneTimePending,
         oneTimeCompleted,
@@ -1030,34 +1089,51 @@ router.get('/counts', async (req, res) => {
         yearlyCompleted
       ] = await Promise.all([
         Task.countDocuments(baseQuery),
-        Task.countDocuments({ ...baseQuery, status: 'pending' }),
-        Task.countDocuments({ ...baseQuery, status: 'completed' }),
+        // Pending: tasks with dueDate <= Today
         Task.countDocuments({
           ...baseQuery,
-          status: { $ne: 'completed' },
           $or: [
-            { dueDate: { $lt: now } },
-            { nextDueDate: { $lt: now } }
+            { dueDate: { $lte: today } },
+            { nextDueDate: { $lte: today } }
           ]
         }),
+        // Upcoming: tasks with dueDate > Today
+        Task.countDocuments({
+          ...baseQuery,
+          $or: [
+            { dueDate: { $gt: today } },
+            { nextDueDate: { $gt: today } }
+          ]
+        }),
+        // Overdue: tasks with dueDate < Today and status != completed
+        Task.countDocuments({
+          ...baseQuery,
+          status: { $nin: statusVariants.completed },
+          $or: [
+            { dueDate: { $lt: today } },
+            { nextDueDate: { $lt: today } }
+          ]
+        }),
+        Task.countDocuments({ ...baseQuery, status: { $in: statusVariants.completed } }),
+        Task.countDocuments({ ...baseQuery, status: { $in: statusVariants.inProgress } }),
         Task.countDocuments({ ...baseQuery, taskType: 'one-time' }),
-        Task.countDocuments({ ...baseQuery, taskType: 'one-time', status: 'pending' }),
-        Task.countDocuments({ ...baseQuery, taskType: 'one-time', status: 'completed' }),
+        Task.countDocuments({ ...baseQuery, taskType: 'one-time', status: { $in: statusVariants.pending } }),
+        Task.countDocuments({ ...baseQuery, taskType: 'one-time', status: { $in: statusVariants.completed } }),
         Task.countDocuments({ ...baseQuery, taskType: 'daily' }),
-        Task.countDocuments({ ...baseQuery, taskType: 'daily', status: 'pending' }),
-        Task.countDocuments({ ...baseQuery, taskType: 'daily', status: 'completed' }),
+        Task.countDocuments({ ...baseQuery, taskType: 'daily', status: { $in: statusVariants.pending } }),
+        Task.countDocuments({ ...baseQuery, taskType: 'daily', status: { $in: statusVariants.completed } }),
         Task.countDocuments({ ...baseQuery, taskType: 'weekly' }),
-        Task.countDocuments({ ...baseQuery, taskType: 'weekly', status: 'pending' }),
-        Task.countDocuments({ ...baseQuery, taskType: 'weekly', status: 'completed' }),
+        Task.countDocuments({ ...baseQuery, taskType: 'weekly', status: { $in: statusVariants.pending } }),
+        Task.countDocuments({ ...baseQuery, taskType: 'weekly', status: { $in: statusVariants.completed } }),
         Task.countDocuments({ ...baseQuery, taskType: 'monthly' }),
-        Task.countDocuments({ ...baseQuery, taskType: 'monthly', status: 'pending' }),
-        Task.countDocuments({ ...baseQuery, taskType: 'monthly', status: 'completed' }),
+        Task.countDocuments({ ...baseQuery, taskType: 'monthly', status: { $in: statusVariants.pending } }),
+        Task.countDocuments({ ...baseQuery, taskType: 'monthly', status: { $in: statusVariants.completed } }),
         Task.countDocuments({ ...baseQuery, taskType: 'quarterly' }),
-        Task.countDocuments({ ...baseQuery, taskType: 'quarterly', status: 'pending' }),
-        Task.countDocuments({ ...baseQuery, taskType: 'quarterly', status: 'completed' }),
+        Task.countDocuments({ ...baseQuery, taskType: 'quarterly', status: { $in: statusVariants.pending } }),
+        Task.countDocuments({ ...baseQuery, taskType: 'quarterly', status: { $in: statusVariants.completed } }),
         Task.countDocuments({ ...baseQuery, taskType: 'yearly' }),
-        Task.countDocuments({ ...baseQuery, taskType: 'yearly', status: 'pending' }),
-        Task.countDocuments({ ...baseQuery, taskType: 'yearly', status: 'completed' })
+        Task.countDocuments({ ...baseQuery, taskType: 'yearly', status: { $in: statusVariants.pending } }),
+        Task.countDocuments({ ...baseQuery, taskType: 'yearly', status: { $in: statusVariants.completed } })
       ]);
 
       const recurringTasks = dailyTasks + weeklyTasks + monthlyTasks + quarterlyTasks + yearlyTasks;
@@ -1065,11 +1141,107 @@ router.get('/counts', async (req, res) => {
       const recurringCompleted = dailyCompleted + weeklyCompleted + monthlyCompleted + quarterlyCompleted + yearlyCompleted;
       const overduePercentage = totalTasks > 0 ? (overdueTasks / totalTasks) * 100 : 0;
 
+      // Get FMS task counts for all-time view
+      const fmsTasks = await Project.aggregate([
+        {
+          $match: {
+            ...(isAdminOrSuperAdmin ? {} : { assignedTo: userObjectId })
+          }
+        },
+        {
+          $group: {
+            _id: null,
+            totalFMSTasks: { $sum: { $size: "$tasks" } },
+            pendingFMSTasks: {
+              $sum: {
+                $size: {
+                  $filter: {
+                    input: "$tasks",
+                    as: "task",
+                    cond: { $eq: ["$$task.status", "Pending"] }
+                  }
+                }
+              }
+            },
+            completedFMSTasks: {
+              $sum: {
+                $size: {
+                  $filter: {
+                    input: "$tasks",
+                    as: "task",
+                    cond: { $eq: ["$$task.status", "Done"] }
+                  }
+                }
+              }
+            },
+            inProgressFMSTasks: {
+              $sum: {
+                $size: {
+                  $filter: {
+                    input: "$tasks",
+                    as: "task",
+                    cond: { $eq: ["$$task.status", "In Progress"] }
+                  }
+                }
+              }
+            }
+          }
+        }
+      ]);
+
+      const fmsMetrics = fmsTasks.length > 0 ? fmsTasks[0] : {
+        totalFMSTasks: 0,
+        pendingFMSTasks: 0,
+        completedFMSTasks: 0,
+        inProgressFMSTasks: 0
+      };
+
+      let assignedByMeCounts = {
+        total: 0,
+        pending: 0,
+        inProgress: 0,
+        completed: 0,
+        overdue: 0
+      };
+
+      if (assignedByObjectId) {
+        const [
+          assignedByTotal,
+          assignedByPending,
+          assignedByInProgress,
+          assignedByCompleted,
+          assignedByOverdue
+        ] = await Promise.all([
+          Task.countDocuments({ assignedBy: assignedByObjectId }),
+          Task.countDocuments({ assignedBy: assignedByObjectId, status: { $in: statusVariants.pending } }),
+          Task.countDocuments({ assignedBy: assignedByObjectId, status: { $in: statusVariants.inProgress } }),
+          Task.countDocuments({ assignedBy: assignedByObjectId, status: { $in: statusVariants.completed } }),
+          Task.countDocuments({
+            assignedBy: assignedByObjectId,
+            status: { $nin: statusVariants.completed },
+            $or: [
+              { dueDate: { $lt: today } },
+              { nextDueDate: { $lt: today } }
+            ]
+          })
+        ]);
+
+        assignedByMeCounts = {
+          total: assignedByTotal,
+          pending: assignedByPending,
+          inProgress: assignedByInProgress,
+          completed: assignedByCompleted,
+          overdue: assignedByOverdue
+        };
+      }
+
       return res.json({
         totalTasks,
         pendingTasks,
-        completedTasks,
+        upcomingTasks,
         overdueTasks,
+        completedTasks,
+        inProgressTasks,
         overduePercentage,
         oneTimeTasks,
         oneTimePending,
@@ -1092,6 +1264,12 @@ router.get('/counts', async (req, res) => {
         yearlyTasks,
         yearlyPending,
         yearlyCompleted,
+        fmsTasks: fmsMetrics.totalFMSTasks,
+        fmsPendingTasks: fmsMetrics.pendingFMSTasks,
+        fmsCompletedTasks: fmsMetrics.completedFMSTasks,
+        fmsInProgressTasks: fmsMetrics.inProgressFMSTasks,
+        pendingRepetitive: recurringPending,
+        assignedByMe: assignedByMeCounts,
         trends: {
           totalTasks: calculateTrend(thisYearTotalTasks, prevYearTotalTasks),
           pendingTasks: calculateTrend(thisYearPendingTasks, prevYearPendingTasks),
@@ -1101,12 +1279,17 @@ router.get('/counts', async (req, res) => {
       });
     }
 
-    // Get current period data - including quarterly
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
+    // Get current period data - including quarterly and new metrics
     const [
       totalTasks,
-      pendingTasks,
+      pendingTasks, // <= Today
+      upcomingTasks, // > Today
+      overdueTasks, // < Today and not completed
       completedTasks,
-      overdueTasks,
+      inProgressTasks,
       oneTimeTasks,
       oneTimePending,
       oneTimeCompleted,
@@ -1127,34 +1310,51 @@ router.get('/counts', async (req, res) => {
       yearlyCompleted
     ] = await Promise.all([
       Task.countDocuments({ ...baseQuery }),
-      Task.countDocuments({ ...baseQuery, status: 'pending' }),
-      Task.countDocuments({ ...baseQuery, status: 'completed' }),
+      // Pending: tasks with dueDate <= Today (regardless of status, but typically pending/in-progress)
       Task.countDocuments({
         ...baseQuery,
-        status: { $ne: 'completed' },
         $or: [
-          { dueDate: { $lt: new Date() } },
-          { nextDueDate: { $lt: new Date() } }
+          { dueDate: { $lte: today } },
+          { nextDueDate: { $lte: today } }
         ]
       }),
+      // Upcoming: tasks with dueDate > Today
+      Task.countDocuments({
+        ...baseQuery,
+        $or: [
+          { dueDate: { $gt: today } },
+          { nextDueDate: { $gt: today } }
+        ]
+      }),
+      // Overdue: tasks with dueDate < Today and status != completed
+      Task.countDocuments({
+        ...baseQuery,
+        status: { $nin: statusVariants.completed },
+        $or: [
+          { dueDate: { $lt: today } },
+          { nextDueDate: { $lt: today } }
+        ]
+      }),
+      Task.countDocuments({ ...baseQuery, status: { $in: statusVariants.completed } }),
+      Task.countDocuments({ ...baseQuery, status: { $in: statusVariants.inProgress } }),
       Task.countDocuments({ ...baseQuery, taskType: 'one-time' }),
-      Task.countDocuments({ ...baseQuery, taskType: 'one-time', status: 'pending' }),
-      Task.countDocuments({ ...baseQuery, taskType: 'one-time', status: 'completed' }),
+      Task.countDocuments({ ...baseQuery, taskType: 'one-time', status: { $in: statusVariants.pending } }),
+      Task.countDocuments({ ...baseQuery, taskType: 'one-time', status: { $in: statusVariants.completed } }),
       Task.countDocuments({ ...baseQuery, taskType: 'daily' }),
-      Task.countDocuments({ ...baseQuery, taskType: 'daily', status: 'pending' }),
-      Task.countDocuments({ ...baseQuery, taskType: 'daily', status: 'completed' }),
+      Task.countDocuments({ ...baseQuery, taskType: 'daily', status: { $in: statusVariants.pending } }),
+      Task.countDocuments({ ...baseQuery, taskType: 'daily', status: { $in: statusVariants.completed } }),
       Task.countDocuments({ ...baseQuery, taskType: 'weekly' }),
-      Task.countDocuments({ ...baseQuery, taskType: 'weekly', status: 'pending' }),
-      Task.countDocuments({ ...baseQuery, taskType: 'weekly', status: 'completed' }),
+      Task.countDocuments({ ...baseQuery, taskType: 'weekly', status: { $in: statusVariants.pending } }),
+      Task.countDocuments({ ...baseQuery, taskType: 'weekly', status: { $in: statusVariants.completed } }),
       Task.countDocuments({ ...baseQuery, taskType: 'monthly' }),
-      Task.countDocuments({ ...baseQuery, taskType: 'monthly', status: 'pending' }),
-      Task.countDocuments({ ...baseQuery, taskType: 'monthly', status: 'completed' }),
+      Task.countDocuments({ ...baseQuery, taskType: 'monthly', status: { $in: statusVariants.pending } }),
+      Task.countDocuments({ ...baseQuery, taskType: 'monthly', status: { $in: statusVariants.completed } }),
       Task.countDocuments({ ...baseQuery, taskType: 'quarterly' }),
-      Task.countDocuments({ ...baseQuery, taskType: 'quarterly', status: 'pending' }),
-      Task.countDocuments({ ...baseQuery, taskType: 'quarterly', status: 'completed' }),
+      Task.countDocuments({ ...baseQuery, taskType: 'quarterly', status: { $in: statusVariants.pending } }),
+      Task.countDocuments({ ...baseQuery, taskType: 'quarterly', status: { $in: statusVariants.completed } }),
       Task.countDocuments({ ...baseQuery, taskType: 'yearly' }),
-      Task.countDocuments({ ...baseQuery, taskType: 'yearly', status: 'pending' }),
-      Task.countDocuments({ ...baseQuery, taskType: 'yearly', status: 'completed' })
+      Task.countDocuments({ ...baseQuery, taskType: 'yearly', status: { $in: statusVariants.pending } }),
+      Task.countDocuments({ ...baseQuery, taskType: 'yearly', status: { $in: statusVariants.completed } })
     ]);
 
     // Get previous period data for trend calculation
@@ -1165,12 +1365,12 @@ router.get('/counts', async (req, res) => {
       prevOverdueTasks
     ] = await Promise.all([
       Task.countDocuments({ ...baseQuery, ...previousDateRangeQuery }),
-      Task.countDocuments({ ...baseQuery, ...previousDateRangeQuery, status: 'pending' }),
-      Task.countDocuments({ ...baseQuery, ...previousDateRangeQuery, status: 'completed' }),
+    Task.countDocuments({ ...baseQuery, ...previousDateRangeQuery, status: { $in: statusVariants.pending } }),
+    Task.countDocuments({ ...baseQuery, ...previousDateRangeQuery, status: { $in: statusVariants.completed } }),
       Task.countDocuments({
         ...baseQuery,
         ...previousDateRangeQuery,
-        status: { $ne: 'completed' },
+      status: { $nin: statusVariants.completed },
         $or: [
           { dueDate: { $lt: new Date() } },
           { nextDueDate: { $lt: new Date() } }
@@ -1194,11 +1394,108 @@ router.get('/counts', async (req, res) => {
     const recurringCompleted = dailyCompleted + weeklyCompleted + monthlyCompleted + quarterlyCompleted + yearlyCompleted;
     const overduePercentage = totalTasks > 0 ? (overdueTasks / totalTasks) * 100 : 0;
 
+    // Get FMS task counts
+    const fmsTasks = await Project.aggregate([
+      {
+        $match: {
+          ...(isAdminOrSuperAdmin ? {} : { assignedTo: userObjectId }),
+          ...dateRangeQuery
+        }
+      },
+      {
+        $group: {
+          _id: null,
+          totalFMSTasks: { $sum: { $size: "$tasks" } },
+          pendingFMSTasks: {
+            $sum: {
+              $size: {
+                $filter: {
+                  input: "$tasks",
+                  as: "task",
+                  cond: { $eq: ["$$task.status", "Pending"] }
+                }
+              }
+            }
+          },
+          completedFMSTasks: {
+            $sum: {
+              $size: {
+                $filter: {
+                  input: "$tasks",
+                  as: "task",
+                  cond: { $eq: ["$$task.status", "Done"] }
+                }
+              }
+            }
+          },
+          inProgressFMSTasks: {
+            $sum: {
+              $size: {
+                $filter: {
+                  input: "$tasks",
+                  as: "task",
+                  cond: { $eq: ["$$task.status", "In Progress"] }
+                }
+              }
+            }
+          }
+        }
+      }
+    ]);
+
+    const fmsMetrics = fmsTasks.length > 0 ? fmsTasks[0] : {
+      totalFMSTasks: 0,
+      pendingFMSTasks: 0,
+      completedFMSTasks: 0,
+      inProgressFMSTasks: 0
+    };
+
+    let assignedByMeCounts = {
+      total: 0,
+      pending: 0,
+      inProgress: 0,
+      completed: 0,
+      overdue: 0
+    };
+
+    if (assignedByObjectId) {
+      const [
+        assignedByTotal,
+        assignedByPending,
+        assignedByInProgress,
+        assignedByCompleted,
+        assignedByOverdue
+      ] = await Promise.all([
+        Task.countDocuments({ assignedBy: assignedByObjectId }),
+      Task.countDocuments({ assignedBy: assignedByObjectId, status: { $in: statusVariants.pending } }),
+      Task.countDocuments({ assignedBy: assignedByObjectId, status: { $in: statusVariants.inProgress } }),
+      Task.countDocuments({ assignedBy: assignedByObjectId, status: { $in: statusVariants.completed } }),
+        Task.countDocuments({
+          assignedBy: assignedByObjectId,
+        status: { $nin: statusVariants.completed },
+          $or: [
+            { dueDate: { $lt: new Date() } },
+            { nextDueDate: { $lt: new Date() } }
+          ]
+        })
+      ]);
+
+      assignedByMeCounts = {
+        total: assignedByTotal,
+        pending: assignedByPending,
+        inProgress: assignedByInProgress,
+        completed: assignedByCompleted,
+        overdue: assignedByOverdue
+      };
+    }
+
     res.json({
       totalTasks,
       pendingTasks,
-      completedTasks,
+      upcomingTasks,
       overdueTasks,
+      completedTasks,
+      inProgressTasks,
       overduePercentage,
       oneTimeTasks,
       oneTimePending,
@@ -1221,6 +1518,12 @@ router.get('/counts', async (req, res) => {
       yearlyTasks,
       yearlyPending,
       yearlyCompleted,
+      fmsTasks: fmsMetrics.totalFMSTasks,
+      fmsPendingTasks: fmsMetrics.pendingFMSTasks,
+      fmsCompletedTasks: fmsMetrics.completedFMSTasks,
+      fmsInProgressTasks: fmsMetrics.inProgressFMSTasks,
+      pendingRepetitive: recurringPending,
+      assignedByMe: assignedByMeCounts,
       trends: {
         totalTasks: calculateTrend(totalTasks, prevTotalTasks),
         pendingTasks: calculateTrend(pendingTasks, prevPendingTasks),

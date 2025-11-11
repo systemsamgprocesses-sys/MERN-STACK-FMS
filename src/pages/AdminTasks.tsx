@@ -45,7 +45,7 @@ const AdminTasks: React.FC = () => {
 
   const fetchAdminTasks = async () => {
     try {
-      const response = await axios.get(`${address}/api/tasks?assignedTo=${user?.id}`);
+      const response = await axios.get(`${address}/api/tasks?assignedTo=${user?.id}&limit=1000000`);
       // Handle both array response and paginated response
       const tasksData = Array.isArray(response.data) ? response.data : (response.data.tasks || []);
       setTasks(tasksData);

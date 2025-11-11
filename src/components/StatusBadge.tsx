@@ -22,6 +22,8 @@ const StatusBadge: React.FC<StatusBadgeProps> = ({ status, size = 'sm', isOnHold
         return 'bg-red-100 text-red-800 border-red-200';
       case 'in-progress':
         return 'bg-blue-100 text-blue-800 border-blue-200';
+      case 'in progress':
+        return 'bg-blue-100 text-blue-800 border-blue-200';
       case 'hold':
         return 'bg-orange-100 text-orange-800 border-orange-200';
       default:
@@ -32,7 +34,7 @@ const StatusBadge: React.FC<StatusBadgeProps> = ({ status, size = 'sm', isOnHold
   const sizeClasses = size === 'sm' ? 'px-2 py-1 text-xs' : 'px-3 py-1.5 text-sm';
   
   // Display "HOLD" if task is on hold, otherwise show the original status
-  const displayStatus = isOnHold ? 'hold' : status;
+  const displayStatus = isOnHold ? 'hold' : status.toLowerCase();
 
   return (
     <span
@@ -40,7 +42,7 @@ const StatusBadge: React.FC<StatusBadgeProps> = ({ status, size = 'sm', isOnHold
         displayStatus
       )}`}
     >
-      {displayStatus.toUpperCase()}
+      {displayStatus === 'in-progress' ? 'IN PROGRESS' : displayStatus.toUpperCase()}
     </span>
   );
 };

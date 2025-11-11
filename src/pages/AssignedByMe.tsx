@@ -45,7 +45,7 @@ const AssignedByMe: React.FC = () => {
         status: filterStatus !== 'all' ? filterStatus : undefined
       };
 
-      const response = await axios.get(`${address}/api/tasks/assigned-by-me`, { params });
+      const response = await axios.get(`${address}/api/tasks/assigned-by-me?limit=1000000`, { params });
       
       if (response.data.tasks) {
         // Sort tasks by creation date descending

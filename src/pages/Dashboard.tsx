@@ -9,7 +9,7 @@ import {
   CheckSquare, Clock, AlertTriangle, TrendingUp, Calendar,
   Target, Activity, CheckCircle, XCircle, Timer,
   ChevronDown, Star, Zap, BarChart3,
-  PieChart as PieChartIcon, Users, RotateCcw,
+  PieChart as PieChartIcon, Users, RotateCcw, UserCheck,
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import axios from 'axios';
@@ -80,6 +80,19 @@ interface DashboardData {
     oneTimeOnTimeRate?: number;
     recurringOnTimeRate?: number;
   };
+  overallScore?: number;
+  currentMonthScore?: number;
+  upcomingTasks?: Array<{
+    _id: string;
+    title: string;
+    description: string;
+    dueDate: string;
+    assignedTo: {
+      _id: string;
+      username: string;
+    };
+    status: string;
+  }>;
   userPerformance?: {
     username: string;
     totalTasks: number;
@@ -116,8 +129,10 @@ interface DashboardData {
 interface TaskCounts {
   totalTasks: number;
   pendingTasks: number;
+  upcomingTasks: number;
   completedTasks: number;
   overdueTasks: number;
+  inProgressTasks: number;
   oneTimeTasks: number;
   oneTimePending: number;
   oneTimeCompleted: number;
@@ -139,6 +154,18 @@ interface TaskCounts {
   yearlyTasks: number;
   yearlyPending: number;
   yearlyCompleted: number;
+  fmsTasks: number;
+  fmsPendingTasks: number;
+  fmsCompletedTasks: number;
+  fmsInProgressTasks: number;
+  pendingRepetitive: number;
+  assignedByMe?: {
+    total: number;
+    pending: number;
+    inProgress: number;
+    completed: number;
+    overdue: number;
+  };
   overduePercentage: number;
   trends?: {
     totalTasks: { value: number; direction: 'up' | 'down' };
@@ -492,6 +519,9 @@ const Dashboard: React.FC = () => {
         includeTeam: 'true',
         includeAllTimeMetrics: viewMode === 'all-time' ? 'true' : 'false'
       };
+      if (user?.id) {
+        params.assignedById = user.id;
+      }
       if (startDate && endDate) {
         params.startDate = startDate;
         params.endDate = endDate;
@@ -569,7 +599,7 @@ const Dashboard: React.FC = () => {
   // Load member trend data when selected team member changes
   useEffect(() => {
     const loadMemberTrendData = async () => {
-      if ((user?.role === 'admin' || user?.role === 'manager') && selectedTeamMember && selectedTeamMember !== 'all') {
+      if ((user?.role === 'admin' || user?.role === 'superadmin' || user?.role === 'manager') && selectedTeamMember && selectedTeamMember !== 'all') {
         try {
           let memberTrendDataResult = null;
 
@@ -615,11 +645,12 @@ const Dashboard: React.FC = () => {
     pending: 'var(--color-warning)',
     completed: 'var(--color-success)',
     overdue: 'var(--color-error)',
-    'in-progress': 'var(--color-primary)'
+    'in-progress': 'var(--color-primary)',
+    'in progress': 'var(--color-primary)'
   };
 
   const statusData = dashboardData?.statusStats.map(item => ({
-    name: item._id.charAt(0).toUpperCase() + item._id.slice(1),
+    name: item._id === 'in-progress' ? 'In Progress' : item._id.charAt(0).toUpperCase() + item._id.slice(1),
     value: item.count,
     color: statusColors[item._id as keyof typeof statusColors] || 'var(--color-secondary)'
   })) || [];
@@ -721,7 +752,7 @@ const Dashboard: React.FC = () => {
 
   // Get team members list for the dropdown
   const getTeamMembersList = () => {
-    if (!dashboardData?.teamPerformance || (user?.role !== 'admin' && user?.role === 'manager')) return [];
+    if (!dashboardData?.teamPerformance || (user?.role !== 'admin' && user?.role !== 'superadmin' && user?.role !== 'manager')) return [];
 
     return dashboardData.teamPerformance.map(member => ({
       username: member.username,
@@ -763,10 +794,10 @@ const Dashboard: React.FC = () => {
                   <BarChart3 size={28} style={{ color: 'var(--color-primary)' }} />
                 </div>
                 <div>
-                  <h1 className="text-4xl font-bold tracking-tight" style={{ color: 'var(--color-text)' }}>Analytics Dashboard</h1>
+                  <h1 className="text-4xl font-bold tracking-tight" style={{ color: 'var(--color-text)' }}>Dashboard</h1>
                   <p className="text-[var(--color-textSecondary)] text-sm mt-1">
-                    Welcome back, <span className="font-semibold">{user?.username}</span>! 
-                    {(user?.role === 'admin' || user?.role === 'manager') ? ' 👥 Team Overview' : ' 📊 Your Performance'}
+                    Welcome back, <span className="font-semibold">{user?.username}</span>!
+                    {(user?.role === 'admin' || user?.role === 'superadmin' || user?.role === 'manager') ? ' 👥 Team Overview' : ' 📊 Your Performance'}
                   </p>
                 </div>
               </div>
@@ -793,12 +824,15 @@ const Dashboard: React.FC = () => {
             </div>
           </div>
 
-          {/* Quick Stats Section */}
+          {/* Quick Stats Section - Updated with new metrics */}
           <div>
-            <h2 className="text-2xl font-bold text-[var(--color-text)] mb-6">Quick Stats</h2>
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-2xl font-bold text-[var(--color-text)]">Quick Stats</h2>
+              {(user?.role === 'admin' || user?.role === 'superadmin' || user?.role === 'manager') && <TeamMemberSelector />}
+            </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-              <div 
-                onClick={() => navigate('/master-tasks', { replace: true })} 
+              <div
+                onClick={() => navigate('/master-tasks', { replace: true })}
                 className="group cursor-pointer"
               >
                 <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-blue-500 to-blue-600 dark:from-blue-950 dark:to-blue-900 p-6 border border-blue-300 dark:border-blue-800 hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
@@ -813,8 +847,8 @@ const Dashboard: React.FC = () => {
                 </div>
               </div>
 
-              <div 
-                onClick={() => navigate('/pending-tasks', { replace: true })} 
+              <div
+                onClick={() => navigate('/pending-tasks', { replace: true })}
                 className="group cursor-pointer"
               >
                 <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-yellow-500 to-yellow-600 dark:from-yellow-950 dark:to-yellow-900 p-6 border border-yellow-300 dark:border-yellow-800 hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
@@ -823,19 +857,20 @@ const Dashboard: React.FC = () => {
                       <Clock size={24} className="text-white" />
                     </div>
                   </div>
-                  <p className="text-white/80 text-sm font-medium mb-2">Pending</p>
+                  <p className="text-white/80 text-sm font-medium mb-2">Pending (≤ Today)</p>
                   <p className="text-3xl font-bold text-white">{displayData?.pendingTasks || 0}</p>
                   <div className="w-full h-1.5 bg-white/30 rounded-full mt-4 overflow-hidden">
-                    <div 
+                    <div
                       className="h-full bg-white transition-all duration-500"
                       style={{ width: `${((displayData?.pendingTasks || 0) / (displayData?.totalTasks || 1)) * 100}%` }}
                     ></div>
                   </div>
+                  <p className="text-xs text-white/70 mt-2 group-hover:text-white transition-colors">Click to view all →</p>
                 </div>
               </div>
 
-              <div 
-                onClick={() => navigate('/master-tasks?status=completed', { replace: true })} 
+              <div
+                onClick={() => navigate('/master-tasks?status=completed', { replace: true })}
                 className="group cursor-pointer"
               >
                 <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-green-500 to-green-600 dark:from-green-950 dark:to-green-900 p-6 border border-green-300 dark:border-green-800 hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
@@ -847,16 +882,17 @@ const Dashboard: React.FC = () => {
                   <p className="text-white/80 text-sm font-medium mb-2">Completed</p>
                   <p className="text-3xl font-bold text-white">{displayData?.completedTasks || 0}</p>
                   <div className="w-full h-1.5 bg-white/30 rounded-full mt-4 overflow-hidden">
-                    <div 
+                    <div
                       className="h-full bg-white transition-all duration-500"
                       style={{ width: `${((displayData?.completedTasks || 0) / (displayData?.totalTasks || 1)) * 100}%` }}
                     ></div>
                   </div>
+                  <p className="text-xs text-white/70 mt-2 group-hover:text-white transition-colors">Click to view all →</p>
                 </div>
               </div>
 
-              <div 
-                onClick={() => navigate('/pending-tasks', { replace: true })} 
+              <div
+                onClick={() => navigate('/pending-tasks', { replace: true })}
                 className="group cursor-pointer"
               >
                 <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-red-500 to-red-600 dark:from-red-950 dark:to-red-900 p-6 border border-red-300 dark:border-red-800 hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
@@ -865,10 +901,67 @@ const Dashboard: React.FC = () => {
                       <AlertTriangle size={24} className="text-white" />
                     </div>
                   </div>
-                  <p className="text-white/80 text-sm font-medium mb-2">Overdue</p>
+                  <p className="text-white/80 text-sm font-medium mb-2">Overdue (&lt; Today)</p>
                   <p className="text-3xl font-bold text-white">{displayData?.overdueTasks || 0}</p>
                   <p className="text-xs text-white/80 font-medium mt-2">⚠️ {displayData?.overduePercentage?.toFixed(1)}% of total</p>
+                  <p className="text-xs text-white/70 mt-2 group-hover:text-white transition-colors">Click to view all →</p>
                 </div>
+              </div>
+            </div>
+
+            {/* Additional Quick Stats Row */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6 mt-6">
+              <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-purple-500 to-purple-600 dark:from-purple-950 dark:to-purple-900 p-6 border border-purple-300 dark:border-purple-800">
+                <div className="flex items-start justify-between mb-4">
+                  <div className="p-3 rounded-xl bg-white/20">
+                    <Timer size={24} className="text-white" />
+                  </div>
+                </div>
+                <p className="text-white/80 text-sm font-medium mb-2">Upcoming (&gt; Today)</p>
+                <p className="text-3xl font-bold text-white">{displayData?.upcomingTasks || 0}</p>
+              </div>
+
+              <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-orange-500 to-orange-600 dark:from-orange-950 dark:to-orange-900 p-6 border border-orange-300 dark:border-orange-800">
+                <div className="flex items-start justify-between mb-4">
+                  <div className="p-3 rounded-xl bg-white/20">
+                    <RotateCcw size={24} className="text-white" />
+                  </div>
+                </div>
+                <p className="text-white/80 text-sm font-medium mb-2">In Progress</p>
+                <p className="text-3xl font-bold text-white">{displayData?.inProgressTasks || 0}</p>
+              </div>
+
+              <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-emerald-500 to-emerald-600 dark:from-emerald-950 dark:to-emerald-900 p-6 border border-emerald-300 dark:border-emerald-800">
+                <div className="flex items-start justify-between mb-4">
+                  <div className="p-3 rounded-xl bg-white/20">
+                    <UserCheck size={24} className="text-white" />
+                  </div>
+                </div>
+                <p className="text-white/80 text-sm font-medium mb-2">Assigned By Me</p>
+                <p className="text-3xl font-bold text-white">{displayData?.assignedByMe?.total || 0}</p>
+                <p className="text-xs text-white/80 font-medium mt-2">
+                  Pending: {displayData?.assignedByMe?.pending || 0} • Completed: {displayData?.assignedByMe?.completed || 0}
+                </p>
+              </div>
+
+              <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-indigo-500 to-indigo-600 dark:from-indigo-950 dark:to-indigo-900 p-6 border border-indigo-300 dark:border-indigo-800">
+                <div className="flex items-start justify-between mb-4">
+                  <div className="p-3 rounded-xl bg-white/20">
+                    <Target size={24} className="text-white" />
+                  </div>
+                </div>
+                <p className="text-white/80 text-sm font-medium mb-2">FMS Tasks</p>
+                <p className="text-3xl font-bold text-white">{displayData?.fmsTasks || 0}</p>
+              </div>
+
+              <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-teal-500 to-teal-600 dark:from-teal-950 dark:to-teal-900 p-6 border border-teal-300 dark:border-teal-800">
+                <div className="flex items-start justify-between mb-4">
+                  <div className="p-3 rounded-xl bg-white/20">
+                    <Activity size={24} className="text-white" />
+                  </div>
+                </div>
+                <p className="text-white/80 text-sm font-medium mb-2">FMS In Progress</p>
+                <p className="text-3xl font-bold text-white">{displayData?.fmsInProgressTasks || 0}</p>
               </div>
             </div>
           </div>
@@ -896,8 +989,128 @@ const Dashboard: React.FC = () => {
             ))}
           </div>
 
+          {/* Hierarchical Task Metrics - Treemap-like structure */}
+          <div className="p-4 sm:p-6 lg:p-8">
+            <div className="mb-6">
+              <h2 className="text-2xl font-bold text-[var(--color-text)] mb-2">Task Hierarchy Overview</h2>
+              <p className="text-sm text-[var(--color-textSecondary)]">Total Tasks → One-off Tasks → FMS Tasks</p>
+            </div>
+
+            {/* Total Tasks Level */}
+            <div className="mb-8">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <ThemeCard className="p-6" variant="glass">
+                  <div className="flex items-center space-x-4 mb-4">
+                    <div className="p-3 rounded-2xl bg-gradient-to-r from-blue-500 to-blue-600 text-white">
+                      <CheckSquare size={24} />
+                    </div>
+                    <div>
+                      <h3 className="text-xl font-bold text-[var(--color-text)]">Total Tasks</h3>
+                      <p className="text-sm text-[var(--color-textSecondary)]">All tasks in the system</p>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="text-center p-4 rounded-xl bg-[var(--color-surface)] border border-[var(--color-border)]">
+                      <p className="text-2xl font-bold text-[var(--color-primary)]">{displayData?.totalTasks || 0}</p>
+                      <p className="text-xs text-[var(--color-textSecondary)]">Total</p>
+                    </div>
+                    <div className="text-center p-4 rounded-xl bg-[var(--color-surface)] border border-[var(--color-border)]">
+                      <p className="text-2xl font-bold text-[var(--color-success)]">{displayData?.completedTasks || 0}</p>
+                      <p className="text-xs text-[var(--color-textSecondary)]">Completed</p>
+                    </div>
+                  </div>
+                </ThemeCard>
+
+                <ThemeCard className="p-6" variant="glass">
+                  <div className="flex items-center space-x-4 mb-4">
+                    <div className="p-3 rounded-2xl bg-gradient-to-r from-green-500 to-green-600 text-white">
+                      <Target size={24} />
+                    </div>
+                    <div>
+                      <h3 className="text-xl font-bold text-[var(--color-text)]">One-off Tasks</h3>
+                      <p className="text-sm text-[var(--color-textSecondary)]">Non-recurring tasks</p>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-3 gap-4">
+                    <div className="text-center p-3 rounded-xl bg-[var(--color-surface)] border border-[var(--color-border)]">
+                      <p className="text-lg font-bold text-[var(--color-primary)]">{displayData?.oneTimeTasks || 0}</p>
+                      <p className="text-xs text-[var(--color-textSecondary)]">Total</p>
+                    </div>
+                    <div className="text-center p-3 rounded-xl bg-[var(--color-surface)] border border-[var(--color-border)]">
+                      <p className="text-lg font-bold text-[var(--color-warning)]">{displayData?.oneTimePending || 0}</p>
+                      <p className="text-xs text-[var(--color-textSecondary)]">Pending</p>
+                    </div>
+                    <div className="text-center p-3 rounded-xl bg-[var(--color-surface)] border border-[var(--color-border)]">
+                      <p className="text-lg font-bold text-[var(--color-success)]">{displayData?.oneTimeCompleted || 0}</p>
+                      <p className="text-xs text-[var(--color-textSecondary)]">Completed</p>
+                    </div>
+                  </div>
+                </ThemeCard>
+              </div>
+            </div>
+
+            {/* FMS Tasks Level */}
+            <div>
+              <ThemeCard className="p-6" variant="glass">
+                <div className="flex items-center space-x-4 mb-6">
+                  <div className="p-3 rounded-2xl bg-gradient-to-r from-indigo-500 to-indigo-600 text-white">
+                    <Activity size={24} />
+                  </div>
+                  <div>
+                    <h3 className="text-xl font-bold text-[var(--color-text)]">FMS Tasks</h3>
+                    <p className="text-sm text-[var(--color-textSecondary)]">Project-based tasks</p>
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <div className="text-center p-4 rounded-xl bg-[var(--color-surface)] border border-[var(--color-border)]">
+                    <p className="text-xl font-bold text-[var(--color-primary)]">{displayData?.fmsTasks || 0}</p>
+                    <p className="text-xs text-[var(--color-textSecondary)]">Total FMS</p>
+                  </div>
+                  <div className="text-center p-4 rounded-xl bg-[var(--color-surface)] border border-[var(--color-border)]">
+                    <p className="text-xl font-bold text-[var(--color-warning)]">{displayData?.fmsPendingTasks || 0}</p>
+                    <p className="text-xs text-[var(--color-textSecondary)]">Pending</p>
+                  </div>
+                  <div className="text-center p-4 rounded-xl bg-[var(--color-surface)] border border-[var(--color-border)]">
+                    <p className="text-xl font-bold text-[var(--color-success)]">{displayData?.fmsCompletedTasks || 0}</p>
+                    <p className="text-xs text-[var(--color-textSecondary)]">Completed</p>
+                  </div>
+                  <div className="text-center p-4 rounded-xl bg-[var(--color-surface)] border border-[var(--color-border)]">
+                    <p className="text-xl font-bold text-[var(--color-accent)]">{displayData?.fmsInProgressTasks || 0}</p>
+                    <p className="text-xs text-[var(--color-textSecondary)]">In Progress</p>
+                  </div>
+                </div>
+              </ThemeCard>
+            </div>
+          </div>
+
+          {/* Overall Score and Current Month Score */}
+          {(user?.role === 'admin' || user?.role === 'superadmin') && (
+            <div className="p-4 sm:p-6 lg:p-8">
+              <div className="mb-6">
+                <h2 className="text-2xl font-bold text-[var(--color-text)] mb-2">Performance Scores</h2>
+                <p className="text-sm text-[var(--color-textSecondary)]">Team performance metrics and scoring</p>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+                <MetricCard
+                  icon={<Star size={24} className="text-yellow-600" />}
+                  title="Overall Score"
+                  value={`${dashboardData?.overallScore || 0}%`}
+                  subtitle="Average performance score"
+                  percentage={dashboardData?.overallScore || 0}
+                />
+                <MetricCard
+                  icon={<Calendar size={24} className="text-blue-600" />}
+                  title="Current Month Score"
+                  value={`${dashboardData?.currentMonthScore || 0}%`}
+                  subtitle="This month's performance"
+                  percentage={dashboardData?.currentMonthScore || 0}
+                />
+              </div>
+            </div>
+          )}
+
           {/* FMS Project Metrics */}
-          {(user?.role === 'admin' || user?.role === 'manager') && (
+          {(user?.role === 'admin' || user?.role === 'superadmin' || user?.role === 'manager') && (
             <div className="p-4 sm:p-6 lg:p-8">
               <div className="mb-6">
                 <h2 className="text-2xl font-bold text-[var(--color-text)] mb-2">FMS Project Metrics</h2>
@@ -944,6 +1157,56 @@ const Dashboard: React.FC = () => {
             </div>
           )}
 
+          {/* Upcoming Tasks Section */}
+          {(user?.role === 'admin' || user?.role === 'superadmin' || user?.role === 'manager') && (
+            <div className="p-4 sm:p-6 lg:p-8">
+              <div className="mb-6">
+                <h2 className="text-2xl font-bold text-[var(--color-text)] mb-2">Upcoming Tasks</h2>
+                <p className="text-sm text-[var(--color-textSecondary)]">Tasks due in the next 7 days</p>
+              </div>
+              <div className="space-y-4 max-h-96 overflow-y-auto">
+                {dashboardData?.upcomingTasks && dashboardData.upcomingTasks.length > 0 ? (
+                  dashboardData.upcomingTasks.map((task: any) => (
+                    <div
+                      key={task._id}
+                      className="p-4 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] hover:shadow-lg transition-all"
+                    >
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1">
+                          <h3 className="text-lg font-bold text-[var(--color-text)] mb-2">{task.title}</h3>
+                          <p className="text-sm text-[var(--color-textSecondary)] mb-3">{task.description}</p>
+                          <div className="flex flex-wrap items-center gap-3 text-sm">
+                            <span className="flex items-center gap-1">
+                              <Users size={14} />
+                              Assigned to: <strong>{task.assignedTo?.username}</strong>
+                            </span>
+                            <span className="flex items-center gap-1">
+                              <Calendar size={14} />
+                              Due: {new Date(task.dueDate).toLocaleDateString()}
+                            </span>
+                            <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
+                              task.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                              task.status === 'completed' ? 'bg-green-100 text-green-800' :
+                              'bg-gray-100 text-gray-800'
+                            }`}>
+                              {task.status}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <div className="text-center py-12 text-[var(--color-textSecondary)]">
+                    <Calendar size={48} className="mx-auto mb-4 opacity-30" />
+                    <p className="text-lg font-semibold opacity-60">No upcoming tasks</p>
+                    <p className="text-sm opacity-40">Tasks due in the next 7 days will appear here</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
           {/* Enhanced Charts Section */}
           <div className="grid grid-cols-1 lg:grid-cols-10 gap-8">
             {/* Task Status Distribution - Enhanced Pie Chart */}
@@ -956,10 +1219,10 @@ const Dashboard: React.FC = () => {
                     </div>
                     <div>
                       <h3 className="text-lg sm:text-xl font-bold text-[var(--color-text)]">
-                        {(user?.role === 'admin' || user?.role === 'manager') ? 'Team Task Status' : 'Your Task Status'}
+                        {(user?.role === 'admin' || user?.role === 'superadmin' || user?.role === 'manager') ? 'Team Task Status' : 'Your Task Status'}
                       </h3>
                       <p className="text-xs text-[var(--color-textSecondary)]">
-                        {(user?.role === 'admin' || user?.role === 'manager') ? 'Team distribution' : 'Your current distribution'}
+                        {(user?.role === 'admin' || user?.role === 'superadmin' || user?.role === 'manager') ? 'Team distribution' : 'Your current distribution'}
                       </p>
                     </div>
                   </div>
@@ -1024,10 +1287,10 @@ const Dashboard: React.FC = () => {
                     </div>
                     <div>
                       <h3 className="text-lg sm:text-xl font-bold text-[var(--color-text)]">
-                        {(user?.role === 'admin' || user?.role === 'manager') ? 'Team Task Types' : 'Your Task Types'}
+                        {(user?.role === 'admin' || user?.role === 'superadmin' || user?.role === 'manager') ? 'Team Task Types' : 'Your Task Types'}
                       </h3>
                       <p className="text-xs text-[var(--color-textSecondary)]">
-                        {(user?.role === 'admin' || user?.role === 'manager') ? 'Team breakdown by category' : 'Your breakdown by category'}
+                        {(user?.role === 'admin' || user?.role === 'superadmin' || user?.role === 'manager') ? 'Team breakdown by category' : 'Your breakdown by category'}
                       </p>
                     </div>
                   </div>
@@ -1086,16 +1349,16 @@ const Dashboard: React.FC = () => {
                   </div>
                   <div>
                     <h3 className="text-lg sm:text-xl font-bold text-[var(--color-text)] mb-1">
-                      {(user?.role === 'admin' || user?.role === 'manager') ? 'Team Completion Trend' : 'Your Completion Trend'}
+                      {(user?.role === 'admin' || user?.role === 'superadmin' || user?.role === 'manager') ? 'Team Completion Trend' : 'Your Completion Trend'}
                     </h3>
                     <p className="text-xs text-[var(--color-textSecondary)]">
-                      {(user?.role === 'admin' || user?.role === 'manager') ? 'Team performance insights over the last 6 months' : 'Your performance insights over the last 6 months'}
+                      {(user?.role === 'admin' || user?.role === 'superadmin' || user?.role === 'manager') ? 'Team performance insights over the last 6 months' : 'Your performance insights over the last 6 months'}
                     </p>
                   </div>
                 </div>
 
                 <div className="flex flex-col sm:flex-row items-center space-y-4 sm:space-y-0 sm:space-x-4 w-full sm:w-auto">
-                  {(user?.role === 'admin' || user?.role === 'manager') && teamMembersList.length > 0 && (
+                  {(user?.role === 'admin' || user?.role === 'superadmin' || user?.role === 'manager') && teamMembersList.length > 0 && (
                     <div className="relative z-10 w-full sm:w-auto">
                       <button
                         onClick={() => setShowTeamMemberFilter(!showTeamMemberFilter)}
@@ -1194,7 +1457,7 @@ const Dashboard: React.FC = () => {
                 </div>
               </div>
 
-              {(user?.role === 'admin' || user?.role === 'manager') && selectedTeamMember !== 'all' && (
+              {(user?.role === 'admin' || user?.role === 'superadmin' || user?.role === 'manager') && selectedTeamMember !== 'all' && (
                 <div className="mb-6 p-4 rounded-2xl border border-[var(--color-primary)]/30" style={{ backgroundColor: 'var(--color-primary)05' }}>
                   <div className="flex items-center space-x-3">
                     <div className="w-10 h-10 rounded-2xl bg-gradient-to-r from-blue-400 to-purple-600 flex items-center justify-center text-white font-bold">
@@ -1367,10 +1630,10 @@ const Dashboard: React.FC = () => {
                   </div>
                   <div>
                     <h3 className="text-lg sm:text-xl font-bold text-[var(--color-text)]">
-                      {(user?.role === 'admin' || user?.role === 'manager') ? 'Recent Activity' : 'Your Recent Activity'}
+                      {(user?.role === 'admin' || user?.role === 'superadmin' || user?.role === 'manager') ? 'Recent Activity' : 'Your Recent Activity'}
                     </h3>
                     <p className="text-xs text-[var(--color-textSecondary)]">
-                      {(user?.role === 'admin' || user?.role === 'manager') ? 'Latest team task updates' : 'Your latest task updates'}
+                      {(user?.role === 'admin' || user?.role === 'superadmin' || user?.role === 'manager') ? 'Latest team task updates' : 'Your latest task updates'}
                     </p>
                   </div>
                 </div>
@@ -1390,7 +1653,7 @@ const Dashboard: React.FC = () => {
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-semibold text-[var(--color-text)] mb-1">
-                        {(user?.role === 'admin' || user?.role === 'manager') ? (
+                        {(user?.role === 'admin' || user?.role === 'superadmin' || user?.role === 'manager') ? (
                           <>
                             <span className="font-bold">{activity.username}</span>
                             <span className="mx-1 text-[var(--color-textSecondary)]">

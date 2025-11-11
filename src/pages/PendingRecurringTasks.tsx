@@ -366,12 +366,10 @@ const PendingRecurringTasks: React.FC = () => {
                   <span className="text-[var(--color-textSecondary)]">Assigned by:</span>
                   <span className="font-medium text-[var(--color-text)]">{task.assignedBy?.username || 'Unknown User'}</span>
                 </div>
-                {isAdmin && (
-                  <div className="flex justify-between items-center py-2 px-3 bg-[var(--color-primary)]/10 rounded-lg">
-                    <span className="text-[var(--color-textSecondary)]">Assigned to:</span>
-                    <span className="font-medium text-[var(--color-primary)]">{task.assignedTo?.username || 'Unknown User'}</span>
-                  </div>
-                )}
+                <div className="flex justify-between items-center py-2 px-3 bg-[var(--color-primary)]/10 rounded-lg">
+                  <span className="text-[var(--color-textSecondary)]">Assigned to:</span>
+                  <span className="font-medium text-[var(--color-primary)]">{task.assignedTo?.username || 'Unknown User'}</span>
+                </div>
                 <div className="flex justify-between items-center py-2 px-3 bg-[var(--color-accent)]/10 rounded-lg">
                   <span className="text-[var(--color-textSecondary)]">Due date:</span>
                   <span className="font-medium text-[var(--color-accent)]">
@@ -429,6 +427,7 @@ const PendingRecurringTasks: React.FC = () => {
               <th className="px-6 py-4 text-left text-xs font-semibold text-[var(--color-textSecondary)] uppercase tracking-wider">Task</th>
               <th className="px-6 py-4 text-left text-xs font-semibold text-[var(--color-textSecondary)] uppercase tracking-wider">Type</th>
               <th className="px-6 py-4 text-left text-xs font-semibold text-[var(--color-textSecondary)] uppercase tracking-wider">Priority</th>
+              <th className="px-6 py-4 text-left text-xs font-semibold text-[var(--color-textSecondary)] uppercase tracking-wider">Assigned By</th>
               {isAdmin && <th className="px-6 py-4 text-left text-xs font-semibold text-[var(--color-textSecondary)] uppercase tracking-wider">Assigned To</th>}
               {/* Attachments Header */}
               <th className="px-6 py-4 text-left text-xs font-semibold text-[var(--color-textSecondary)] uppercase tracking-wider">Attachments</th>
@@ -489,6 +488,10 @@ const PendingRecurringTasks: React.FC = () => {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap"><TaskTypeBadge taskType={task.taskType} /></td>
                   <td className="px-6 py-4 whitespace-nowrap"><PriorityBadge priority={task.priority} /></td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="text-sm text-[var(--color-text)]">{task.assignedBy?.username || 'Unknown User'}</div>
+                    <div className="text-sm text-[var(--color-textSecondary)]">{task.assignedBy?.email || ''}</div>
+                  </td>
                   {isAdmin && (
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm text-[var(--color-text)]">{task.assignedTo?.username || 'Unknown User'}</div>

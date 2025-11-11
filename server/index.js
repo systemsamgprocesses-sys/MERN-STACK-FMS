@@ -31,12 +31,15 @@ const app = express();
 const PORT = config.port;
 
 // Middleware
+const replitDomain = process.env.REPLIT_DEV_DOMAIN;
 const allowedOrigins = [
   'http://localhost:5173',
+  'http://localhost:5000',
   'http://localhost:3000',
   'https://hub.amgrealty.in',
   'https://task.amgrealty.in',
   'https://tasks.amgrealty.in',
+  replitDomain ? `https://${replitDomain}` : null,
   config.corsOrigin
 ].filter(Boolean);
 

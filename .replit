@@ -5,3 +5,78 @@ expertMode = true
 [nix]
 channel = "stable-25_05"
 packages = ["mongodb"]
+
+[workflows]
+runButton = "Project"
+
+[[workflows.workflow]]
+name = "Project"
+mode = "parallel"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "dev"
+
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "mongodb"
+
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "client"
+
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "server"
+
+[[workflows.workflow]]
+name = "dev"
+author = "agent"
+
+[workflows.workflow.metadata]
+outputType = "webview"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "export MONGO_URI=\"mongodb://localhost:27017/task-management-system\" && export BACKEND_PORT=\"3000\" && export NODE_ENV=\"development\" && export JWT_SECRET=\"dev-jwt-secret-key-change-in-production\" && export CORS_ORIGIN=\"http://localhost:5000\" && npm run dev"
+waitForPort = 5000
+
+[[workflows.workflow]]
+name = "mongodb"
+author = "agent"
+
+[workflows.workflow.metadata]
+outputType = "console"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "mkdir -p ~/mongodb-data && mongod --dbpath ~/mongodb-data --port 27017 --bind_ip 127.0.0.1"
+
+[[workflows.workflow]]
+name = "client"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "export MONGO_URI=\"mongodb://localhost:27017/task-management-system\" && export BACKEND_PORT=\"3000\" && export NODE_ENV=\"development\" && export JWT_SECRET=\"dev-jwt-secret-key-change-in-production\" && export CORS_ORIGIN=\"http://localhost:5000\" && npm run client"
+waitForPort = 5000
+
+[workflows.workflow.metadata]
+outputType = "webview"
+
+[[workflows.workflow]]
+name = "server"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "export MONGO_URI=\"mongodb://localhost:27017/task-management-system\" && export BACKEND_PORT=\"3000\" && export NODE_ENV=\"development\" && export JWT_SECRET=\"dev-jwt-secret-key-change-in-production\" && export CORS_ORIGIN=\"http://localhost:5000\" && npm run server"
+waitForPort = 3000
+
+[workflows.workflow.metadata]
+outputType = "console"
+
+[[ports]]
+localPort = 3000
+externalPort = 3000

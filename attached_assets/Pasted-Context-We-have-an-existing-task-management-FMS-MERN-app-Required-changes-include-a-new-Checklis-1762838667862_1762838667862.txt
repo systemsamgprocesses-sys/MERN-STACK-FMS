@@ -1,0 +1,311 @@
+Context: We have an existing task management / FMS MERN app. Required changes include a new Checklists area (with recurring patterns), a help-ticket system for employees, a dedicated Checklist dashboard, several task/assignment/dashboard bug fixes and UI enhancements.
+
+1) New: Checklists section (separate module)
+
+Goal: Add a dedicated "Checklists" section (separate from Tasks). Users can create checklists which contain multiple items. Checklists can be one-off or recurring with preset intervals (daily, weekly, fortnightly, monthly) or a custom recurrence (any n days/weeks/months).
+
+Data model (suggested):
+
+Checklist
+
+id
+
+title (Parent name)
+
+parentTaskId (nullable) — reference to a Task if attached
+
+createdBy
+
+assignedTo (user or team)
+
+recurrence: { type: 'one-time'|'daily'|'weekly'|'fortnightly'|'monthly'|'custom', customInterval: { unit:'days'|'weeks'|'months', n: number } }
+
+startDate, nextRunDate
+
+status: Draft | Active | Submitted | Archived
+
+metadata: createdAt, updatedAt
+
+ChecklistItem
+
+id
+
+checklistId
+
+title
+
+isDone (boolean)
+
+remarks (optional)
+
+doneAt (optional)
+
+ChecklistHierarchy (for nested parent/sub-parent/children)
+
+checklistId
+
+parentChecklistId (nullable) // allows Parent → Sub Parent → children
+
+UI:
+
+A separate navigation entry: Checklists (with icon).
+
+Create Checklist form: title, attach to Task (optional), assignedTo, recurrence (preset + custom), add items (inline add), optional hierarchy (choose parent/sub-parent).
+
+Checklist list view: filter by assignedTo, status, recurrence, date range.
+
+Checklist detail view: show items with checkboxes, ability to mark items done.
+
+Submit button: user may Submit checklist even if some items are unchecked — submission records current progress.
+
+Progress indicator per checklist (percent of items done).
+
+Ability to mark checklist as Active/Submitted/Archived.
+
+Behavior / Rules:
+
+When submitted, the checklist’s progress should be recorded and displayed in the Checklist Dashboard and in associated Task aggregation (see section 3).
+
+Recurring checklists: when a cycle completes (or on schedule), create next instance and set nextRunDate accordingly.
+
+Allow manual creation of a new cycle (for immediate repeat).
+
+2) Checklist Dashboard (separate dashboard)
+
+Goal: A dedicated dashboard for Checklists with metrics and quick actions.
+
+Metrics/Widgets:
+
+Total checklists (current)
+
+Completed, Pending, Overdue (relative to nextRunDate or dueDate)
+
+Quick filters (person, team, recurrence)
+
+Recent submissions (list)
+
+Progress visualization per Parent task (see aggregation below)
+
+"Click to view all →" links that route to filtered checklist lists.
+
+Behavior:
+
+When selecting a person in dashboard dropdown, load metrics only for that person.
+
+Super Admins see cross-team data; admins see their RBAC-limited data.
+
+3) Checklist → Task aggregation & progress calculation
+
+Requirement: Tasks may have multiple checklists. There is a hierarchical structure:
+
+Parent Task
+
+Task 1 (child)
+
+Checklist A, B, C
+
+Task 2
+
+Checklist D, E, F
+
+Progress calculation rules:
+
+Each checklist contributes equally to its parent task’s checklist-based progress.
+
+Example: Task 1 has 3 checklists, all done → Task 1 checklist progress = 100%.
+
+Task 2 has 3 checklists, 2 done → Task 2 checklist progress = (2/3)*100 = 66.67% (round to nearest integer where appropriate).
+
+Parent Task progress = weighted average of its child tasks’ checklist progress (or simple average if weights are not provided).
+
+The aggregated progress must reflect on the Task dashboard and in Master tasks view.
+
+4) Help Tickets (employee feature)
+
+Goal: Employees can raise help tickets related to anything (task modification, missed completion, other issues). Tickets visible to Super Admin only; Super Admin can close them with remarks.
+
+Data model:
+
+HelpTicket
+
+id
+
+raisedBy
+
+subject
+
+description
+
+relatedTaskId (optional)
+
+priority (low/medium/high)
+
+status: Open | In Progress | Closed
+
+assignedTo (Super Admin by default)
+
+createdAt, updatedAt
+
+adminRemarks (array of {by, remark, at})
+
+UI:
+
+Button/Link for employees: Raise Help Ticket (accessible in task detail and main nav).
+
+Ticket listing for Super Admin (filter by status, date, priority).
+
+Ticket detail view: admin can add remarks and close ticket (status->Closed) with final remark.
+
+5) Assignment & Task UX fixes
+
+Add Searchable dropdowns for names across the app (assign-to, who, people dropdown).
+
+Fix Assigned By Me view: must show only tasks where assignedBy equals the currently logged-in user’s name/ID (not objectIDs or unrelated entries).
+
+In Assigned tasks, change Planned Date field as required (replace current UI element with date picker + display format).
+
+Add Quick action: Assign Task shortcut/button that navigates to the Assign Task section (from task rows and master tasks).
+
+Add a button on assigned tasks: Update Progress Now — opens modal to update progress value and optionally mark In-Progress or Completed (see next).
+
+Allow users to set task status In Progress (new state for one-time tasks). Setting In Progress must require a remarks field (non-empty). Remarks should be saved and visible on Master tasks.
+
+Admin/Super Admin can complete tasks from the Master Tasks view.
+
+6) Dashboard / Analytics fixes & enhancements
+
+Rename sidebar menu item: Dashboard → Analytics Dashboard (already changed in some places; ensure consistency).
+
+Fix metric numbers (Pending, Upcoming, Overdue, Completed). Definitions:
+
+Total As: total number of tasks (current)
+
+Pending: tasks due <= Today
+
+Upcoming: tasks with planned date > Today
+
+Overdue: tasks with planned date < Today (only)
+
+Completed: tasks with status == Completed
+
+Add "Click to view all →" links to Pending, Completed, Overdue cards that navigate to appropriate filtered lists.
+
+Add People dropdown: when a name is selected, load only selected person metrics.
+
+Fix Who display (show actual user names rather than ObjectIDs).
+
+Fix Reports: ensure AdminTasks, AssignedByMe, MasterTasks fetch more than 10 entries (remove hard-coded 10; use 1,000,000 or paginated API).
+
+Add Upcoming Tasks section to dashboard.
+
+Add Recent Activity for Super Admin with pagination.
+
+7) Metrics and caching
+
+Fix metric calculation logic for all dashboard numbers (audit queries).
+
+Implement optional data caching to reduce Dashboard load times (e.g., cache aggregated numbers for N minutes, invalidate on relevant updates).
+
+8) Other bugs / UX changes
+
+Fix Start Project error when starting a project from the UI.
+
+Show Pending tasks popup when user logs in and automatically display it every 2 hours while logged in (use session/local timestamp to control frequency).
+
+Fix metrics not showing correct data anywhere they are inconsistent.
+
+Add Print options for FMS (single and all) with logo/branding (admin only).
+
+Add in progress status support for one-time tasks (display properly in StatusBadge component).
+
+Change My tasks section to show more than 10 tasks (same as above).
+
+Add ability to mark checklist tasks submitted even if not all checkboxes checked — submission records partial progress.
+
+9) Permissions & roles
+
+Create Super Admin user role (similar capabilities to Admin but broader) — implement RBAC adjustments:
+
+Super Admin sees all checklists, tickets, metrics
+
+Admin sees team-limited data
+
+Employees see their own assignments and can raise tickets
+
+Add FMS categorization for Super Admin & Admin with RBAC (future iteration: follow-up ticket).
+
+10) Acceptance Criteria (concrete)
+
+A new Checklists section exists in nav and UI; users can create checklists with items and recurrence.
+
+Checklists can be submitted regardless of item completion; submission updates progress and appears on Checklist Dashboard.
+
+Parent/Child relationships supported; progress aggregates from child checklists → tasks → parent task.
+
+Employee Help Ticket flow: employee raises, Super Admin can view, add remarks, and close.
+
+Assigned By Me shows only tasks assigned by the logged-in user.
+
+People dropdown filters load only the selected person's metrics.
+
+Dashboard cards (Pending, Upcoming, Overdue, Completed) show correct counts and “Click to view all →” navigates to filtered lists.
+
+Status “In Progress” for one-time tasks works with mandatory remarks and shows in Master tasks.
+
+Start Project button no longer throws error and successfully starts a project.
+
+Pending tasks popup shows on login and repeats every 2 hours during session.
+
+Searchable name dropdowns work across forms.
+
+Admin/Super Admin can complete tasks from Master Tasks.
+
+Print option added for FMS (single/all) with logo.
+
+Data fetch limits corrected (no hidden 10-task truncation).
+
+11) Implementation notes & suggestions
+
+Backend: Add checklist and ticket schemas, update task aggregation endpoints, add endpoints to fetch checklist metrics, and endpoints to raise/close tickets.
+
+Frontend: Create Checklist pages, Checklist Dashboard, modals for submission and progress updates. Reuse existing UI components (StatusBadge etc.) and ensure consistent styling.
+
+DB: If using Mongo, add indexes for assignedTo, createdBy, recurrence nextRunDate.
+
+Jobs: Add scheduled job or on-demand generator for recurring checklist instances.
+
+Tests: Unit tests for aggregation logic and integration tests for dashboard counts and RBAC.
+
+Logging: Log ticket creation and checklist submissions for traceability.
+
+12) Priorities & Minimal MVP (must-have for first release)
+
+Checklist creation with items, submission, and basic recurrence (daily, weekly, monthly, custom n-days).
+
+Checklist Dashboard showing totals and recent submissions.
+
+Progress aggregation onto tasks (parent task reflects child checklist progress).
+
+Help Ticket creation + Super Admin view + close with remarks.
+
+Fix Assigned By Me filter and Who display (names).
+
+Add in-progress status with required remarks + Update Progress Now button.
+
+Fix Dashboard card counts and "Click to view all →" links.
+
+Developer acceptance (what to demo)
+
+Create a checklist, add 3 items, submit with only 2 checked — show recorded progress.
+
+Attach checklists to child tasks and show aggregated parent task progress.
+
+Raise a help ticket as employee; show Super Admin closing it with remarks.
+
+Demonstrate Assigned By Me view showing only tasks assigned by the logged-in user.
+
+Select a person in Analytics Dashboard People dropdown and show filtered metrics.
+
+Start Project from UI without error.
+
+Show Pending popup appearing on login and reappearing after 2 hours.

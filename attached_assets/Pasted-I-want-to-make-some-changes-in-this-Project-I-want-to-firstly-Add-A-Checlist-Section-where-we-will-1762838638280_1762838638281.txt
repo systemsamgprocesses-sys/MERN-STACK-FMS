@@ -1,0 +1,90 @@
+I want to make some changes in this Project,
+I want to firstly Add A Checlist Section, where we will make CheclistsRealted tasks, and this will be a seperate section only.
+Here we will give option ot create checklists
+Checklists can have multiple items
+and it (checklist) can be created for Daily, weekly, fortnighlt, and monthly as well and also we will give customised interval it can be any months or weekl or days.
+
+Once the clecklist is created it can Submitted without chcking all the checkboxed and the same progress will refect on its dashboard, create a seperate dasboard for the Checklists section.
+
+The Checlists structure will be
+A Parent name
+Sub Parent (child of the parent) and then Its chlids ass well.
+
+Example : Main task
+Has 2 tasks
+And both Tasks have 3 checklists each
+task 1 is 100% complete, mens the 3 checklists are done.
+and the task 2 is 67% done, means only 2 checklist are done.
+
+and then calcute the progress of the Main Task.
+
+
+also to the Employees give a feature to raise help ticket, it can be realted to anything.
+Task modification, missed to mark as completed, or check for any other cased , and this will show to the Super Admin only
+and he will close them by adding remarks to them.
+
+Add Search option in the Dropdowns of the Names
+Metrics are not showing the correct data, we have to fix this as well.
+also to the assiged task, add a button to update the progress now allow users to mark the task as In progress as well.
+it will require a remarks as well. and the same will show in the master tasks.
+
+In the assign task, change the planned date to 
+Assigned by me is not showing any data in this. it should only show thoes tasks where the assigned by = Logged in person 
+name.
+Add quick action to assign task, this will navigate to the assign task section.
+
+Start project is showing error whenwe are starting project fromt his., we have to fix this as well.
+
+Pending tasks popup when the log in in the Page, and automatically show after every 2 hours.
+
+Admin/ super Admin can complete his tasks from the master tasks as well.
+
+Redesign the look of the Dashboard section.
+When we choose the name in the dashbaord this should load only selected person metrics, we have to fix this.
+
+show the total tasks 
+
+Total As : Total Number of tasks (Current)
+Pending : =< Today
+Upcoming : > Today
+Overdue : <Today only
+Completed : Status = Completed (Like current)
+
+
+Changed "Dashboard" to "Analytics Dashboard" in the sidebar navigation
+Enhanced Analytics Dashboard with:
+More metrics including overall score, current month score, FMS metrics
+People dropdown for filtering team member data
+Updated UI to support superadmin role visibility
+Fixed Dashboard numbers - Added "Click to view all →" links to Pending, Completed, and Overdue cards that navigate to appropriate filtered views
+Added "in progress" status support for one-time tasks with proper display in StatusBadge component
+Fixed task limits - Updated AdminTasks, AssignedByMe, and MasterTasks to fetch more than 10 tasks (set to 1,000,000 limit)
+🔄 Remaining Features to Complete:
+Create Super Admin user role similar to Admin
+Fix Assigned By Me section to show only tasks assigned by logged-in user
+Implement data caching to reduce Dashboard loading delays
+Add FMS categorization for Super Admin & Admin with RBAC
+Fix "Who" part to show actual names instead of object IDs
+Add print options for FMS (single and all) with logo and branding
+Add Upcoming Tasks section to Dashboard
+Add Recent Activity section for Super Admin with pagination
+
+
+
+
+Analyze current Dashboard and Sidebar components to understand structure
+Change "Dashboard" to "Analytics Dashboard" in Sidebar
+Add more metrics to Analytics Dashboard: overall score, current month score, FMS metrics, people dropdown
+Create Super Admin user role similar to Admin
+Fix Assigned By Me section to show only tasks assigned by logged-in user
+Implement data caching to reduce Dashboard loading delays
+Add FMS categorization for Super Admin & Admin with RBAC
+Fix "Who" part to show actual names instead of object IDs
+Add print options for FMS (single and all) with logo and branding
+Fix My tasks section to show more than 10 tasks
+Add Upcoming Tasks section to Dashboard
+Fix Dashboard numbers (Pending, Completed, Overdue) and apply filters on click
+Add Recent Activity section for Super Admin with pagination
+Add "in progress" option for one-time tasks with remarks
+
+

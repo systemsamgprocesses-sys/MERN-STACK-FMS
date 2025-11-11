@@ -604,29 +604,71 @@ const AssignTask: React.FC = () => {
                     </h2>
                   </div>
 
-                  {/* Replacing the old select with SearchableSelect */}
-                  <div>
+                  {/* Custom Multi-Select with Search */}
+                  <div className="relative" ref={dropdownRef}>
                     <label className={`block text-sm font-semibold mb-2 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
-                      Assign To <span className="text-red-500">*</span>
+                      Select Users <span className="text-red-500">*</span>
                     </label>
-                    <SearchableSelect
-                      options={users.map(user => ({
-                        value: user._id,
-                        label: `${user.username} ${user.role ? `(${user.role})` : ''}` // Display username and role
-                      }))}
-                      value={formData.assignedTo}
-                      onChange={(selectedUserIds: string[]) => {
-                        // Ensure that the value passed to setFormData is always an array
-                        setFormData(prev => ({
-                          ...prev,
-                          assignedTo: Array.isArray(selectedUserIds) ? selectedUserIds : [selectedUserIds].filter(Boolean) // Handle single value or array
-                        }));
-                        setShowUserDropdown(false); // Close dropdown after selection
-                      }}
-                      placeholder="Select team members..."
-                      isMulti={true} // Allow multiple selections
-                      isDark={isDark} // Pass theme to SearchableSelect
-                    />
+                    
+                    {/* Search Input */}
+                    <div className="relative">
+                      <Search size={18} className={`absolute left-3 top-1/2 -translate-y-1/2 ${isDark ? 'text-gray-400' : 'text-gray-600'}`} />
+                      <input
+                        type="text"
+                        placeholder="Search users by name, email, or phone..."
+                        value={userSearchTerm}
+                        onChange={(e) => setUserSearchTerm(e.target.value)}
+                        onFocus={() => setShowUserDropdown(true)}
+                        className={`w-full pl-10 pr-4 py-3 border-2 rounded-xl focus:ring-2 focus:ring-[var(--color-primary)]/30 focus:border-[var(--color-primary)] transition-all font-medium ${
+                          isDark
+                            ? 'bg-gray-700 border-gray-600 text-gray-100 placeholder-gray-400'
+                            : 'bg-gray-50 border-gray-200 text-gray-900 placeholder-gray-500 focus:bg-white'
+                        }`}
+                      />
+                      <ChevronDown size={18} className={`absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none transition-transform ${showUserDropdown ? 'rotate-180' : ''} ${isDark ? 'text-gray-400' : 'text-gray-600'}`} />
+                    </div>
+
+                    {/* Dropdown */}
+                    {showUserDropdown && (
+                      <div className={`absolute z-50 mt-2 w-full max-h-64 overflow-y-auto rounded-xl border-2 shadow-lg ${
+                        isDark ? 'bg-gray-700 border-gray-600' : 'bg-white border-gray-200'
+                      }`}>
+                        {filteredUsers.length > 0 ? (
+                          filteredUsers.map(userItem => (
+                            <div
+                              key={userItem._id}
+                              onClick={() => handleUserSelection(userItem._id)}
+                              className={`px-4 py-3 cursor-pointer transition-all border-b last:border-b-0 ${
+                                formData.assignedTo.includes(userItem._id)
+                                  ? 'bg-[var(--color-primary)] text-white'
+                                  : (isDark ? 'hover:bg-gray-600 border-gray-600' : 'hover:bg-gray-50 border-gray-100')
+                              }`}
+                            >
+                              <div className="flex items-center justify-between">
+                                <div>
+                                  <div className="font-medium">{userItem.username}</div>
+                                  <div className={`text-sm ${formData.assignedTo.includes(userItem._id) ? 'text-white/80' : (isDark ? 'text-gray-400' : 'text-gray-600')}`}>
+                                    {userItem.email}
+                                  </div>
+                                  {userItem.phoneNumber && (
+                                    <div className={`text-xs ${formData.assignedTo.includes(userItem._id) ? 'text-white/70' : (isDark ? 'text-gray-500' : 'text-gray-500')}`}>
+                                      {userItem.phoneNumber}
+                                    </div>
+                                  )}
+                                </div>
+                                {formData.assignedTo.includes(userItem._id) && (
+                                  <CheckSquare size={18} className="flex-shrink-0 ml-2" />
+                                )}
+                              </div>
+                            </div>
+                          ))
+                        ) : (
+                          <div className={`px-4 py-3 text-center ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+                            No users found
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
                 </div>
 

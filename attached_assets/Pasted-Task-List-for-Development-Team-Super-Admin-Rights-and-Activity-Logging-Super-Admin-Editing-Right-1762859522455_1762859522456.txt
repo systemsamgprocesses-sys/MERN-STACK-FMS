@@ -1,0 +1,89 @@
+Task List for Development Team:
+
+Super Admin Rights and Activity Logging:
+
+Super Admin Editing Rights: Grant super admins the ability to edit rights from the frontend. All edits should be logged along with remarks about the changes made (date, time, user who made the change, and any comments).
+
+Recent Activity Tracking: Create a new tab for Super Admins where they can view all recent activities, including edits and updates made across the platform. The activity log should be accessible and show detailed information on the changes.
+
+Sidebar Responsiveness:
+
+Sidebar Issue on Smaller Screens: The sidebar is not behaving properly on smaller screen sizes (height-wise). Ensure that the sidebar adjusts and remains fully functional and visible on all screen sizes, especially on mobile and tablets.
+
+Objection Master:
+
+Objection Master for Super Admins and Admins: Implement an "Objection Master" feature where Super Admins and Admins can manage objections. This will allow them to track objections raised by users, assign them, and view their status in a master list.
+
+Assign Task Layout Changes:
+
+Revised Task Assignment Layout: Redesign the task assignment interface to make it more visually appealing and user-friendly. Include appropriate spacing, colors, and layout changes to make it more engaging.
+
+Multi-Stage Task Addition:
+
+Multi-Stage Tasks: Introduce a new task type: "Multi-Stage Task". This type will allow a one-time task where the user is instructed not to forward it to anyone else. The task will be marked complete only when it is handled internally, with no further action required by anyone else.
+
+In-Progress Tasks: For Multi-Stage Tasks, the user will need to provide a remark when marking the task as "In Progress".
+
+Task Button UI Improvements:
+
+Attractive Button Design: Update the appearance of task action buttons (e.g., Mark as In-Progress, Complete, etc.) to make them more visually appealing and user-friendly.
+
+Master Repetitive Task - Show "Assigned By":
+
+Assigned By Information: Ensure that the "Assigned By" field is displayed in the "Master Repetitive" task view, showing who assigned the task.
+
+RBAC (Role-Based Access Control) Issue:
+
+RBAC Fix: Address the issue with RBAC, where all tasks are being shown to employees, even those that they are not assigned to. The RBAC permissions should be set correctly so that employees only see tasks assigned to them and not others.
+
+PC User Creation Glitch:
+
+Fix PC User Creation: Resolve the glitch occurring during the PC user creation process to ensure that users can be created without any errors or issues.
+
+Dashboard Metrics Fix:
+
+Pending Tasks Fix (≤ Today): The "Pending (≤ Today)" section of the dashboard should display tasks as per the actual due date (tasks due today or earlier). Fix this logic to accurately reflect pending tasks.
+
+Deployment Guidance:
+
+Once all changes have been implemented, follow these steps to deploy the updated application:
+
+Code Review & Testing:
+
+Ensure all tasks have been completed and thoroughly tested in the staging environment. Perform a code review to check for any bugs or issues.
+
+Run regression tests to ensure no existing functionality is broken.
+
+Commit Changes:
+
+Commit all changes to the version control system (e.g., Git). Make sure the commit message clearly describes the changes made.
+
+Build the Application:
+
+Build the application (frontend and backend) for production. Use the appropriate commands depending on your tech stack (e.g., npm run build for React apps, or docker-compose build for Docker-based environments).
+
+Database Migration (if applicable):
+
+If any database changes are involved (e.g., adding new tables or columns), make sure to run the necessary migrations.
+
+Verify that the database schema is updated without issues.
+
+Deploy to Production:
+
+Deploy the updated application to the production environment. This might involve updating your production server or container.
+
+If using a cloud platform, ensure you follow your deployment pipeline (e.g., AWS, Azure, or GCP).
+
+Clear Cache & Session:
+
+Clear any cached data and sessions from the previous version to avoid conflicts between the old and new code.
+
+Post-Deployment Testing:
+
+After deployment, perform sanity checks to ensure that all features are working correctly in the live environment.
+
+Test the critical functionalities like task assignment, multi-stage tasks, RBAC, and the sidebar responsiveness on various devices.
+
+Monitor Application Logs:
+
+Monitor the application logs to ensure there are no errors or issues after deployment. Check server performance and ensure that the application is running smoothly.

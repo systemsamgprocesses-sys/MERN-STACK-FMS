@@ -7,6 +7,7 @@ import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import VoiceRecorder from '../components/VoiceRecorder';
 import { address } from '../../utils/ipAddress';
+import SearchableSelect from '../components/SearchableSelect'; // Import SearchableSelect
 
 // Add ref type for VoiceRecorder
 interface VoiceRecorderRef {
@@ -18,6 +19,7 @@ interface User {
   username: string;
   email: string;
   phoneNumber?: string; // Added phoneNumber to User interface
+  role?: string; // Added role to User interface for SearchableSelect display
 }
 
 const AssignTask: React.FC = () => {
@@ -91,13 +93,13 @@ const AssignTask: React.FC = () => {
       console.log(`📍 Fetching users from: ${address}/api/users`);
       const response = await axios.get(`${address}/api/users`);
       console.log('✅ Users fetched:', response.data);
-      
+
       if (!response.data || response.data.length === 0) {
         console.warn('⚠️  No users returned from API');
         setUsers([]);
         return;
       }
-      
+
       // Allow everyone to assign tasks to themselves as well
       const filteredUsers = response.data;
       console.log(`✅ Filtered users (${filteredUsers.length}):`, filteredUsers);
@@ -173,7 +175,7 @@ const AssignTask: React.FC = () => {
   const handleVoiceRecordingDeleted = (fileName: string) => {
     setAttachments(prev => prev.filter(file => file.name !== fileName));
   };
-  
+
   const removeAttachment = (index: number) => {
     setAttachments(prev => prev.filter((_, i) => i !== index));
   };
@@ -185,58 +187,58 @@ const AssignTask: React.FC = () => {
   // Helper function to calculate expected number of yearly tasks
   const calculateYearlyTasks = () => {
     if (formData.taskType !== 'yearly' || !formData.startDate) return 0;
-    
+
     if (!formData.isForever) {
       return 1; // Single yearly task
     }
-    
+
     return formData.yearlyDuration; // Exact number of years selected
   };
 
   // Helper function to preview yearly task dates
   const getYearlyTaskPreview = () => {
     if (formData.taskType !== 'yearly' || !formData.startDate) return [];
-    
+
     const startDate = new Date(formData.startDate);
     const tasks = [];
-    
+
     const count = formData.isForever ? formData.yearlyDuration : 1;
-    
+
     for (let i = 0; i < count; i++) {
       const taskDate = new Date(startDate);
       taskDate.setFullYear(startDate.getFullYear() + i);
-      
+
       // Handle Sunday exclusion
       if (!formData.includeSunday && taskDate.getDay() === 0) {
         taskDate.setDate(taskDate.getDate() - 1); // Move to Saturday
       }
-      
+
       tasks.push(taskDate);
     }
-    
+
     return tasks;
   };
 
   // Helper function to preview quarterly task dates
   const getQuarterlyTaskPreview = () => {
     if (formData.taskType !== 'quarterly' || !formData.startDate) return [];
-    
+
     const startDate = new Date(formData.startDate);
     const tasks = [];
-    
+
     // Create 4 quarterly tasks
     for (let i = 0; i < 4; i++) {
       const taskDate = new Date(startDate);
       taskDate.setMonth(startDate.getMonth() + (i * 3)); // Add 3 months for each quarter
-      
+
       // Handle Sunday exclusion
       if (!formData.includeSunday && taskDate.getDay() === 0) {
         taskDate.setDate(taskDate.getDate() - 1); // Move to Saturday
       }
-      
+
       tasks.push(taskDate);
     }
-    
+
     return tasks;
   };
 
@@ -266,7 +268,7 @@ const AssignTask: React.FC = () => {
           setLoading(false);
           return;
         }
-      } 
+      }
       // For other recurring tasks (daily, weekly, monthly), validate based on isForever
       else if (!formData.isForever) {
         if (!formData.startDate || !formData.endDate) {
@@ -274,7 +276,7 @@ const AssignTask: React.FC = () => {
           setLoading(false);
           return;
         }
-        
+
         if (new Date(formData.startDate) >= new Date(formData.endDate)) {
           toast.error('End date must be after start date.', { theme: isDark ? 'dark' : 'light' });
           setLoading(false);
@@ -355,12 +357,14 @@ const AssignTask: React.FC = () => {
         includeSunday: false,
         weeklyDays: [],
         monthlyDay: 1,
-        yearlyDuration: 3
+        yearlyDuration: 3,
+        requireAttachments: false,
+        mandatoryAttachments: false
       });
       setAttachments([]);
       setUserSearchTerm('');
       setShowUserDropdown(false);
-      
+
       // Reset voice recorder
       if (voiceRecorderRef.current) {
         voiceRecorderRef.current.resetFromParent();
@@ -413,7 +417,7 @@ const AssignTask: React.FC = () => {
     setMessage({ type: '', text: '' });
     setUserSearchTerm('');
     setShowUserDropdown(false);
-    
+
     // Reset voice recorder
     if (voiceRecorderRef.current) {
       voiceRecorderRef.current.resetFromParent();
@@ -430,12 +434,12 @@ const AssignTask: React.FC = () => {
   return (
     <div className={`min-h-screen ${isDark ? 'bg-gray-900' : 'bg-gradient-to-br from-blue-50 via-white to-purple-50'} pb-8`}>
       <div className="max-w-6xl mx-auto px-4 py-6 space-y-6">
-        
+
         {/* Compact Header */}
         <div className="relative overflow-hidden rounded-2xl shadow-md" style={{ background: 'linear-gradient(135deg, var(--color-primary) 0%, var(--color-secondary) 100%)' }}>
           <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-16 -mt-16"></div>
           <div className="absolute bottom-0 left-0 w-24 h-24 bg-white/10 rounded-full -ml-12 -mb-12"></div>
-          
+
           <div className="relative p-5 md:p-6">
             <div className="flex items-center gap-3">
               <div className="p-3 bg-white/20 backdrop-blur-sm rounded-xl">
@@ -473,7 +477,7 @@ const AssignTask: React.FC = () => {
         )}
 
         <form onSubmit={handleSubmit} className="space-y-5">
-          
+
           {/* Task Basics Card */}
           <div className={`rounded-2xl border overflow-hidden transition-all shadow-sm hover:shadow-md ${
             isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-100'
@@ -588,7 +592,7 @@ const AssignTask: React.FC = () => {
           }`}>
             <div className="p-5 md:p-6">
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                
+
                 {/* User Assignment */}
                 <div className="lg:col-span-2">
                   <div className="flex items-center gap-3 mb-4">
@@ -600,92 +604,29 @@ const AssignTask: React.FC = () => {
                     </h2>
                   </div>
 
-                  <div className="relative" ref={dropdownRef}>
-                    <button
-                      type="button"
-                      className={`w-full flex justify-between items-center px-4 py-3 border-2 rounded-xl transition-all font-medium ${
-                        isDark
-                          ? 'bg-gray-700 border-gray-600 text-gray-100 hover:border-gray-500'
-                          : 'bg-gray-50 border-gray-200 text-gray-900 hover:bg-white hover:border-[var(--color-primary)]/50'
-                      }`}
-                      onClick={() => setShowUserDropdown(!showUserDropdown)}
-                    >
-                      {formData.assignedTo.length > 0 ? (
-                        <span className="text-sm">
-                          {formData.assignedTo.length} user{formData.assignedTo.length !== 1 ? 's' : ''} selected
-                        </span>
-                      ) : (
-                        <span className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
-                          Select team members...
-                        </span>
-                      )}
-                      <ChevronDown size={18} className={`transition-transform ${showUserDropdown ? 'rotate-180' : ''}`} style={{ color: 'var(--color-primary)' }} />
-                    </button>
-
-                    {showUserDropdown && (
-                      <div
-                        className={`absolute z-50 w-full mt-2 rounded-xl shadow-lg border backdrop-blur-sm ${
-                          isDark ? 'bg-gray-700 border-gray-600' : 'bg-white border-gray-100'
-                        }`}
-                      >
-                        <div className="p-2 border-b" style={{ borderColor: isDark ? 'var(--color-border)' : 'var(--color-border-light)' }}>
-                          <div className="relative">
-                            <Search className={`absolute left-3 top-1/2 -translate-y-1/2 ${isDark ? 'text-gray-400' : 'text-gray-400'}`} size={16} />
-                            <input
-                              type="text"
-                              placeholder="Search by name or phone..."
-                              className={`w-full pl-9 pr-3 py-2 border-2 rounded-lg focus:ring-2 focus:ring-[var(--color-primary)]/30 focus:border-[var(--color-primary)] transition-all font-medium text-sm ${
-                                isDark
-                                  ? 'bg-gray-600 border-gray-500 text-gray-100 placeholder-gray-400'
-                                  : 'bg-gray-50 border-gray-200 text-gray-900 placeholder-gray-500 focus:bg-white'
-                              }`}
-                              value={userSearchTerm}
-                              onChange={(e) => setUserSearchTerm(e.target.value)}
-                            />
-                          </div>
-                        </div>
-                        <div className="max-h-60 overflow-y-auto">
-                          {filteredUsers.length === 0 && (
-                            <p className={`p-4 text-center text-sm font-medium ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-                              No users found
-                            </p>
-                          )}
-                          {filteredUsers.map((userItem) => (
-                            <label
-                              key={userItem._id}
-                              className={`flex items-center px-4 py-3 cursor-pointer transition-all border-b last:border-b-0 text-sm ${
-                                formData.assignedTo.includes(userItem._id)
-                                  ? isDark ? 'bg-gray-600/50' : 'bg-blue-50'
-                                  : isDark ? 'hover:bg-gray-600/30' : 'hover:bg-gray-50'
-                              }`}
-                              style={{
-                                borderColor: isDark ? 'var(--color-border)' : 'var(--color-border-light)'
-                              }}
-                            >
-                              <input
-                                type="checkbox"
-                                checked={formData.assignedTo.includes(userItem._id)}
-                                onChange={() => handleUserSelection(userItem._id)}
-                                className="w-4 h-4 rounded cursor-pointer accent-blue-500"
-                              />
-                              <div className="ml-3 flex-1">
-                                <div className={`font-medium ${isDark ? 'text-gray-100' : 'text-gray-900'}`}>
-                                  {userItem.username}
-                                </div>
-                                <div className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-                                  {userItem.phoneNumber || userItem.email}
-                                </div>
-                              </div>
-                              {formData.assignedTo.includes(userItem._id) && (
-                                <div className="p-1 rounded-full" style={{ backgroundColor: 'var(--color-primary)' }}>
-                                  <CheckSquare size={14} className="text-white" />
-                                </div>
-                              )}
-                            </label>
-                          ))}
-                        </div>
-                      </div>
-                    )}
+                  {/* Replacing the old select with SearchableSelect */}
+                  <div>
+                    <label className={`block text-sm font-semibold mb-2 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
+                      Assign To <span className="text-red-500">*</span>
+                    </label>
+                    <SearchableSelect
+                      options={users.map(user => ({
+                        value: user._id,
+                        label: `${user.username} ${user.role ? `(${user.role})` : ''}` // Display username and role
+                      }))}
+                      value={formData.assignedTo}
+                      onChange={(selectedUserIds: string[]) => {
+                        // Ensure that the value passed to setFormData is always an array
+                        setFormData(prev => ({
+                          ...prev,
+                          assignedTo: Array.isArray(selectedUserIds) ? selectedUserIds : [selectedUserIds].filter(Boolean) // Handle single value or array
+                        }));
+                        setShowUserDropdown(false); // Close dropdown after selection
+                      }}
+                      placeholder="Select team members..."
+                      isMulti={true} // Allow multiple selections
+                      isDark={isDark} // Pass theme to SearchableSelect
+                    />
                   </div>
                 </div>
 
@@ -1020,9 +961,9 @@ const AssignTask: React.FC = () => {
                       <div className="space-y-1">
                         {getYearlyTaskPreview().map((date, index) => (
                           <div key={index} className={`text-xs ${isDark ? 'text-gray-200' : 'text-gray-800'}`}>
-                            • {date.toLocaleDateString('en-US', { 
-                              year: 'numeric', 
-                              month: 'long', 
+                            • {date.toLocaleDateString('en-US', {
+                              year: 'numeric',
+                              month: 'long',
                               day: 'numeric',
                               weekday: 'long'
                             })}
@@ -1051,9 +992,9 @@ const AssignTask: React.FC = () => {
                       <div className="space-y-1">
                         {getQuarterlyTaskPreview().map((date, index) => (
                           <div key={index} className={`text-xs ${isDark ? 'text-gray-200' : 'text-gray-800'}`}>
-                            • Quarter {index + 1}: {date.toLocaleDateString('en-US', { 
-                              year: 'numeric', 
-                              month: 'long', 
+                            • Quarter {index + 1}: {date.toLocaleDateString('en-US', {
+                              year: 'numeric',
+                              month: 'long',
                               day: 'numeric',
                               weekday: 'long'
                             })}
@@ -1106,7 +1047,7 @@ const AssignTask: React.FC = () => {
           </div>
 
           {/* Voice Recording Section */}
-          <VoiceRecorder 
+          <VoiceRecorder
             ref={voiceRecorderRef}
             onRecordingComplete={handleVoiceRecordingComplete}
             onRecordingDeleted={handleVoiceRecordingDeleted}
@@ -1151,12 +1092,12 @@ const AssignTask: React.FC = () => {
                 </label>
               )}
             </div>
-              
+
               {/* Centered File Upload Area */}
               <div className="flex flex-col items-center justify-center">
                 <div className={`w-full max-w-md p-6 rounded-xl border-2 border-dashed text-center transition-all ${
-                  isDark 
-                    ? 'border-gray-600 bg-gray-700/50 hover:border-gray-500 hover:bg-gray-700' 
+                  isDark
+                    ? 'border-gray-600 bg-gray-700/50 hover:border-gray-500 hover:bg-gray-700'
                     : 'border-gray-300 bg-gray-50 hover:border-[var(--color-primary)] hover:bg-[var(--color-primary)]/5'
                 }`}>
                   <div className="mb-4">
@@ -1164,7 +1105,7 @@ const AssignTask: React.FC = () => {
                       <Paperclip size={20} style={{ color: 'var(--color-primary)' }} />
                     </div>
                   </div>
-                  
+
                   <input
                     type="file"
                     multiple
@@ -1172,7 +1113,7 @@ const AssignTask: React.FC = () => {
                     className={`hidden`}
                     id="file-input"
                   />
-                  
+
                   <label htmlFor="file-input" className="cursor-pointer">
                     <p className={`text-sm font-semibold mb-1 ${isDark ? 'text-gray-100' : 'text-gray-900'}`}>
                       Click to upload files
@@ -1181,7 +1122,7 @@ const AssignTask: React.FC = () => {
                       or drag and drop
                     </p>
                   </label>
-                  
+
                   <p className={`text-xs leading-relaxed ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
                     Supported formats: PDF, images (JPG, PNG), documents (DOCX, XLSX), voice recordings. Max 10MB per file.
                   </p>
@@ -1202,7 +1143,7 @@ const AssignTask: React.FC = () => {
                       <div
                         key={index}
                         className={`flex items-center justify-between p-3 rounded-xl border transition-all ${
-                          isAudioFile(file) 
+                          isAudioFile(file)
                             ? (isDark ? 'bg-blue-900/20 border-blue-700/50' : 'bg-blue-50/80 border-blue-200')
                             : (isDark ? 'bg-gray-700/50 border-gray-600' : 'bg-gray-50/80 border-gray-200')
                         }`}
@@ -1281,7 +1222,7 @@ const AssignTask: React.FC = () => {
             </button>
           </div>
         </form>
-        
+
         {/* ToastContainer for React-Toastify alerts */}
         <ToastContainer
           position="top-right"

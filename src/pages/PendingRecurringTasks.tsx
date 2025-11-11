@@ -9,6 +9,7 @@ import TaskTypeBadge from '../components/TaskTypeBadge';
 import TaskCompletionModal from '../components/TaskCompletionModal';
 import { useTaskSettings } from '../hooks/useTaskSettings';
 import { address } from '../../utils/ipAddress';
+import SearchableSelect from '../components/SearchableSelect'; // Import SearchableSelect
 
 interface Attachment {
   filename: string;
@@ -25,7 +26,7 @@ interface Task {
   taskType: string;
   assignedBy: { username: string; email: string };
   assignedTo: {
-    _id: string; username: string; email: string; phoneNumber?: string 
+    _id: string; username: string; email: string; phoneNumber?: string
 };
   dueDate: string;
   priority: string;
@@ -297,6 +298,37 @@ const PendingRecurringTasks: React.FC = () => {
     setCurrentPage(1); // Reset to first page
   };
 
+  const handleDeleteTask = async (taskId: string) => {
+    try {
+      await axios.delete(`${address}/api/tasks/${taskId}`);
+      alert('Task deleted successfully');
+      fetchTasks();
+
+      // Emit custom event to update sidebar counts
+      window.dispatchEvent(new Event('taskDeleted'));
+    } catch (error: any) {
+      console.error('Error deleting task:', error);
+      alert(error.response?.data?.error || 'Failed to delete task');
+    }
+  };
+
+  const updateTaskProgress = async (taskId: string, status: string) => {
+    try {
+      await axios.patch(
+        `${address}/api/tasks/${taskId}`,
+        { status },
+        { headers: { 'Content-Type': 'application/json' } }
+      );
+
+      alert(`Task marked as ${status}`);
+      fetchTasks();
+    } catch (error: any) {
+      console.error('Error updating task status:', error);
+      alert(error.response?.data?.error || 'Failed to update task status');
+    }
+  };
+
+
   const renderCardView = () => (
     <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-4 gap-6">
       {currentTasks.map((task) => {
@@ -530,6 +562,14 @@ const PendingRecurringTasks: React.FC = () => {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                     <button
+                      onClick={() => updateTaskProgress(task._id, 'In Progress')}
+                      className="p-2 text-blue-600 hover:bg-blue-100 rounded-lg transition-all mr-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                      title="Mark as In Progress"
+                      disabled={task.status === 'In Progress'}
+                    >
+                      <Clock size={18} />
+                    </button>
+                    <button
                       onClick={() => setShowCompleteModal(task._id)}
                       className="text-[var(--color-success)] hover:opacity-80 transition-all hover:scale-110"
                       title="Complete task"
@@ -625,44 +665,42 @@ const PendingRecurringTasks: React.FC = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-4 p-4 bg-[var(--color-background)] rounded-lg border border-[var(--color-border)]">
             <div>
               <label className="block text-sm font-medium text-[var(--color-text)] mb-1">Task Type</label>
-              <select
+              <SearchableSelect
+                options={[
+                  { value: '', label: 'All Types' },
+                  { value: 'daily', label: 'Daily' },
+                  { value: 'weekly', label: 'Weekly' },
+                  { value: 'monthly', label: 'Monthly' },
+                  { value: 'quarterly', label: 'Quarterly' },
+                  { value: 'yearly', label: 'Yearly' },
+                ]}
                 value={filter.taskType}
-                onChange={(e) => setFilter({ ...filter, taskType: e.target.value })}
-                className="w-full text-sm px-1 py-1 border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text)] rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)] transition-colors"
-              >
-                <option value="">All Types</option>
-                <option value="daily">Daily</option>
-                <option value="weekly">Weekly</option>
-                <option value="monthly">Monthly</option>
-                <option value="quarterly">Quarterly</option>
-                <option value="yearly">Yearly</option>
-              </select>
+                onChange={(val) => setFilter({ ...filter, taskType: val })}
+                placeholder="Select task type"
+              />
             </div>
             <div>
               <label className="block text-sm font-medium text-[var(--color-text)] mb-1">Priority</label>
-              <select
+              <SearchableSelect
+                options={[
+                  { value: '', label: 'All Priorities' },
+                  { value: 'normal', label: 'Normal' },
+                  { value: 'high', label: 'High' },
+                ]}
                 value={filter.priority}
-                onChange={(e) => setFilter({ ...filter, priority: e.target.value })}
-                className="w-full text-sm px-1 py-1 border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text)] rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)] transition-colors"
-              >
-                <option value="">All Priorities</option>
-                <option value="normal">Normal</option>
-                <option value="high">High</option>
-              </select>
+                onChange={(val) => setFilter({ ...filter, priority: val })}
+                placeholder="Select priority"
+              />
             </div>
             {isAdmin && (
               <div>
                 <label className="block text-sm font-medium text-[var(--color-text)] mb-1">Team Member</label>
-                <select
+                <SearchableSelect
+                  options={[{ value: '', label: 'All Members' }, ...users.map((user) => ({ value: user._id, label: user.username }))]}
                   value={filter.assignedTo}
-                  onChange={(e) => setFilter({ ...filter, assignedTo: e.target.value })}
-                  className="w-full text-sm px-1 py-1 border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text)] rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)] transition-colors"
-                >
-                  <option value="">All Members</option>
-                  {users.map((user) => (
-                    <option key={user._id} value={user._id}>{user.username}</option>
-                  ))}
-                </select>
+                  onChange={(val) => setFilter({ ...filter, assignedTo: val })}
+                  placeholder="Select team member"
+                />
               </div>
             )}
             <div className="md:col-span-2 lg:col-span-1">

@@ -8,6 +8,8 @@ import TaskCompletionModal from '../components/TaskCompletionModal';
 import { useTaskSettings } from '../hooks/useTaskSettings';
 import { useTheme } from '../contexts/ThemeContext';
 import { address } from '../../utils/ipAddress';
+import SearchableSelect from '../components/SearchableSelect';
+
 
 interface Attachment {
   filename: string;
@@ -32,12 +34,18 @@ interface Task {
   revisionCount: number;
   createdAt: string;
   attachments: Attachment[];
+  isOnHold?: boolean; // Added for clarity in print
 }
 
 interface User {
   _id: string;
   username: string;
   email: string;
+  permissions: {
+    canViewAllTeamTasks: boolean;
+  };
+  role?: string;
+  phoneNumber?: string;
 }
 
 type SortOrder = 'asc' | 'desc' | 'none';
@@ -258,17 +266,17 @@ const PendingTasks: React.FC = () => {
 
   // New handler for raising objection
   const handleRaiseObjection = async (taskId: string) => {
+    if (!objectionRemarks.trim()) {
+      alert('Please provide remarks for the objection');
+      return;
+    }
+
+    if (objectionType === 'date_change' && !objectionRequestedDate) {
+      alert('Please select a new requested date');
+      return;
+    }
+
     try {
-      if (!objectionRemarks.trim()) {
-        alert('Please provide remarks for the objection');
-        return;
-      }
-
-      if (objectionType === 'date_change' && !objectionRequestedDate) {
-        alert('Please select a new requested date');
-        return;
-      }
-
       await axios.post(`${address}/api/objections/task/${taskId}`, {
         type: objectionType,
         requestedDate: objectionType === 'date_change' ? objectionRequestedDate : undefined,
@@ -299,7 +307,7 @@ const PendingTasks: React.FC = () => {
     const formData = new FormData();
     formData.append('remarks', remarks);
     formData.append('completedBy', completedOnBehalfBy || user?.id || '');
-    
+
     if (completedOnBehalfBy) {
       formData.append('completedOnBehalfBy', user?.id || '');
     }
@@ -687,6 +695,14 @@ const PendingTasks: React.FC = () => {
                 {(user?.role !== 'admin' || user?.role === 'pc') && (
                   <div className="flex space-x-1 ml-2 opacity-0 group-hover:opacity-100 transition-opacity">
                     <button
+                      onClick={() => updateTaskProgress(task._id, 'In Progress')}
+                      className="p-2 rounded-lg transition-all transform hover:scale-110 hover:bg-blue-500 hover:text-[--color-background] text-blue-500"
+                      title="Mark as In Progress"
+                      disabled={task.status === 'In Progress'}
+                    >
+                      <Clock size={16} />
+                    </button>
+                    <button
                       onClick={() => setShowCompleteModal(task._id)}
                       className="p-2 rounded-lg transition-all transform hover:scale-110 hover:bg-[--color-success] hover:text-[--color-background] text-[--color-success]"
                       title="Complete task"
@@ -719,6 +735,11 @@ const PendingTasks: React.FC = () => {
                 {task.dueDate && isDueToday(task.dueDate) && (
                   <span className="px-2 py-1 text-xs font-medium rounded-full shadow-sm animate-pulse bg-[--color-accent] text-[--color-background]">
                     🗓️ DUE TODAY
+                  </span>
+                )}
+                {task.status === 'In Progress' && (
+                  <span className="px-2 py-1 text-xs font-medium rounded-full bg-blue-500 text-white">
+                    IN PROGRESS
                   </span>
                 )}
               </div>
@@ -881,6 +902,11 @@ const PendingTasks: React.FC = () => {
                             🗓️ DUE TODAY
                           </span>
                         )}
+                        {task.status === 'In Progress' && (
+                          <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-500 text-white">
+                            IN PROGRESS
+                          </span>
+                        )}
                       </div>
                     </div>
                   </td>
@@ -940,6 +966,14 @@ const PendingTasks: React.FC = () => {
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                       <div className="flex space-x-2">
                         <button
+                          onClick={() => updateTaskProgress(task._id, 'In Progress')}
+                          className="p-2 rounded-lg transition-all transform hover:scale-110 text-blue-500"
+                          title="Mark as In Progress"
+                          disabled={task.status === 'In Progress'}
+                        >
+                          <Clock size={16} />
+                        </button>
+                        <button
                           onClick={() => setShowObjectionModal(task._id)}
                           className="transition-all transform hover:scale-110 text-[--color-warning]"
                           title="Raise objection"
@@ -976,6 +1010,22 @@ const PendingTasks: React.FC = () => {
   }
 
   const completingTask = getTaskToComplete();
+
+  const updateTaskProgress = async (taskId: string, status: string) => {
+    try {
+      await axios.patch(
+        `${address}/api/tasks/${taskId}`,
+        { status },
+        { headers: { 'Content-Type': 'application/json' } }
+      );
+
+      alert(`Task marked as ${status}`);
+      fetchTasks();
+    } catch (error: any) {
+      console.error('Error updating task status:', error);
+      alert(error.response?.data?.error || 'Failed to update task status');
+    }
+  };
 
   return (
     <div className="min-h-screen bg-[var(--color-background)] p-4 space-y-3">
@@ -1075,18 +1125,14 @@ const PendingTasks: React.FC = () => {
                   <Users size={14} className="inline mr-1" />
                   Team Member
                 </label>
-                <select
+                <SearchableSelect
+                  options={users.map(member => ({ label: member.username, value: member._id }))}
+                  placeholder="All Members"
                   value={filter.assignedTo}
-                  onChange={(e) => setFilter({ ...filter, assignedTo: e.target.value })}
-                  className="w-full text-sm px-1 py-1 border border-[--color-border] rounded-lg focus:ring-2 focus:ring-[--color-primary] focus:border-[--color-primary] transition-colors bg-[--color-background] text-[--color-text]"
-                >
-                  <option value="">All Members</option>
-                  {users.map((member) => (
-                    <option key={member._id} value={member._id}>
-                      {member.username}
-                    </option>
-                  ))}
-                </select>
+                  onChange={(selected) => setFilter({ ...filter, assignedTo: selected?.value || '' })}
+                  theme={theme}
+                  isMulti={false}
+                />
               </div>
             )}
 

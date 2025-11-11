@@ -925,8 +925,8 @@ const Dashboard: React.FC = () => {
               </div>
             </div>
 
-            {/* Additional Metrics Row */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mt-6">
+            {/* Additional Metrics Row - Enhanced with more data points */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-6 mt-6">
               <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-purple-500 to-purple-600 dark:from-purple-950 dark:to-purple-900 p-6 border border-purple-300 dark:border-purple-800">
                 <div className="flex items-start justify-between mb-4">
                   <div className="p-3 rounded-xl bg-white/20">
@@ -935,6 +935,7 @@ const Dashboard: React.FC = () => {
                 </div>
                 <p className="text-white/80 text-sm font-medium mb-2">Upcoming (&gt; Today)</p>
                 <p className="text-3xl font-bold text-white">{displayData?.upcomingTasks || 0}</p>
+                <p className="text-xs text-white/70 mt-2">Future tasks scheduled</p>
               </div>
 
               <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-orange-500 to-orange-600 dark:from-orange-950 dark:to-orange-900 p-6 border border-orange-300 dark:border-orange-800">
@@ -945,6 +946,7 @@ const Dashboard: React.FC = () => {
                 </div>
                 <p className="text-white/80 text-sm font-medium mb-2">In Progress</p>
                 <p className="text-3xl font-bold text-white">{displayData?.inProgressTasks || 0}</p>
+                <p className="text-xs text-white/70 mt-2">Currently being worked on</p>
               </div>
 
               <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-emerald-500 to-emerald-600 dark:from-emerald-950 dark:to-emerald-900 p-6 border border-emerald-300 dark:border-emerald-800">
@@ -968,6 +970,7 @@ const Dashboard: React.FC = () => {
                 </div>
                 <p className="text-white/80 text-sm font-medium mb-2">FMS Tasks</p>
                 <p className="text-3xl font-bold text-white">{displayData?.fmsTasks || 0}</p>
+                <p className="text-xs text-white/70 mt-2">Project-based tasks</p>
               </div>
 
               <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-teal-500 to-teal-600 dark:from-teal-950 dark:to-teal-900 p-6 border border-teal-300 dark:border-teal-800">
@@ -978,6 +981,18 @@ const Dashboard: React.FC = () => {
                 </div>
                 <p className="text-white/80 text-sm font-medium mb-2">FMS In Progress</p>
                 <p className="text-3xl font-bold text-white">{displayData?.fmsInProgressTasks || 0}</p>
+                <p className="text-xs text-white/70 mt-2">Active FMS tasks</p>
+              </div>
+
+              <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-pink-500 to-pink-600 dark:from-pink-950 dark:to-pink-900 p-6 border border-pink-300 dark:border-pink-800">
+                <div className="flex items-start justify-between mb-4">
+                  <div className="p-3 rounded-xl bg-white/20">
+                    <RefreshCw size={24} className="text-white" />
+                  </div>
+                </div>
+                <p className="text-white/80 text-sm font-medium mb-2">Today's Tasks</p>
+                <p className="text-3xl font-bold text-white">{displayData?.todayTasks || 0}</p>
+                <p className="text-xs text-white/70 mt-2">Due today</p>
               </div>
             </div>
           </div>

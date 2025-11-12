@@ -21,7 +21,7 @@ const AdminHelpTickets: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [selectedTicket, setSelectedTicket] = useState<string | null>(null);
   const [remark, setRemark] = useState('');
-  const [newStatus, setNewStatus] = useState('');
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     fetchTickets();
@@ -29,13 +29,23 @@ const AdminHelpTickets: React.FC = () => {
 
   const fetchTickets = async () => {
     try {
+      setError(null);
       const token = localStorage.getItem('token');
+      if (!token) {
+        setError('Authentication required. Please log in again.');
+        setLoading(false);
+        return;
+      }
+
       const response = await axios.get(`${address}/api/help-tickets/admin`, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      setTickets(response.data);
-    } catch (error) {
+      setTickets(response.data || []);
+    } catch (error: any) {
       console.error('Error fetching tickets:', error);
+      const errorMessage = error.response?.data?.error || error.message || 'Failed to load help tickets';
+      setError(errorMessage);
+      setTickets([]);
     } finally {
       setLoading(false);
     }
@@ -46,15 +56,24 @@ const AdminHelpTickets: React.FC = () => {
     
     try {
       const token = localStorage.getItem('token');
+      const userStr = localStorage.getItem('user');
+      const userId = userStr ? JSON.parse(userStr).id : null;
+      
+      if (!userId) {
+        alert('User information not found. Please log in again.');
+        return;
+      }
+
       await axios.post(
         `${address}/api/help-tickets/${ticketId}/remark`,
-        { remark },
+        { remark, by: userId },
         { headers: { Authorization: `Bearer ${token}` } }
       );
       setRemark('');
       setSelectedTicket(null);
       fetchTickets();
     } catch (error: any) {
+      console.error('Error adding remark:', error);
       alert(error.response?.data?.error || 'Failed to add remark');
     }
   };
@@ -105,6 +124,17 @@ const AdminHelpTickets: React.FC = () => {
         {loading ? (
           <div className="text-center py-12">
             <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-[--color-primary]"></div>
+          </div>
+        ) : error ? (
+          <div className="bg-red-50 border border-red-200 rounded-xl p-6 text-center">
+            <p className="text-red-700 font-medium mb-2">Unable to Load Help Tickets</p>
+            <p className="text-red-600 text-sm mb-4">{error}</p>
+            <button
+              onClick={fetchTickets}
+              className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+            >
+              Retry
+            </button>
           </div>
         ) : tickets.length === 0 ? (
           <div className="text-center py-12 bg-[--color-surface] rounded-xl border border-[--color-border]">

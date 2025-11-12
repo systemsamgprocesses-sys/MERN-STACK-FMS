@@ -187,52 +187,75 @@ const ViewFMSProgress: React.FC = () => {
             <p className="text-[var(--color-textSecondary)] text-sm">Create a project to get started</p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {/* Projects List */}
-            <div className="lg:col-span-1 space-y-4">
-              <h2 className="text-xl font-bold text-[var(--color-text)] mb-4 flex items-center">
-                <span className="w-1 h-6 bg-[var(--color-primary)] rounded-full mr-3"></span>
-                Projects
+          <div className="space-y-8">
+            {/* Projects Grid */}
+            <div>
+              <h2 className="text-2xl font-bold text-[var(--color-text)] mb-6 flex items-center">
+                <span className="w-1 h-8 bg-[var(--color-primary)] rounded-full mr-3"></span>
+                Your Projects
               </h2>
-              <div className="space-y-3">
-                {projects.map((project) => (
-                  <div
-                    key={project._id}
-                    onClick={() => setSelectedProject(project)}
-                    className={`p-4 rounded-2xl border-2 cursor-pointer transition-all duration-300 hover:shadow-lg ${
-                      selectedProject?._id === project._id
-                        ? 'border-[var(--color-primary)] bg-[var(--color-primary)]/5 shadow-lg'
-                        : 'border-[var(--color-border)] bg-[var(--color-surface)] hover:border-[var(--color-primary)]/50 hover:-translate-y-1'
-                    }`}
-                  >
-                    <div className="flex items-start justify-between mb-2">
-                      <h3 className="font-bold text-[var(--color-text)]">{project.projectName}</h3>
-                      {selectedProject?._id === project._id && (
-                        <span className="px-2 py-1 rounded-full text-xs font-semibold" style={{ backgroundColor: 'var(--color-primary)10', color: 'var(--color-primary)' }}>
-                          Active
-                        </span>
-                      )}
-                    </div>
-                    <p className="text-xs text-[var(--color-textSecondary)] mb-1 font-medium">{project.projectId}</p>
-                    <p className="text-xs text-[var(--color-textSecondary)] mb-3">
-                      📋 {project.fmsId?.fmsName || 'No FMS Assigned'}
-                    </p>
-                    <div className="flex items-center gap-2">
-                      <div className="flex-1 h-3 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden shadow-sm">
-                        <div
-                          className="h-full bg-gradient-to-r from-green-500 via-emerald-500 to-green-400 transition-all duration-500 rounded-full shadow-lg"
-                          style={{ 
-                            width: `${calculateProgress(project.tasks)}%`,
-                            boxShadow: '0 0 12px rgba(16, 185, 129, 0.6)'
-                          }}
-                        />
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5 mb-8">
+                {projects.map((project) => {
+                  const progress = calculateProgress(project.tasks);
+                  const isSelected = selectedProject?._id === project._id;
+                  
+                  return (
+                    <div
+                      key={project._id}
+                      onClick={() => setSelectedProject(project)}
+                      className={`cursor-pointer rounded-2xl overflow-hidden border-2 transition-all duration-300 transform hover:scale-105 hover:shadow-xl ${
+                        isSelected
+                          ? 'border-[var(--color-primary)] bg-[var(--color-primary)]/5 shadow-xl ring-2 ring-[var(--color-primary)]'
+                          : 'border-[var(--color-border)] bg-[var(--color-surface)] hover:border-[var(--color-primary)]/50'
+                      }`}
+                    >
+                      <div className="h-1 bg-gradient-to-r" style={{ 
+                        width: `${progress}%`,
+                        backgroundColor: progress >= 80 ? '#10b981' : progress >= 50 ? '#f59e0b' : '#ef4444'
+                      }} />
+                      
+                      <div className="p-4">
+                        <div className="flex items-start justify-between mb-3">
+                          <h3 className="font-bold text-[var(--color-text)] line-clamp-2 text-base">{project.projectName}</h3>
+                          {isSelected && (
+                            <span className="ml-2 px-2 py-1 rounded-full text-xs font-semibold whitespace-nowrap bg-[var(--color-primary)] text-white">
+                              Active
+                            </span>
+                          )}
+                        </div>
+                        
+                        <p className="text-xs text-[var(--color-textSecondary)] mb-2 font-mono truncate">{project.projectId}</p>
+                        
+                        <div className="mb-3 p-2 rounded-lg bg-[var(--color-background)] text-xs text-[var(--color-textSecondary)] truncate">
+                          📋 {project.fmsId?.fmsName || 'No FMS'}
+                        </div>
+                        
+                        <div className="space-y-2">
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs text-[var(--color-textSecondary)]">Progress</span>
+                            <span className="text-sm font-bold" style={{ color: progress >= 80 ? '#10b981' : progress >= 50 ? '#f59e0b' : '#ef4444' }}>{progress}%</span>
+                          </div>
+                          <div className="h-2 bg-gray-300 dark:bg-gray-600 rounded-full overflow-hidden">
+                            <div
+                              className="h-full transition-all duration-500 rounded-full"
+                              style={{ 
+                                width: `${progress}%`,
+                                backgroundColor: progress >= 80 ? '#10b981' : progress >= 50 ? '#f59e0b' : '#ef4444'
+                              }}
+                            />
+                          </div>
+                        </div>
+
+                        <div className="mt-4 pt-3 border-t border-[var(--color-border)] flex justify-between text-xs text-[var(--color-textSecondary)]">
+                          <span className="font-medium">{project.tasks.filter(t => t.status === 'Done').length}/{project.tasks.length}</span>
+                          <span className="px-2 py-1 rounded-full text-xs font-semibold" style={{ backgroundColor: 'var(--color-primary)10', color: 'var(--color-primary)' }}>
+                            {project.status}
+                          </span>
+                        </div>
                       </div>
-                      <span className="text-xs font-bold min-w-fit" style={{ color: '#10b981' }}>
-                        {calculateProgress(project.tasks)}%
-                      </span>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
 
@@ -377,14 +400,12 @@ const ViewFMSProgress: React.FC = () => {
                     <AlertCircle size={32} style={{ color: 'var(--color-primary)' }} />
                   </div>
                   <p className="text-[var(--color-text)] font-medium">Select a project to view details</p>
-                  <p className="text-[var(--color-textSecondary)] text-sm">Choose from the list on the left</p>
+                  <p className="text-[var(--color-textSecondary)] text-sm">Click a project card above to see full details</p>
                 </div>
               )}
             </div>
           </div>
         )}
-
-        {/* Task Update Modal */}
         {selectedTask && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
             <div className="bg-[var(--color-surface)] rounded-lg p-6 max-w-lg w-full mx-4 max-h-[90vh] overflow-y-auto">

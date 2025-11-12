@@ -59,6 +59,8 @@ router.post('/', async (req, res) => {
 
     const ticket = new HelpTicket({
       raisedBy,
+      title,
+      // keep subject for backward compatibility
       subject: title,
       description,
       priority,

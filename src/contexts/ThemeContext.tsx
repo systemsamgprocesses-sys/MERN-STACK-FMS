@@ -93,6 +93,3 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 };
 
 export const availableThemes = Object.keys(themes);
-export const themeNames = Object.fromEntries(
-  Object.entries(themes).map(([key, value]) => [key, value.name])
-);

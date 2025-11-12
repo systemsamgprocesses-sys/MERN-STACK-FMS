@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { CheckSquare, Clock, RefreshCcw, Search, Users, Calendar, ArrowUpDown, ArrowUp, ArrowDown, Filter, Paperclip, FileText, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from 'lucide-react';
+import { CheckSquare, Clock, RefreshCcw, Search, Users, Calendar, ArrowUpDown, ArrowUp, ArrowDown, Filter, Paperclip, FileText, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, AlertTriangle } from 'lucide-react';
 import axios from 'axios';
 import ViewToggle from '../components/ViewToggle';
 import PriorityBadge from '../components/PriorityBadge';
@@ -91,6 +91,8 @@ const PendingTasks: React.FC = () => {
   const isMobile = useIsMobile();
   const [allTasks, setAllTasks] = useState<Task[]>([]);
   const [tasks, setTasks] = useState<Task[]>([]);
+  const [pendingTasks, setPendingTasks] = useState<Task[]>([]);
+  const [upcomingTasks, setUpcomingTasks] = useState<Task[]>([]);
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [view, setView] = useState<'table' | 'card'>(getInitialViewPreference);
@@ -245,6 +247,26 @@ const PendingTasks: React.FC = () => {
       });
     }
 
+    // Separate into pending (dueDate <= today) and upcoming (dueDate > today)
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const pending = filteredTasks.filter(task => {
+      if (!task.dueDate) return true; // Tasks without dueDate go to pending
+      const dueDate = new Date(task.dueDate);
+      dueDate.setHours(0, 0, 0, 0);
+      return dueDate <= today;
+    });
+
+    const upcoming = filteredTasks.filter(task => {
+      if (!task.dueDate) return false;
+      const dueDate = new Date(task.dueDate);
+      dueDate.setHours(0, 0, 0, 0);
+      return dueDate > today;
+    });
+
+    setPendingTasks(pending);
+    setUpcomingTasks(upcoming);
     setTasks(filteredTasks);
   };
 
@@ -693,28 +715,31 @@ const PendingTasks: React.FC = () => {
                   {task.title}
                 </h3>
                 {(user?.role !== 'admin' || user?.role === 'pc') && (
-                  <div className="flex space-x-1 ml-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <div className="flex space-x-2 ml-2 opacity-0 group-hover:opacity-100 transition-opacity">
                     <button
                       onClick={() => updateTaskProgress(task._id, 'In Progress')}
-                      className="p-2 rounded-lg transition-all transform hover:scale-110 hover:bg-blue-500 hover:text-[--color-background] text-blue-500"
+                      className="px-3 py-2 rounded-lg transition-all transform hover:scale-105 bg-blue-50 hover:bg-blue-500 text-blue-600 hover:text-white border border-blue-300 hover:border-blue-600 font-medium text-xs flex items-center gap-1"
                       title="Mark as In Progress"
                       disabled={task.status === 'In Progress'}
                     >
-                      <Clock size={16} />
+                      <Clock size={14} />
+                      <span className="hidden sm:inline">In Progress</span>
                     </button>
                     <button
                       onClick={() => setShowCompleteModal(task._id)}
-                      className="p-2 rounded-lg transition-all transform hover:scale-110 hover:bg-[--color-success] hover:text-[--color-background] text-[--color-success]"
+                      className="px-3 py-2 rounded-lg transition-all transform hover:scale-105 bg-green-50 hover:bg-green-500 text-green-600 hover:text-white border border-green-300 hover:border-green-600 font-medium text-xs flex items-center gap-1"
                       title="Complete task"
                     >
-                      <CheckSquare size={16} />
+                      <CheckSquare size={14} />
+                      <span className="hidden sm:inline">Complete</span>
                     </button>
                     <button
                       onClick={() => setShowObjectionModal(task._id)}
-                      className="p-2 rounded-lg transition-all transform hover:scale-110 hover:bg-[--color-warning] hover:text-[--color-background] text-[--color-warning]"
+                      className="px-3 py-2 rounded-lg transition-all transform hover:scale-105 bg-orange-50 hover:bg-orange-500 text-orange-600 hover:text-white border border-orange-300 hover:border-orange-600 font-medium text-xs flex items-center gap-1"
                       title="Raise objection"
                     >
-                      <RefreshCcw size={16} />
+                      <RefreshCcw size={14} />
+                      <span className="hidden sm:inline">Objection</span>
                     </button>
                   </div>
                 )}
@@ -964,28 +989,31 @@ const PendingTasks: React.FC = () => {
                   </td>
                   {user?.role !== 'admin' && (
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                      <div className="flex space-x-2">
+                      <div className="flex space-x-2 gap-1">
                         <button
                           onClick={() => updateTaskProgress(task._id, 'In Progress')}
-                          className="p-2 rounded-lg transition-all transform hover:scale-110 text-blue-500"
+                          className="px-3 py-2 rounded-lg transition-all transform hover:scale-105 bg-blue-50 hover:bg-blue-500 text-blue-600 hover:text-white border border-blue-300 hover:border-blue-600 font-medium text-xs flex items-center gap-1"
                           title="Mark as In Progress"
                           disabled={task.status === 'In Progress'}
                         >
-                          <Clock size={16} />
-                        </button>
-                        <button
-                          onClick={() => setShowObjectionModal(task._id)}
-                          className="transition-all transform hover:scale-110 text-[--color-warning]"
-                          title="Raise objection"
-                        >
-                          <RefreshCcw size={16} />
+                          <Clock size={14} />
+                          <span>In Progress</span>
                         </button>
                         <button
                           onClick={() => setShowCompleteModal(task._id)}
-                          className="transition-all transform hover:scale-110 text-[--color-success]"
+                          className="px-3 py-2 rounded-lg transition-all transform hover:scale-105 bg-green-50 hover:bg-green-500 text-green-600 hover:text-white border border-green-300 hover:border-green-600 font-medium text-xs flex items-center gap-1"
                           title="Complete task"
                         >
-                          <CheckSquare size={16} />
+                          <CheckSquare size={14} />
+                          <span>Complete</span>
+                        </button>
+                        <button
+                          onClick={() => setShowObjectionModal(task._id)}
+                          className="px-3 py-2 rounded-lg transition-all transform hover:scale-105 bg-orange-50 hover:bg-orange-500 text-orange-600 hover:text-white border border-orange-300 hover:border-orange-600 font-medium text-xs flex items-center gap-1"
+                          title="Raise objection"
+                        >
+                          <RefreshCcw size={14} />
+                          <span>Objection</span>
                         </button>
                       </div>
                     </td>
@@ -1034,10 +1062,10 @@ const PendingTasks: React.FC = () => {
         <div className="flex items-center">
           <div>
             <h1 className="text-lg font-bold text-[--color-text]">
-              Pending Tasks
+              Tasks Overview
             </h1>
             <p className="mt-0 text-xs text-[--color-textSecondary]">
-              {tasks.length + fmsTasks.length} pending task(s) found ({tasks.length} regular + {fmsTasks.length} FMS)
+              {pendingTasks.length} pending + {upcomingTasks.length} upcoming + {fmsTasks.length} FMS tasks
               {sortOrder !== 'none' && (
                 <span className="ml-2 text-[--color-primary]">
                   • Sorted by due date ({sortOrder === 'asc' ? 'earliest first' : 'latest first'})
@@ -1207,20 +1235,66 @@ const PendingTasks: React.FC = () => {
       )}
 
       {/* Content */}
-      {tasks.length === 0 && fmsTasks.length === 0 ? (
+      {pendingTasks.length === 0 && upcomingTasks.length === 0 && fmsTasks.length === 0 ? (
         <div className="text-center py-12">
           <div className="rounded-full w-24 h-24 flex items-center justify-center mx-auto mb-4 bg-gradient-to-r from-[--color-primary] to-[--color-accent]">
             <CheckSquare size={48} className="text-[--color-background]" />
           </div>
-          <p className="text-lg text-[--color-textSecondary]">No pending tasks found</p>
+          <p className="text-lg text-[--color-textSecondary]">No pending or upcoming tasks found</p>
           <p className="text-sm mt-2 text-[--color-textSecondary]">Try adjusting your filters or check back later</p>
         </div>
-      ) : tasks.length > 0 ? (
+      ) : (
         <>
-          <h2 className="text-md font-semibold text-[--color-text] mb-3">Regular Pending Tasks</h2>
-          {isMobile || view === 'card' ? renderCardView() : renderTableView()}
+          {/* Pending Tasks Section */}
+          {pendingTasks.length > 0 && (
+            <div>
+              <h2 className="text-md font-semibold text-[--color-text] mb-3 flex items-center gap-2">
+                <AlertTriangle size={18} className="text-red-500" />
+                Pending Tasks ({pendingTasks.length})
+              </h2>
+              {isMobile || view === 'card' ? renderCardView() : renderTableView()}
+            </div>
+          )}
+
+          {/* Upcoming Tasks Section */}
+          {upcomingTasks.length > 0 && (
+            <div className="mt-8">
+              <h2 className="text-md font-semibold text-[--color-text] mb-3 flex items-center gap-2">
+                <Calendar size={18} className="text-blue-500" />
+                Upcoming Tasks ({upcomingTasks.length})
+              </h2>
+              <p className="text-sm text-[--color-textSecondary] mb-3">Tasks with due dates in the future</p>
+              {/* Render upcoming tasks - for now, use same view but with upcoming tasks data */}
+              <div className="space-y-4">
+                {/* Simple list view for upcoming tasks */}
+                {upcomingTasks.map((task) => (
+                  <div key={task._id} className="rounded-lg border border-[--color-border] bg-[--color-surface] p-4">
+                    <div className="flex justify-between items-start mb-2">
+                      <div className="flex-1">
+                        <h4 className="font-medium text-[--color-text]">{task.title}</h4>
+                        <p className="text-sm text-[--color-textSecondary]">{task.description}</p>
+                      </div>
+                    </div>
+                    <div className="flex gap-2 flex-wrap text-sm">
+                      <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded">Due: {task.dueDate ? new Date(task.dueDate).toLocaleDateString() : 'N/A'}</span>
+                      <span className="px-2 py-1 bg-gray-100 text-gray-800 rounded">{task.priority}</span>
+                      {task.assignedTo && <span className="px-2 py-1 bg-gray-100 text-gray-800 rounded">→ {task.assignedTo.username}</span>}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Regular Pending Tasks Section (FMS) */}
+          {fmsTasks.length > 0 && (
+            <div className="mt-8">
+              <h2 className="text-md font-semibold text-[--color-text] mb-3">FMS Pending Tasks</h2>
+              {/* FMS tasks will be rendered by existing FMS section below */}
+            </div>
+          )}
         </>
-      ) : null}
+      )}
 
       {/* Task Completion Modal */}
       {showCompleteModal && completingTask && (

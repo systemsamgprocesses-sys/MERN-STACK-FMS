@@ -1,5 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { useTheme } from '../contexts/ThemeContext';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -9,11 +8,11 @@ import {
   CheckSquare, Clock, AlertTriangle, TrendingUp, Calendar,
   Target, Activity, CheckCircle, XCircle, Timer,
   ChevronDown, Star, Zap, BarChart3,
-  PieChart as PieChartIcon, Users, RotateCcw, UserCheck, RefreshCw
+  PieChart as PieChartIcon, Users, RotateCcw, UserCheck,
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import axios from 'axios';
-import { format, startOfMonth, endOfMonth, subMonths, addMonths, isThisMonth, isSameMonth, isSameYear } from 'date-fns';
+import { format, startOfMonth, endOfMonth, subMonths } from 'date-fns';
 // import { availableThemes } from '../contexts/ThemeContext';
 import { address } from '../../utils/ipAddress';
 
@@ -124,22 +123,6 @@ interface DashboardData {
     onTimeCompletedTasks: number;
     onTimeRecurringCompleted: number;
   };
-  totalTasks: number;
-  completedTasks: number;
-  pendingTasks: number;
-  totalUsers: number;
-  recurringTasks: number;
-  recurringPending: number;
-  recentTasks: any[];
-  inProgressTasks?: number;
-  overdueTasks?: number;
-  todayTasks?: number;
-  assignedByMe?: {
-    total: number;
-    pending: number;
-    completed: number;
-    inProgress: number;
-  };
 }
 
 interface TaskCounts {
@@ -194,9 +177,7 @@ interface TaskCounts {
 
 const Dashboard: React.FC = () => {
   const { user } = useAuth();
-  const { theme } = useTheme();
   const navigate = useNavigate();
-  useTheme();
   const [dashboardData, setDashboardData] = useState<DashboardData | null>(() => {
     const cached = localStorage.getItem('dashboardData');
     if (cached) {
@@ -220,8 +201,7 @@ const Dashboard: React.FC = () => {
     return null;
   });
   const [loading, setLoading] = useState(!dashboardData || !taskCounts);
-  const [selectedMonth, setSelectedMonth] = useState(new Date());
-  const [showMonthFilter, setShowMonthFilter] = useState(false);
+  const [selectedMonth] = useState(new Date());
   const [viewMode, setViewMode] = useState<'current' | 'all-time'>('all-time');
 
   // New states for team member selection
@@ -291,7 +271,6 @@ const Dashboard: React.FC = () => {
     pendingValue?: number;
     completedValue?: number;
   }) => {
-    console.log(`MetricCard ${title}:`, { percentage, value, subtitle }); // Debug log
     const safePercentage = Number.isFinite(percentage) ? percentage : 0; // Ensure valid number
 
     return (
@@ -404,7 +383,7 @@ const Dashboard: React.FC = () => {
   // Team Member Selector Component
   const TeamMemberSelector = () => {
     const [teamMembers, setTeamMembers] = useState<Array<{id: string, username: string}>>([]);
-
+    
     useEffect(() => {
       const fetchTeamMembers = async () => {
         try {
@@ -417,7 +396,7 @@ const Dashboard: React.FC = () => {
           console.error('Error fetching team members:', error);
         }
       };
-
+      
       fetchTeamMembers();
     }, []);
 
@@ -434,7 +413,7 @@ const Dashboard: React.FC = () => {
         >
           <div className="flex items-center">
             <Users size={16} className="mr-2" />
-            <span>{selectedTeamMember === 'all' ? 'All Team Members' :
+            <span>{selectedTeamMember === 'all' ? 'All Team Members' : 
               teamMembers.find(m => m.id === selectedTeamMember)?.username || 'Select Member'}</span>
             <ChevronDown size={16} className="ml-2" />
           </div>
@@ -498,11 +477,64 @@ const Dashboard: React.FC = () => {
   };
 
   // --- Core Data Fetching Logic ---
-  // Using useCallback for memoization of fetch functions
-  const fetchDashboardAnalytics = useCallback(async (startDate?: string, endDate?: string) => {
+  // Helper function to generate cache key based on all relevant parameters
+  const generateCacheKey = useCallback((type: 'analytics' | 'counts', userId?: string, startDate?: string, endDate?: string) => {
+    const keyParts = [
+      type,
+      userId || 'all',
+      viewMode,
+      startDate || 'all-time',
+      endDate || 'all-time',
+      user?.id || 'no-user'
+    ];
+    return `dashboard_${keyParts.join('_')}`;
+  }, [viewMode, user?.id]);
+
+  // Helper function to get cached data
+  const getCachedData = useCallback((cacheKey: string) => {
     try {
+      const cached = localStorage.getItem(cacheKey);
+      if (cached) {
+        const { data, timestamp } = JSON.parse(cached);
+        // Cache for 5 minutes
+        if (Date.now() - timestamp < 5 * 60 * 1000) {
+          return data;
+        }
+      }
+    } catch (error) {
+      console.error('Error reading cache:', error);
+    }
+    return null;
+  }, []);
+
+  // Helper function to set cached data
+  const setCachedData = useCallback((cacheKey: string, data: any) => {
+    try {
+      localStorage.setItem(cacheKey, JSON.stringify({
+        data,
+        timestamp: Date.now()
+      }));
+    } catch (error) {
+      console.error('Error setting cache:', error);
+    }
+  }, []);
+
+  // Using useCallback for memoization of fetch functions
+  const fetchDashboardAnalytics = useCallback(async (startDate?: string, endDate?: string, forceRefresh = false) => {
+    try {
+      const userId = selectedTeamMember === 'all' ? undefined : selectedTeamMember;
+      const cacheKey = generateCacheKey('analytics', userId, startDate, endDate);
+      
+      // Check cache first unless force refresh
+      if (!forceRefresh) {
+        const cachedData = getCachedData(cacheKey);
+        if (cachedData) {
+          return cachedData;
+        }
+      }
+
       const params: any = {
-        userId: selectedTeamMember === 'all' ? undefined : selectedTeamMember,
+        userId,
         isAdmin: (user?.role === 'admin' || user?.role === 'superadmin' || user?.role === 'manager') ? 'true' : 'false',
         includeTeam: 'true',
         includeAllTimeMetrics: viewMode === 'all-time' ? 'true' : 'false'
@@ -513,24 +545,32 @@ const Dashboard: React.FC = () => {
       }
 
       const response = await axios.get(`${address}/api/dashboard/analytics`, { params });
-
+      
       // Cache the response
-      localStorage.setItem('dashboardData', JSON.stringify({
-        data: response.data,
-        timestamp: Date.now()
-      }));
-
+      setCachedData(cacheKey, response.data);
+      
       return response.data;
     } catch (error) {
       console.error('Error fetching dashboard analytics:', error);
       return null;
     }
-  }, [user, selectedTeamMember, viewMode]);
+  }, [user, selectedTeamMember, viewMode, generateCacheKey, getCachedData, setCachedData]);
 
-  const fetchTaskCounts = useCallback(async (startDate?: string, endDate?: string) => {
+  const fetchTaskCounts = useCallback(async (startDate?: string, endDate?: string, forceRefresh = false) => {
     try {
+      const userId = selectedTeamMember === 'all' ? undefined : selectedTeamMember;
+      const cacheKey = generateCacheKey('counts', userId, startDate, endDate);
+      
+      // Check cache first unless force refresh
+      if (!forceRefresh) {
+        const cachedData = getCachedData(cacheKey);
+        if (cachedData) {
+          return cachedData;
+        }
+      }
+
       const params: any = {
-        userId: selectedTeamMember === 'all' ? undefined : selectedTeamMember,
+        userId,
         isAdmin: (user?.role === 'admin' || user?.role === 'superadmin' || user?.role === 'manager') ? 'true' : 'false',
         includeTeam: 'true',
         includeAllTimeMetrics: viewMode === 'all-time' ? 'true' : 'false'
@@ -544,19 +584,16 @@ const Dashboard: React.FC = () => {
       }
 
       const response = await axios.get(`${address}/api/dashboard/counts`, { params });
-
+      
       // Cache the response
-      localStorage.setItem('taskCounts', JSON.stringify({
-        data: response.data,
-        timestamp: Date.now()
-      }));
-
+      setCachedData(cacheKey, response.data);
+      
       return response.data;
     } catch (error) {
       console.error('Error fetching task counts:', error);
       return null;
     }
-  }, [user, selectedTeamMember, viewMode]);
+  }, [user, selectedTeamMember, viewMode, generateCacheKey, getCachedData, setCachedData]);
 
   // New function to fetch individual member trend data
   const fetchMemberTrendData = useCallback(async (memberUsername: string, startDate?: string, endDate?: string) => {
@@ -578,8 +615,40 @@ const Dashboard: React.FC = () => {
     }
   }, []);
 
+  // Use ref to track previous values and prevent unnecessary API calls
+  const prevParamsRef = useRef<{
+    userId?: string;
+    viewMode: string;
+    monthKey?: string;
+  }>({
+    userId: undefined,
+    viewMode: 'all-time',
+    monthKey: undefined
+  });
+
   useEffect(() => {
     const loadData = async () => {
+      if (!user?.id) return;
+
+      const userId = selectedTeamMember === 'all' ? undefined : selectedTeamMember;
+      const monthKey = viewMode === 'current' 
+        ? `${selectedMonth.getFullYear()}-${selectedMonth.getMonth()}` 
+        : 'all-time';
+
+      // Check if parameters actually changed
+      const paramsChanged = 
+        prevParamsRef.current.userId !== userId ||
+        prevParamsRef.current.viewMode !== viewMode ||
+        prevParamsRef.current.monthKey !== monthKey;
+
+      if (!paramsChanged && dashboardData && taskCounts) {
+        // Parameters haven't changed and we have data, skip API call
+        return;
+      }
+
+      // Update ref with current values
+      prevParamsRef.current = { userId, viewMode, monthKey };
+
       setLoading(true);
       try {
         let analyticsData = null;
@@ -607,24 +676,38 @@ const Dashboard: React.FC = () => {
       }
     };
 
-    if (user?.id) {
-      loadData();
-    }
-  }, [user, selectedMonth, viewMode, fetchDashboardAnalytics, fetchTaskCounts]);
+    loadData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id, selectedMonth, viewMode, selectedTeamMember]);
 
   // Load member trend data when selected team member changes
   useEffect(() => {
     const loadMemberTrendData = async () => {
       if ((user?.role === 'admin' || user?.role === 'superadmin' || user?.role === 'manager') && selectedTeamMember && selectedTeamMember !== 'all') {
         try {
+          // Get username for member-trend API (it expects username, not ID)
+          // Since selectedTeamMember might be ID or username, we need to handle both
+          // If it's an ID, we need to find the username from teamPerformance
+          let memberUsername = selectedTeamMember;
+          
+          // Check if selectedTeamMember is an ID (MongoDB ObjectId format) or username
+          // If it looks like an ID (24 hex chars), we can't use it for member-trend API
+          // The member-trend API expects username, not ID
+          if (memberUsername.length === 24 && /^[0-9a-fA-F]{24}$/.test(memberUsername)) {
+            // It's an ID, skip member trend data fetch
+            // TODO: Properly map ID to username when TeamMemberSelector uses IDs
+            setMemberTrendData([]);
+            return;
+          }
+
           let memberTrendDataResult = null;
 
           if (viewMode === 'current') {
             const monthStart = startOfMonth(selectedMonth);
             const monthEnd = endOfMonth(selectedMonth);
-            memberTrendDataResult = await fetchMemberTrendData(selectedTeamMember, monthStart.toISOString(), monthEnd.toISOString());
+            memberTrendDataResult = await fetchMemberTrendData(memberUsername, monthStart.toISOString(), monthEnd.toISOString());
           } else {
-            memberTrendDataResult = await fetchMemberTrendData(selectedTeamMember);
+            memberTrendDataResult = await fetchMemberTrendData(memberUsername);
           }
 
           if (memberTrendDataResult) {
@@ -633,29 +716,16 @@ const Dashboard: React.FC = () => {
         } catch (error) {
           console.error('Error loading member trend data:', error);
         }
+      } else {
+        setMemberTrendData([]);
       }
     };
 
     loadMemberTrendData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedTeamMember, viewMode, selectedMonth, fetchMemberTrendData, user?.role]);
 
   // --- Helper Functions ---
-  const generateMonthOptions = () => {
-    const options = [];
-    const currentDate = new Date();
-
-    for (let i = 5; i >= 1; i--) {
-      options.push(subMonths(currentDate, i));
-    }
-    options.push(currentDate);
-    for (let i = 1; i <= 5; i++) {
-      options.push(addMonths(currentDate, i));
-    }
-
-    return options;
-  };
-
-  const monthOptions = generateMonthOptions();
 
   const statusColors = {
     pending: 'var(--color-warning)',
@@ -779,11 +849,20 @@ const Dashboard: React.FC = () => {
 
   const teamMembersList = getTeamMembersList();
 
-  console.log('displayData for Overdue:', {
-    overdueTasks: displayData?.overdueTasks,
-    totalTasks: displayData?.totalTasks,
-    percentage: ((displayData?.overdueTasks ?? 0) / (displayData?.totalTasks || 1)) * 100
-  });
+  // Helper to get username for display when selectedTeamMember is an ID or username
+  const getDisplayName = useCallback(() => {
+    if (selectedTeamMember === 'all') return 'All Team';
+    // If selectedTeamMember is already a username (not an ID), return it
+    // Check if it's an ID format (24 hex chars)
+    if (selectedTeamMember.length === 24 && /^[0-9a-fA-F]{24}$/.test(selectedTeamMember)) {
+      // It's an ID, try to find username from teamPerformance
+      // Since teamPerformance doesn't have IDs, we can't directly map
+      // Return the ID for now (will be improved with proper data structure)
+      return selectedTeamMember;
+    }
+    // It's a username, return it
+    return selectedTeamMember;
+  }, [selectedTeamMember]);
 
   if (loading) {
     return (
@@ -925,8 +1004,8 @@ const Dashboard: React.FC = () => {
               </div>
             </div>
 
-            {/* Additional Metrics Row - Enhanced with more data points */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-6 mt-6">
+            {/* Additional Quick Stats Row */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6 mt-6">
               <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-purple-500 to-purple-600 dark:from-purple-950 dark:to-purple-900 p-6 border border-purple-300 dark:border-purple-800">
                 <div className="flex items-start justify-between mb-4">
                   <div className="p-3 rounded-xl bg-white/20">
@@ -935,7 +1014,6 @@ const Dashboard: React.FC = () => {
                 </div>
                 <p className="text-white/80 text-sm font-medium mb-2">Upcoming (&gt; Today)</p>
                 <p className="text-3xl font-bold text-white">{displayData?.upcomingTasks || 0}</p>
-                <p className="text-xs text-white/70 mt-2">Future tasks scheduled</p>
               </div>
 
               <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-orange-500 to-orange-600 dark:from-orange-950 dark:to-orange-900 p-6 border border-orange-300 dark:border-orange-800">
@@ -946,7 +1024,6 @@ const Dashboard: React.FC = () => {
                 </div>
                 <p className="text-white/80 text-sm font-medium mb-2">In Progress</p>
                 <p className="text-3xl font-bold text-white">{displayData?.inProgressTasks || 0}</p>
-                <p className="text-xs text-white/70 mt-2">Currently being worked on</p>
               </div>
 
               <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-emerald-500 to-emerald-600 dark:from-emerald-950 dark:to-emerald-900 p-6 border border-emerald-300 dark:border-emerald-800">
@@ -965,12 +1042,11 @@ const Dashboard: React.FC = () => {
               <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-indigo-500 to-indigo-600 dark:from-indigo-950 dark:to-indigo-900 p-6 border border-indigo-300 dark:border-indigo-800">
                 <div className="flex items-start justify-between mb-4">
                   <div className="p-3 rounded-xl bg-white/20">
-                    <Activity size={24} className="text-white" />
+                    <Target size={24} className="text-white" />
                   </div>
                 </div>
                 <p className="text-white/80 text-sm font-medium mb-2">FMS Tasks</p>
                 <p className="text-3xl font-bold text-white">{displayData?.fmsTasks || 0}</p>
-                <p className="text-xs text-white/70 mt-2">Project-based tasks</p>
               </div>
 
               <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-teal-500 to-teal-600 dark:from-teal-950 dark:to-teal-900 p-6 border border-teal-300 dark:border-teal-800">
@@ -981,18 +1057,6 @@ const Dashboard: React.FC = () => {
                 </div>
                 <p className="text-white/80 text-sm font-medium mb-2">FMS In Progress</p>
                 <p className="text-3xl font-bold text-white">{displayData?.fmsInProgressTasks || 0}</p>
-                <p className="text-xs text-white/70 mt-2">Active FMS tasks</p>
-              </div>
-
-              <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-pink-500 to-pink-600 dark:from-pink-950 dark:to-pink-900 p-6 border border-pink-300 dark:border-pink-800">
-                <div className="flex items-start justify-between mb-4">
-                  <div className="p-3 rounded-xl bg-white/20">
-                    <RefreshCw size={24} className="text-white" />
-                  </div>
-                </div>
-                <p className="text-white/80 text-sm font-medium mb-2">Today's Tasks</p>
-                <p className="text-3xl font-bold text-white">{displayData?.todayTasks || 0}</p>
-                <p className="text-xs text-white/70 mt-2">Due today</p>
               </div>
             </div>
           </div>
@@ -1397,7 +1461,7 @@ const Dashboard: React.FC = () => {
                       >
                         <Users size={16} className="mr-2" />
                         <span>
-                          {selectedTeamMember === 'all' ? 'All Team' : selectedTeamMember}
+                          {selectedTeamMember === 'all' ? 'All Team' : getDisplayName()}
                         </span>
                         <ChevronDown size={16} className="ml-2" />
                       </button>
@@ -1427,34 +1491,46 @@ const Dashboard: React.FC = () => {
                                   </div>
                                 </div>
                               </button>
-                              {teamMembersList.map((member, index) => (
-                                <button
-                                  key={member.username}
-                                  onClick={() => {
-                                    setSelectedTeamMember(member.username);
-                                    setShowTeamMemberFilter(false);
-                                  }}
-                                  className={`w-full text-left px-3 py-3 rounded-xl transition-all duration-200 ${selectedTeamMember === member.username
-                                    ? 'bg-[var(--color-primary)] text-white shadow-lg'
-                                    : 'hover:bg-[var(--color-border)] text-[var(--color-text)]'
-                                    }`}
-                                >
-                                  <div className="flex items-center justify-between">
-                                    <div className="flex items-center space-x-3">
-                                      <div className="w-8 h-8 rounded-xl bg-gradient-to-r from-blue-400 to-purple-600 flex items-center justify-center text-white font-bold text-sm">
-                                        {member.username.charAt(0).toUpperCase()}
+                              {teamMembersList.map((member, index) => {
+                                // Find the corresponding team member ID from dashboardData
+                                // Since teamMembersList only has username, we need to match it
+                                // For now, we'll use username as the identifier for this dropdown
+                                // This creates inconsistency but is needed for member-trend API
+                                const isSelected = selectedTeamMember === member.username || 
+                                  (selectedTeamMember !== 'all' && getDisplayName() === member.username);
+                                
+                                return (
+                                  <button
+                                    key={member.username}
+                                    onClick={() => {
+                                      // Use username here since member-trend API needs it
+                                      // This creates inconsistency with TeamMemberSelector which uses ID
+                                      // TODO: Refactor to use consistent ID-based system
+                                      setSelectedTeamMember(member.username);
+                                      setShowTeamMemberFilter(false);
+                                    }}
+                                    className={`w-full text-left px-3 py-3 rounded-xl transition-all duration-200 ${isSelected
+                                      ? 'bg-[var(--color-primary)] text-white shadow-lg'
+                                      : 'hover:bg-[var(--color-border)] text-[var(--color-text)]'
+                                      }`}
+                                  >
+                                    <div className="flex items-center justify-between">
+                                      <div className="flex items-center space-x-3">
+                                        <div className="w-8 h-8 rounded-xl bg-gradient-to-r from-blue-400 to-purple-600 flex items-center justify-center text-white font-bold text-sm">
+                                          {member.username.charAt(0).toUpperCase()}
+                                        </div>
+                                        <div>
+                                          <span className="font-semibold">{member.username}</span>
+                                          <p className="text-xs opacity-75">{member.totalTasks} tasks {member.completionRate.toFixed(1)}% completion</p>
+                                        </div>
                                       </div>
-                                      <div>
-                                        <span className="font-semibold">{member.username}</span>
-                                        <p className="text-xs opacity-75">{member.totalTasks} tasks {member.completionRate.toFixed(1)}% completion</p>
+                                      <div className="text-right">
+                                        <div className="text-sm font-bold opacity-75">{index + 1}</div>
                                       </div>
                                     </div>
-                                    <div className="text-right">
-                                      <div className="text-sm font-bold opacity-75">{index + 1}</div>
-                                    </div>
-                                  </div>
-                                </button>
-                              ))}
+                                  </button>
+                                );
+                              })}
                             </div>
                           </ThemeCard>
                         </div>
@@ -1492,14 +1568,14 @@ const Dashboard: React.FC = () => {
                 <div className="mb-6 p-4 rounded-2xl border border-[var(--color-primary)]/30" style={{ backgroundColor: 'var(--color-primary)05' }}>
                   <div className="flex items-center space-x-3">
                     <div className="w-10 h-10 rounded-2xl bg-gradient-to-r from-blue-400 to-purple-600 flex items-center justify-center text-white font-bold">
-                      {selectedTeamMember.charAt(0).toUpperCase()}
+                      {getDisplayName()?.charAt(0).toUpperCase() || '?'}
                     </div>
                     <div>
                       <h4 className="text-lg font-bold text-[var(--color-text)]">
-                        {selectedTeamMember}'s Performance Trend
+                        {getDisplayName() || selectedTeamMember}'s Performance Trend
                       </h4>
                       <p className="text-sm text-[var(--color-textSecondary)]">
-                        Showing individual completion data for {selectedTeamMember}
+                        Showing individual completion data for {getDisplayName() || selectedTeamMember}
                       </p>
                     </div>
                   </div>
@@ -1571,7 +1647,7 @@ const Dashboard: React.FC = () => {
                                 {label} {new Date().getFullYear()}
                                 {selectedTeamMember !== 'all' && (
                                   <span className="block text-xs opacity-75">
-                                    {selectedTeamMember}'s Data
+                                    {getDisplayName() || selectedTeamMember}'s Data
                                   </span>
                                 )}
                               </p>

@@ -14,6 +14,8 @@ const checklistSchema = new mongoose.Schema({
   parentChecklistId: { type: mongoose.Schema.Types.ObjectId, ref: 'Checklist' },
   createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
   assignedTo: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+  category: { type: String, default: 'General' },
+  department: { type: String, default: 'General' },
   recurrence: {
     type: { 
       type: String, 

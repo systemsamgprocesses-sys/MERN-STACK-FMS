@@ -1,1 +1,1 @@
-export const address = import.meta.env.VITE_BACKEND_URL || 'https://hub.amgrealty.in';
+export const address = import.meta.env.VITE_BACKEND_URL || 'http://hub.amgrealty.in';

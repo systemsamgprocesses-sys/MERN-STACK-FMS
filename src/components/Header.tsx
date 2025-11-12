@@ -28,11 +28,7 @@ const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
 
   const themeNames = {
     light: 'Light',
-    dark: 'Dark',
-    oceanic: 'Oceanic',
-    forest: 'Forest',
-    sunset: 'Sunset',
-    royal: 'Royal'
+    dark: 'Dark'
   };
 
   return (

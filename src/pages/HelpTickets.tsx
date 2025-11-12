@@ -12,6 +12,7 @@ interface HelpTicket {
   description: string;
   priority: string;
   status: string;
+  raisedBy: { _id: string; username: string };
   createdBy: { _id: string; username: string };
   createdAt: string;
   adminRemarks: Array<{ by: { username: string }; remark: string; at: string }>;
@@ -36,7 +37,12 @@ const HelpTickets: React.FC = () => {
   const fetchTickets = async () => {
     try {
       const token = localStorage.getItem('token');
-      const response = await axios.get(`${address}/api/help-tickets`, {
+      const params = new URLSearchParams({
+        userId: user?.id || '',
+        role: user?.role || ''
+      });
+      
+      const response = await axios.get(`${address}/api/help-tickets?${params}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       setTickets(response.data);
@@ -51,7 +57,10 @@ const HelpTickets: React.FC = () => {
     e.preventDefault();
     try {
       const token = localStorage.getItem('token');
-      await axios.post(`${address}/api/help-tickets`, formData, {
+      await axios.post(`${address}/api/help-tickets`, {
+        ...formData,
+        raisedBy: user?.id,
+      }, {
         headers: { Authorization: `Bearer ${token}` },
       });
       setShowCreateModal(false);
@@ -101,6 +110,15 @@ const HelpTickets: React.FC = () => {
           </button>
         </div>
 
+        {/* Information Notice */}
+        <div className="mb-6 p-4 bg-blue-50 border-l-4 border-blue-500 rounded text-blue-800">
+          <p className="font-semibold">📌 When to use Help Tickets vs Objections:</p>
+          <ul className="mt-2 text-sm space-y-1 ml-4 list-disc">
+            <li><strong>Raise Help Ticket:</strong> Only for technical assistance related to the MIS system (software issues, feature requests, system errors)</li>
+            <li><strong>Raise Objection:</strong> For assistance or disputes related to task assignments, deadlines, or task-specific issues</li>
+          </ul>
+        </div>
+
         {/* Tickets List */}
         {loading ? (
           <div className="text-center py-12">
@@ -122,13 +140,16 @@ const HelpTickets: React.FC = () => {
                   <div className="flex-1">
                     <h3 className="text-lg font-semibold text-[--color-text] mb-2">{ticket.title}</h3>
                     <p className="text-[--color-textSecondary] mb-3">{ticket.description}</p>
-                    <div className="flex gap-2">
+                    <div className="flex gap-2 flex-wrap">
                       <span className={`px-2 py-1 rounded-full text-xs font-medium ${getPriorityColor(ticket.priority)}`}>
-                        {ticket.priority}
+                        Priority: {ticket.priority}
                       </span>
                       <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(ticket.status)}`}>
-                        {ticket.status}
+                        Status: {ticket.status}
                       </span>
+                    </div>
+                    <div className="text-xs text-[--color-textSecondary] mt-2">
+                      Raised by: <strong>{ticket.raisedBy?.username || 'Unknown'}</strong>
                     </div>
                   </div>
                   <span className="text-sm text-[--color-textSecondary]">

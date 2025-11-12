@@ -40,9 +40,23 @@ const filterTasks = (tasks: Task[], filter: any) => {
       if (!matchesSearch) return false;
     }
 
-    // Status filter
-    if (filter.status && task.status !== filter.status) {
-      return false;
+    // Status filter - with special handling for "overdue"
+    if (filter.status) {
+      if (filter.status === 'overdue') {
+        // Overdue: not completed AND dueDate < today
+        if (task.status === 'completed') return false;
+        if (!task.dueDate) return false;
+        const dueDate = new Date(task.dueDate);
+        dueDate.setHours(0, 0, 0, 0);
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        if (dueDate >= today) return false;
+      } else {
+        // Regular status filter
+        if (task.status !== filter.status) {
+          return false;
+        }
+      }
     }
 
     // Priority filter

@@ -1,9 +1,10 @@
 
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { CheckSquare, TrendingUp, Clock, CheckCircle, AlertCircle } from 'lucide-react';
+import { CheckSquare, Clock, CheckCircle, AlertCircle } from 'lucide-react';
 import axios from 'axios';
 import { address } from '../../utils/ipAddress';
+import { useAuth } from '../contexts/AuthContext';
 
 interface DashboardStats {
   total: number;
@@ -16,15 +17,20 @@ interface DashboardStats {
 
 const ChecklistDashboard: React.FC = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [selectedPerson, setSelectedPerson] = useState('');
   const [users, setUsers] = useState<any[]>([]);
 
   useEffect(() => {
     fetchUsers();
+  }, []);
+
+  useEffect(() => {
     fetchStats();
-  }, [selectedPerson]);
+  }, [selectedPerson, user]);
 
   const fetchUsers = async () => {
     try {
@@ -35,19 +41,33 @@ const ChecklistDashboard: React.FC = () => {
       setUsers(response.data);
     } catch (error) {
       console.error('Error fetching users:', error);
+      setError('Failed to fetch users');
     }
   };
 
   const fetchStats = async () => {
     try {
+      setError(null);
+      setLoading(true);
       const token = localStorage.getItem('token');
-      const params = selectedPerson ? `?assignedTo=${selectedPerson}` : '';
-      const response = await axios.get(`${address}/api/checklists/dashboard${params}`, {
+      
+      // Build query parameters
+      const params = new URLSearchParams({
+        role: user?.role || '',
+        userId: user?.id || ''
+      });
+      
+      if (selectedPerson) {
+        params.append('assignedTo', selectedPerson);
+      }
+      
+      const response = await axios.get(`${address}/api/checklists/dashboard?${params}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       setStats(response.data);
     } catch (error) {
       console.error('Error fetching stats:', error);
+      setError('Failed to load dashboard data. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -57,6 +77,29 @@ const ChecklistDashboard: React.FC = () => {
     return (
       <div className="min-h-screen bg-[--color-background] flex items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[--color-primary]"></div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-[--color-background] p-6">
+        <div className="max-w-7xl mx-auto">
+          <div className="bg-red-50 border border-red-200 rounded-lg p-6 text-center">
+            <AlertCircle className="text-red-500 mx-auto mb-4" size={48} />
+            <h2 className="text-2xl font-bold text-red-700 mb-2">Error Loading Dashboard</h2>
+            <p className="text-red-600 mb-4">{error}</p>
+            <button
+              onClick={() => {
+                setError(null);
+                fetchStats();
+              }}
+              className="px-6 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+            >
+              Try Again
+            </button>
+          </div>
+        </div>
       </div>
     );
   }

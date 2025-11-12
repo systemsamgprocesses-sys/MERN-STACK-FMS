@@ -41,6 +41,60 @@ router.get('/', async (req, res) => {
   }
 });
 
+// Get checklist dashboard metrics
+router.get('/dashboard', async (req, res) => {
+  try {
+    const { assignedTo, role, userId } = req.query;
+    
+    let query = {};
+    
+    // Filter based on role
+    if (role === 'employee' && userId) {
+      query.assignedTo = userId;
+    } else if (assignedTo) {
+      query.assignedTo = assignedTo;
+    }
+    
+    const now = new Date();
+    
+    const [total, completed, pending, overdue] = await Promise.all([
+      Checklist.countDocuments(query),
+      Checklist.countDocuments({ ...query, status: 'Submitted' }),
+      Checklist.countDocuments({ ...query, status: { $in: ['Active', 'Draft'] } }),
+      Checklist.countDocuments({ 
+        ...query, 
+        status: { $in: ['Active', 'Draft'] },
+        nextRunDate: { $lt: now }
+      })
+    ]);
+    
+    // Get recurrence breakdown
+    const allChecklists = await Checklist.find(query);
+    const byRecurrence = allChecklists.reduce((acc, cl) => {
+      const type = cl.recurrence.type;
+      acc[type] = (acc[type] || 0) + 1;
+      return acc;
+    }, {});
+    
+    const recentSubmissions = await Checklist.find({ ...query, status: 'Submitted' })
+      .populate('createdBy assignedTo')
+      .sort({ submittedAt: -1 })
+      .limit(10);
+    
+    res.json({
+      total,
+      completed,
+      pending,
+      overdue,
+      byRecurrence,
+      recentSubmissions
+    });
+  } catch (error) {
+    console.error('Error fetching dashboard metrics:', error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
 // Get checklist by ID
 router.get('/:id', async (req, res) => {
   try {
@@ -160,60 +214,6 @@ router.patch('/:id/items/:itemId', async (req, res) => {
     res.json(checklist);
   } catch (error) {
     console.error('Error updating checklist item:', error);
-    res.status(500).json({ error: 'Server error' });
-  }
-});
-
-// Get checklist dashboard metrics
-router.get('/dashboard', async (req, res) => {
-  try {
-    const { assignedTo, role, userId } = req.query;
-    
-    let query = {};
-    
-    // Filter based on role
-    if (role === 'employee' && userId) {
-      query.assignedTo = userId;
-    } else if (assignedTo) {
-      query.assignedTo = assignedTo;
-    }
-    
-    const now = new Date();
-    
-    const [total, completed, pending, overdue] = await Promise.all([
-      Checklist.countDocuments(query),
-      Checklist.countDocuments({ ...query, status: 'Submitted' }),
-      Checklist.countDocuments({ ...query, status: { $in: ['Active', 'Draft'] } }),
-      Checklist.countDocuments({ 
-        ...query, 
-        status: { $in: ['Active', 'Draft'] },
-        nextRunDate: { $lt: now }
-      })
-    ]);
-    
-    // Get recurrence breakdown
-    const allChecklists = await Checklist.find(query);
-    const byRecurrence = allChecklists.reduce((acc, cl) => {
-      const type = cl.recurrence.type;
-      acc[type] = (acc[type] || 0) + 1;
-      return acc;
-    }, {});
-    
-    const recentSubmissions = await Checklist.find({ ...query, status: 'Submitted' })
-      .populate('createdBy assignedTo')
-      .sort({ submittedAt: -1 })
-      .limit(10);
-    
-    res.json({
-      total,
-      completed,
-      pending,
-      overdue,
-      byRecurrence,
-      recentSubmissions
-    });
-  } catch (error) {
-    console.error('Error fetching dashboard metrics:', error);
     res.status(500).json({ error: 'Server error' });
   }
 });

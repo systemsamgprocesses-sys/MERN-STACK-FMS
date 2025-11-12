@@ -35,10 +35,21 @@ const ViewAllFMS: React.FC = () => {
   const [showCategoryEdit, setShowCategoryEdit] = useState(false);
   const [newCategory, setNewCategory] = useState('');
   const [editingFMS, setEditingFMS] = useState<string | null>(null);
+  const [usersCache, setUsersCache] = useState<any[]>([]);
 
   useEffect(() => {
     fetchFMSTemplates();
+    fetchUsers();
   }, [user, selectedCategory]);
+
+  const fetchUsers = async () => {
+    try {
+      const response = await axios.get(`${address}/api/users`);
+      setUsersCache(response.data.filter((u: any) => u.isActive));
+    } catch (error) {
+      console.error('Error fetching users:', error);
+    }
+  };
 
   const fetchFMSTemplates = async () => {
     try {
@@ -103,21 +114,146 @@ const ViewAllFMS: React.FC = () => {
     setExpandedFMS(expandedFMS === fmsId ? null : fmsId);
   };
 
-  const generateMermaidDiagram = (steps: any[]) => {
+  const printFMS = (fms: FMSTemplate) => {
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) return;
+    
+    const usersMap = new Map();
+    usersCache.forEach(user => {
+      if (user._id || user.id) {
+        usersMap.set(user._id || user.id, user);
+      }
+    });
+    
+    const formatAssignee = (who: any): string => {
+      if (Array.isArray(who)) {
+        return who.map((w: any) => {
+          if (typeof w === 'object' && w !== null) {
+            if (w.username) return w.username;
+            if (w.name) return w.name;
+            if (w._id && usersMap.has(w._id)) return usersMap.get(w._id).username || usersMap.get(w._id).name;
+            return w._id ? w._id.toString().substring(0, 8) : 'Unknown User';
+          } else if (typeof w === 'string') {
+            if (usersMap.has(w)) return usersMap.get(w).username || usersMap.get(w).name;
+            return w.substring(0, 8) + '...';
+          }
+          return 'Unknown User';
+        }).filter(name => name !== 'Unknown User').join(', ');
+      }
+      return 'N/A';
+    };
+    
+    printWindow.document.write(`
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>FMS Template: ${fms.fmsName}</title>
+        <style>
+          body { font-family: Arial, sans-serif; margin: 20px; }
+          .header { text-align: center; margin-bottom: 30px; }
+          .fms-info { background: #f5f5f5; padding: 15px; border-radius: 5px; margin-bottom: 20px; }
+          .step { border: 1px solid #ddd; margin-bottom: 15px; border-radius: 5px; padding: 15px; }
+          .step-header { font-weight: bold; margin-bottom: 10px; }
+          .detail-row { margin-bottom: 8px; }
+          .label { font-weight: bold; display: inline-block; width: 80px; }
+          @media print {
+            body { margin: 0; }
+            .no-print { display: none; }
+          }
+        </style>
+      </head>
+      <body>
+        <div class="header">
+          <h1>FMS Template: ${fms.fmsName}</h1>
+          <p>FMS ID: ${fms.fmsId}</p>
+        </div>
+        
+        <div class="fms-info">
+          <p><strong>Created by:</strong> ${fms.createdBy}</p>
+          <p><strong>Created:</strong> ${new Date(fms.createdOn).toLocaleDateString()}</p>
+          <p><strong>Steps:</strong> ${fms.stepCount}</p>
+          <p><strong>Total Time:</strong> ${fms.totalTimeFormatted}</p>
+        </div>
+        
+        <h2>Workflow Steps</h2>
+        ${fms.steps.map(step => `
+          <div class="step">
+            <div class="step-header">Step ${step.stepNo}: ${step.what || 'Task Description'}</div>
+            <div class="detail-row"><span class="label">WHO:</span> ${formatAssignee(step.who)}</div>
+            <div class="detail-row"><span class="label">HOW:</span> ${step.how || 'Method not specified'}</div>
+            <div class="detail-row"><span class="label">WHEN:</span> ${step.whenType === 'ask-on-completion' ? 'Ask on completion' : `${step.when || 0} ${step.whenUnit || 'days'}`}</div>
+          </div>
+        `).join('')}
+        
+        <div style="margin-top: 30px; text-align: center; font-size: 12px; color: #666;">
+          <p>Generated on ${new Date().toLocaleString()}</p>
+        </div>
+        
+        <script>
+          window.onload = function() {
+            window.print();
+            window.onafterprint = function() {
+              window.close();
+            };
+          };
+        </script>
+      </body>
+      </html>
+    `);
+    
+    printWindow.document.close();
+  };
+
+  const generateMermaidDiagram = (steps: any[], usersCache?: any[]) => {
     let diagram = 'graph TD\n';
+    const usersMap = new Map();
+    
+    // Create a cache of users for faster lookup
+    if (usersCache && Array.isArray(usersCache)) {
+      usersCache.forEach(user => {
+        if (user._id || user.id) {
+          usersMap.set(user._id || user.id, user);
+        }
+      });
+    }
+    
     steps.forEach((step, index) => {
       const stepId = `S${step.stepNo}`;
       const nextStepId = index < steps.length - 1 ? `S${steps[index + 1].stepNo}` : null;
       
-      const assignees = Array.isArray(step.who) 
-        ? step.who.map((w: any) => w.username || w).join(', ')
-        : 'N/A';
+      // Enhanced assignee resolution
+      let assignees = 'N/A';
+      if (Array.isArray(step.who)) {
+        assignees = step.who.map((w: any): string => {
+          if (typeof w === 'object' && w !== null) {
+            // Handle populated user objects
+            if (w.username) return w.username;
+            if (w.name) return w.name;
+            if (w._id && usersMap.has(w._id)) return usersMap.get(w._id).username || usersMap.get(w._id).name;
+            // Fallback for object IDs
+            return w._id ? w._id.toString().substring(0, 8) : 'Unknown User';
+          } else if (typeof w === 'string') {
+            // Handle string IDs
+            if (usersMap.has(w)) return usersMap.get(w).username || usersMap.get(w).name;
+            return w.substring(0, 8) + '...'; // Truncate for display
+          }
+          return 'Unknown User';
+        }).filter((name: string) => name !== 'Unknown User').join(', ');
+        
+        if (!assignees) assignees = 'N/A';
+      }
       
-      const duration = step.whenUnit === 'days+hours' 
+      const duration = step.whenUnit === 'days+hours'
         ? `${step.whenDays || 0}d ${step.whenHours || 0}h`
-        : `${step.when} ${step.whenUnit}`;
+        : step.whenType === 'ask-on-completion'
+          ? 'Ask on completion'
+          : `${step.when || 0} ${step.whenUnit || 'days'}`;
       
-      diagram += `    ${stepId}["Step ${step.stepNo}: ${step.what}<br/>WHO: ${assignees}<br/>HOW: ${step.how}<br/>WHEN: ${duration}"]\n`;
+      // Create a well-formatted step description
+      const stepDescription = step.what || `Step ${step.stepNo}`;
+      const howDescription = step.how || 'Method not specified';
+      
+      diagram += `    ${stepId}["<b>Step ${step.stepNo}</b><br/><br/><b>WHAT:</b> ${stepDescription}<br/><br/><b>WHO:</b> ${assignees}<br/><br/><b>HOW:</b> ${howDescription}<br/><br/><b>WHEN:</b> ${duration}"]\n`;
       
       if (nextStepId) {
         diagram += `    ${stepId} --> ${nextStepId}\n`;
@@ -125,6 +261,19 @@ const ViewAllFMS: React.FC = () => {
     });
     
     return diagram;
+  };
+
+  // Helper function to format assignee names in the details view
+  const formatAssigneeForDetails = (who: any): string => {
+    if (Array.isArray(who)) {
+      return who.map((w: any) => {
+        if (typeof w === 'object' && w !== null) {
+          return w.username || w.name || 'Unknown User';
+        }
+        return w || 'Unknown User';
+      }).join(', ');
+    }
+    return 'N/A';
   };
 
   if (loading) {
@@ -370,11 +519,20 @@ const ViewAllFMS: React.FC = () => {
 
                           {showMermaid === fms.fmsId && (
                             <div className="px-6 pb-4 border-t border-[var(--color-border)]">
-                              <h4 className="text-lg font-bold text-[var(--color-text)] mb-3 mt-4">
-                                Workflow Preview
-                              </h4>
+                              <div className="flex items-center justify-between mb-3 mt-4">
+                                <h4 className="text-lg font-bold text-[var(--color-text)]">
+                                  Workflow Preview
+                                </h4>
+                                <button
+                                  onClick={() => printFMS(fms)}
+                                  className="px-4 py-2 bg-[var(--color-primary)] text-white rounded-lg hover:opacity-90 flex items-center gap-2 print:hidden"
+                                >
+                                  <Printer size={16} />
+                                  Print This FMS
+                                </button>
+                              </div>
                               <div className="bg-white p-6 rounded-lg overflow-auto">
-                                <MermaidDiagram chart={generateMermaidDiagram(fms.steps)} />
+                                <MermaidDiagram chart={generateMermaidDiagram(fms.steps, usersCache)} />
                               </div>
                             </div>
                           )}
@@ -417,11 +575,7 @@ const ViewAllFMS: React.FC = () => {
                                       
                                       <div>
                                         <p className="text-sm font-medium text-[var(--color-textSecondary)] mb-1">Who</p>
-                                        <p className="text-[var(--color-text)]">
-                                          {Array.isArray(step.who) 
-                                            ? step.who.map((w: any) => w.username || w).join(', ')
-                                            : 'N/A'}
-                                        </p>
+                                        <p className="text-[var(--color-text)]">{formatAssigneeForDetails(step.who)}</p>
                                       </div>
                                       
                                       <div>
@@ -434,7 +588,9 @@ const ViewAllFMS: React.FC = () => {
                                         <p className="text-[var(--color-text)]">
                                           {step.whenUnit === 'days+hours' 
                                             ? `${step.whenDays || 0} days, ${step.whenHours || 0} hours`
-                                            : `${step.when} ${step.whenUnit}`}
+                                            : step.whenType === 'ask-on-completion'
+                                              ? 'Ask on completion'
+                                              : `${step.when} ${step.whenUnit}`}
                                         </p>
                                       </div>
                                     </div>

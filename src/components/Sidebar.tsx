@@ -104,6 +104,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
     myTasks: 0,
     objections: 0,
     assignedByMe: 0,
+    helpTickets: 0,
   });
 
   const menuItems = [
@@ -121,12 +122,12 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
     { icon: User, label: 'My Tasks', path: '/admin-tasks', requireAdmin: true, countKey: 'myTasks' },
     { icon: Settings, label: 'Admin Panel', path: '/admin', requireAdmin: true },
     { icon: AlertCircle, label: 'Objection Approvals', path: '/objection-approvals', countKey: 'objections' },
-    { icon: Shield, label: 'Audit Logs', path: '/audit-logs', requireAdmin: true }, // Added Audit Logs
-    { icon: Award, label: 'Score Logs', path: '/score-logs', requireAdmin: true }, // Added Score Logs
+    { icon: Shield, label: 'Audit Logs', path: '/audit-logs', requireSuperAdmin: true },
+    { icon: Award, label: 'Score Logs', path: '/score-logs', requireSuperAdmin: true },
     // Added Checklist and Help Ticket navigation items
     { icon: CheckSquare, label: 'Checklists', path: '/checklists' },
     { icon: BarChart2, label: 'Checklist Dashboard', path: '/checklist-dashboard' },
-    { icon: HelpCircle, label: 'Help Tickets', path: '/help-tickets' },
+    { icon: HelpCircle, label: 'Help Tickets', path: '/help-tickets', countKey: 'helpTickets' },
     { icon: HelpCircle, label: 'Manage Tickets', path: '/admin-help-tickets', requireAdmin: true },
     { icon: BarChart2, label: 'Purchase Dashboard', path: '/purchase-dashboard' },
     { icon: BarChart2, label: 'Sales Dashboard', path: '/sales-dashboard' },
@@ -190,6 +191,15 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
         console.error('Error fetching objections:', e);
       }
 
+      // Fetch help tickets count
+      let helpTicketsCount = 0;
+      try {
+        const helpTicketsResponse = await axios.get(`${address}/api/help-tickets?userId=${user?.id}&role=${user?.role}`);
+        helpTicketsCount = helpTicketsResponse.data.length;
+      } catch (e) {
+        console.error('Error fetching help tickets:', e);
+      }
+
       setCounts({
         pendingTasks: countsData.pendingTasks || 0,
         pendingRepetitive: countsData.pendingRepetitive || countsData.recurringPending || 0,
@@ -198,6 +208,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
         myTasks: countsData.totalTasks || 0, // For admin, show total tasks
         assignedByMe: countsData.assignedByMe?.total || 0,
         objections: objectionsCount,
+        helpTickets: helpTicketsCount,
       });
     } catch (error) {
       console.error('Error fetching counts:', error);
@@ -207,6 +218,8 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
   const filteredMenuItems = menuItems.filter(item => {
     // Super admin can see everything
     if (user?.role === 'superadmin') return true;
+    // Hide items that require super admin (for non-superadmins)
+    if (item.requireSuperAdmin && user?.role !== 'superadmin') return false;
     // Admin can see admin panel and below
     if (item.requireAdmin && user?.role !== 'admin') return false;
     // Check for specific permissions
@@ -270,7 +283,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
         </div>
 
         {/* Navigation */}
-        <nav className="mt-4 pb-32">
+        <nav className="flex-1 mt-4 overflow-y-auto">
           <div className="px-2 space-y-1">
             {filteredMenuItems.map((item) => (
               <Tooltip
@@ -322,35 +335,6 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
             ))}
           </div>
         </nav>
-
-        {/* User Profile */}
-        <div className="absolute bottom-0 left-0 right-0 p-4 border-t backdrop-blur-md" style={{ borderColor: 'var(--color-border)', background: 'linear-gradient(180deg, rgba(255,255,255,0.3) 0%, rgba(var(--color-surface-rgb, 255, 255, 255), 0.6) 100%)' }}>
-          {isCollapsed ? (
-            <Tooltip content={`${user?.username} (${user?.role})`} show={true}>
-              <div className="flex justify-center">
-                <div className="relative w-10 h-10 rounded-xl flex items-center justify-center text-white text-sm font-bold shadow-lg hover:scale-110 transition-transform" style={{ background: 'linear-gradient(135deg, var(--color-primary), var(--color-accent))' }}>
-                  {user?.username?.charAt(0).toUpperCase()}
-                  <div className="absolute inset-0 rounded-xl bg-gradient-to-br from-white/30 to-transparent"></div>
-                </div>
-              </div>
-            </Tooltip>
-          ) : (
-            <div className="flex items-center transition-all duration-200 group hover:scale-105">
-              <div className="relative w-10 h-10 rounded-xl flex items-center justify-center text-white text-sm font-bold shadow-lg" style={{ background: 'linear-gradient(135deg, var(--color-primary), var(--color-accent))' }}>
-                {user?.username?.charAt(0).toUpperCase()}
-                <div className="absolute inset-0 rounded-xl bg-gradient-to-br from-white/30 to-transparent"></div>
-              </div>
-              <div className="ml-3 min-w-0">
-                <p className="text-sm font-semibold truncate" style={{ color: 'var(--color-text)' }}>
-                  {user?.username}
-                </p>
-                <p className="text-xs font-medium capitalize truncate" style={{ color: 'var(--color-textSecondary)' }}>
-                  {user?.role}
-                </p>
-              </div>
-            </div>
-          )}
-        </div>
       </div>
     </>
   );

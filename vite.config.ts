@@ -31,11 +31,12 @@ export default defineConfig({
     exclude: ['lucide-react'],
   },
   server: {
-    port: 5000,
+    port: 5173,
     host: '0.0.0.0',
     strictPort: true,
     hmr: {
-      clientPort: 443
+      host: 'localhost',
+      port: 5173
     }
   },
   build: {

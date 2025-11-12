@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "concurrently \"npm run server\" \"npm run client\"",
-    "client": "vite --host 0.0.0.0 --port 5000",
+  "client": "vite --host 0.0.0.0 --port 5173",
     "server": "nodemon ./server/index.js",
     "build": "vite build",
     "build:prod": "cross-env NODE_ENV=production VITE_BACKEND_URL=https://hub.amgrealty.in vite build",

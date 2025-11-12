@@ -54,7 +54,8 @@ const CreateChecklist: React.FC = () => {
       const response = await axios.get(`${address}/api/tasks`, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      setTasks(response.data);
+      // API returns { tasks, totalPages, currentPage, total }
+      setTasks(response.data.tasks || []);
     } catch (error) {
       console.error('Error fetching tasks:', error);
     }
@@ -76,12 +77,31 @@ const CreateChecklist: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Validation
+    if (!formData.title.trim()) {
+      alert('Please enter a checklist title');
+      return;
+    }
+    
+    if (!formData.assignedTo) {
+      alert('Please select who to assign this checklist to');
+      return;
+    }
+    
+    const filteredItems = items.filter(item => item.title.trim());
+    if (filteredItems.length === 0) {
+      alert('Please add at least one checklist item');
+      return;
+    }
+    
     setLoading(true);
 
     try {
       const token = localStorage.getItem('token');
       const payload = {
-        title: formData.title,
+        title: formData.title.trim(),
+        createdBy: user?.id,
         parentTaskId: formData.parentTaskId || undefined,
         assignedTo: formData.assignedTo,
         recurrence: {
@@ -91,19 +111,23 @@ const CreateChecklist: React.FC = () => {
             n: formData.customN,
           } : undefined,
         },
-        startDate: formData.startDate,
+        startDate: new Date(formData.startDate).toISOString(),
         status: formData.status,
-        items: items.filter(item => item.title.trim()).map(item => ({ title: item.title })),
+        items: filteredItems.map(item => ({ title: item.title.trim() })),
       };
 
-      await axios.post(`${address}/api/checklists`, payload, {
+      const response = await axios.post(`${address}/api/checklists`, payload, {
         headers: { Authorization: `Bearer ${token}` },
       });
 
-      navigate('/checklists');
+      if (response.data) {
+        alert('Checklist created successfully!');
+        navigate('/checklists');
+      }
     } catch (error: any) {
       console.error('Error creating checklist:', error);
-      alert(error.response?.data?.error || 'Failed to create checklist');
+      const errorMsg = error.response?.data?.error || error.message || 'Failed to create checklist';
+      alert(errorMsg);
     } finally {
       setLoading(false);
     }

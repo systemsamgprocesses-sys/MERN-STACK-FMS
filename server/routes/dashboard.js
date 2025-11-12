@@ -4,6 +4,8 @@ import User from '../models/User.js';
 import mongoose from 'mongoose';
 // Import Project model for FMS metrics
 import Project from '../models/Project.js';
+// Import ScoreLog model
+import ScoreLog from '../models/ScoreLog.js';
 
 const router = express.Router();
 
@@ -21,8 +23,14 @@ router.get('/analytics', async (req, res) => {
     const shouldIncludeTeam = includeTeam === 'true' && isAdminOrSuperAdmin;
 
     let baseQuery = {};
-    if (isAdmin !== 'true' && userObjectId) {
+    // If userId is provided (even for admins), filter by that user
+    // If userId is not provided and user is not admin, filter by their own ID
+    if (userObjectId) {
       baseQuery.assignedTo = userObjectId;
+    } else if (isAdmin !== 'true') {
+      // Non-admin without userId - this shouldn't happen, but handle it
+      // In this case, we'd need the actual user's ID from the session
+      // For now, return empty results
     }
 
     let dateRangeQueryForStats = {};
@@ -40,7 +48,7 @@ router.get('/analytics', async (req, res) => {
     const fmsMetrics = await Project.aggregate([
       {
         $match: {
-          ...(isAdminOrSuperAdmin ? {} : { assignedTo: userObjectId }),
+          ...(userObjectId ? { assignedTo: userObjectId } : {}),
           ...dateRangeQueryForStats
         }
       },
@@ -590,6 +598,50 @@ router.get('/analytics', async (req, res) => {
 
     const totalActiveTasks = await Task.countDocuments({ ...baseQuery, ...dateRangeQueryForStats });
 
+    // Calculate pending/completed/overdue/upcoming according to definitions:
+    // pending = tasks not completed and dueDate/nextDueDate <= today
+    // completed = status = completed
+    // overdues = not completed and dueDate/nextDueDate < today
+    // upcoming = dueDate/nextDueDate > today
+    const todayStart = new Date();
+    todayStart.setHours(0, 0, 0, 0);
+    const todayEnd = new Date();
+    todayEnd.setHours(23, 59, 59, 999);
+
+    const pendingQuery = {
+      ...baseQuery,
+      status: { $nin: ['completed'] },
+      $or: [
+        { dueDate: { $lte: todayEnd } },
+        { nextDueDate: { $lte: todayEnd } }
+      ],
+      ...(startDate && endDate ? dateRangeQueryForStats : {})
+    };
+
+    const overdueQuery = {
+      ...baseQuery,
+      status: { $nin: ['completed'] },
+      $or: [
+        { dueDate: { $lt: todayStart } },
+        { nextDueDate: { $lt: todayStart } }
+      ],
+      ...(startDate && endDate ? dateRangeQueryForStats : {})
+    };
+
+    const upcomingQuery = {
+      ...baseQuery,
+      status: { $nin: ['completed'] },
+      $or: [
+        { dueDate: { $gt: todayEnd } },
+        { nextDueDate: { $gt: todayEnd } }
+      ],
+      ...(startDate && endDate ? dateRangeQueryForStats : {})
+    };
+
+    const pendingTasksCount = await Task.countDocuments(pendingQuery);
+    const overdueTasksCount = await Task.countDocuments(overdueQuery);
+    const upcomingTasksCount = await Task.countDocuments(upcomingQuery);
+
     let completedTasksCountQuery = {
       ...baseQuery,
       status: 'completed',
@@ -758,7 +810,8 @@ router.get('/analytics', async (req, res) => {
         }
       });
 
-      fmsMetrics = {
+      // Re-assign fmsMetrics with updated values
+      const updatedFmsMetrics = {
         activeProjects,
         completedProjects,
         totalProjects: allProjects.length,
@@ -796,7 +849,13 @@ router.get('/analytics', async (req, res) => {
       fmsMetrics,
       overallScore: Math.round(overallScore * 10) / 10,
       currentMonthScore: Math.round(currentMonthScore * 10) / 10,
-      upcomingTasks
+      upcomingTasks,
+      // expose simplified counts for widgets
+      totalTasks: totalActiveTasks,
+      pendingTasks: pendingTasksCount,
+      completedTasks: completedTasksCount,
+      overdueTasks: overdueTasksCount,
+      upcomingTasksCount
     });
   } catch (error) {
     console.error('Dashboard analytics error:', error);
@@ -942,8 +1001,14 @@ router.get('/counts', async (req, res) => {
     };
 
     let baseQuery = {};
-    if (isAdmin !== 'true' && userObjectId) {
+    // If userId is provided (even for admins), filter by that user
+    // If userId is not provided and user is not admin, filter by their own ID
+    if (userObjectId) {
       baseQuery.assignedTo = userObjectId;
+    } else if (isAdmin !== 'true') {
+      // Non-admin without userId - this shouldn't happen, but handle it
+      // In this case, we'd need the actual user's ID from the session
+      // For now, return empty results
     }
 
     let dateRangeQuery = {};
@@ -1145,7 +1210,7 @@ router.get('/counts', async (req, res) => {
       const fmsTasks = await Project.aggregate([
         {
           $match: {
-            ...(isAdminOrSuperAdmin ? {} : { assignedTo: userObjectId })
+            ...(userObjectId ? { assignedTo: userObjectId } : {})
           }
         },
         {

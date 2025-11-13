@@ -1138,8 +1138,11 @@ const PendingTasks: React.FC = () => {
               </label>
               <select
                 value={filter.priority}
-                onChange={(e) => setFilter({ ...filter, priority: e.target.value })}
-                className="w-full text-sm px-1 py-1 border border-[--color-border] rounded-lg focus:ring-2 focus:ring-[--color-primary] focus:border-[--color-primary] transition-colors bg-[--color-background] text-[--color-text]"
+                onChange={(e) => {
+                  const newValue = e.target.value;
+                  setFilter(prev => ({ ...prev, priority: newValue }));
+                }}
+                className="w-full text-sm px-1 py-1 border border-[--color-border] rounded-lg focus:ring-2 focus:ring-[--color-primary] focus:border-[--color-primary] transition-colors bg-[--color-background] text-[--color-text] cursor-pointer"
               >
                 <option value="">All Priorities</option>
                 <option value="normal">Normal</option>

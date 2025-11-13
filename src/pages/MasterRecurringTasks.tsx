@@ -1220,8 +1220,11 @@ const MasterRecurringTasks: React.FC = () => {
               </label>
               <select
                 value={filter.priority}
-                onChange={(e) => setFilter({ ...filter, priority: e.target.value })}
-                className="w-full text-sm px-3 py-2 border border-[--color-border] rounded-lg focus:ring-2 focus:ring-[--color-primary] focus:border-[--color-primary] bg-[--color-surface] text-[--color-text]"
+                onChange={(e) => {
+                  const newValue = e.target.value;
+                  setFilter(prev => ({ ...prev, priority: newValue }));
+                }}
+                className="w-full text-sm px-3 py-2 border border-[--color-border] rounded-lg focus:ring-2 focus:ring-[--color-primary] focus:border-[--color-primary] bg-[--color-surface] text-[--color-text] cursor-pointer"
               >
                 <option value="">All Priorities</option>
                 <option value="normal">Normal</option>
@@ -1238,8 +1241,11 @@ const MasterRecurringTasks: React.FC = () => {
                 </label>
                 <select
                   value={filter.assignedTo}
-                  onChange={(e) => setFilter({ ...filter, assignedTo: e.target.value })}
-                  className="w-full text-sm px-3 py-2 border border-[--color-border] rounded-lg focus:ring-2 focus:ring-[--color-primary] focus:border-[--color-primary] bg-[--color-surface] text-[--color-text]"
+                  onChange={(e) => {
+                    const newValue = e.target.value;
+                    setFilter(prev => ({ ...prev, assignedTo: newValue }));
+                  }}
+                  className="w-full text-sm px-3 py-2 border border-[--color-border] rounded-lg focus:ring-2 focus:ring-[--color-primary] focus:border-[--color-primary] bg-[--color-surface] text-[--color-text] cursor-pointer"
                 >
                   <option value="">All Members</option>
                   {users.map((teamUser) => (

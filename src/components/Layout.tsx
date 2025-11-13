@@ -7,11 +7,11 @@ const Layout: React.FC = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   return (
-    <div className="flex h-screen" style={{ backgroundColor: 'var(--color-background)' }}>
+    <div className="flex h-screen overflow-hidden" style={{ backgroundColor: 'var(--color-background)' }}>
       <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
-      <div className="flex-1 flex flex-col overflow-hidden">
+      <div className="flex-1 flex flex-col overflow-hidden min-w-0">
         <Header onMenuClick={() => setSidebarOpen(true)} />
-        <main className="flex-1 overflow-x-hidden overflow-y-auto p-2" style={{ backgroundColor: 'var(--color-surface)' }}>
+        <main className="flex-1 overflow-x-hidden overflow-y-auto p-2 md:p-4 lg:p-6" style={{ backgroundColor: 'var(--color-surface)' }}>
           <Outlet />
         </main>
       </div>

@@ -458,8 +458,11 @@ const EnhancedTaskTable: React.FC<EnhancedTaskTableProps> = ({
               </label>
               <select
                 value={filterState.status}
-                onChange={(e) => setFilterState({ ...filterState, status: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                onChange={(e) => {
+                  const newValue = e.target.value;
+                  setFilterState(prev => ({ ...prev, status: newValue }));
+                }}
+                className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 cursor-pointer"
               >
                 <option value="">All Statuses</option>
                 <option value="pending">Pending</option>
@@ -476,8 +479,11 @@ const EnhancedTaskTable: React.FC<EnhancedTaskTableProps> = ({
               </label>
               <select
                 value={filterState.priority}
-                onChange={(e) => setFilterState({ ...filterState, priority: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                onChange={(e) => {
+                  const newValue = e.target.value;
+                  setFilterState(prev => ({ ...prev, priority: newValue }));
+                }}
+                className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 cursor-pointer"
               >
                 <option value="">All Priorities</option>
                 <option value="low">Low</option>
@@ -496,8 +502,11 @@ const EnhancedTaskTable: React.FC<EnhancedTaskTableProps> = ({
                 </label>
                 <select
                   value={filterState.assignedTo}
-                  onChange={(e) => setFilterState({ ...filterState, assignedTo: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  onChange={(e) => {
+                    const newValue = e.target.value;
+                    setFilterState(prev => ({ ...prev, assignedTo: newValue }));
+                  }}
+                  className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 cursor-pointer"
                 >
                   <option value="">All Team Members</option>
                   {users.map((user) => (

@@ -126,11 +126,11 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
     { icon: Award, label: 'Score Logs', path: '/score-logs', requireSuperAdmin: true },
     // Added Checklist and Help Ticket navigation items
     { icon: CheckSquare, label: 'Checklists', path: '/checklists' },
-    { icon: BarChart2, label: 'Checklist Dashboard', path: '/checklist-dashboard' },
+    { icon: BarChart2, label: 'Checklist Dashboard', path: '/checklist-dashboard', requireAdmin: true },
     { icon: HelpCircle, label: 'Help Tickets', path: '/help-tickets', countKey: 'helpTickets' },
     { icon: HelpCircle, label: 'Manage Tickets', path: '/admin-help-tickets', requireAdmin: true },
-    { icon: BarChart2, label: 'Purchase Dashboard', path: '/purchase-dashboard' },
-    { icon: BarChart2, label: 'Sales Dashboard', path: '/sales-dashboard' },
+    { icon: BarChart2, label: 'Purchase Dashboard', path: '/purchase-dashboard', requireAdmin: true },
+    { icon: BarChart2, label: 'Sales Dashboard', path: '/sales-dashboard', requireAdmin: true },
   ];
 
   useEffect(() => {
@@ -246,16 +246,15 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
 
       {/* Sidebar */}
       <div
-        className={`fixed inset-y-0 left-0 z-30 overflow-y-auto transition-all duration-300 transform lg:translate-x-0 lg:static lg:inset-0 ${
-          isOpen ? 'translate-x-0 ease-out' : '-translate-x-full ease-in lg:translate-x-0'
+        className={`fixed inset-y-0 left-0 z-30 flex flex-col transition-all duration-300 ease-in-out transform lg:translate-x-0 lg:static lg:inset-0 ${
+          isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
         } border-r backdrop-blur-xl`}
         style={{
           backgroundColor: 'rgba(var(--color-surface-rgb, 255, 255, 255), 0.95)',
           borderColor: 'var(--color-border)',
           width: isCollapsed ? '5rem' : '14rem',
-          willChange: 'width',
-          backfaceVisibility: 'hidden',
-          perspective: 1000,
+          minWidth: isCollapsed ? '5rem' : '14rem',
+          maxWidth: isCollapsed ? '5rem' : '14rem',
           boxShadow: '0 10px 30px -10px rgba(0, 0, 0, 0.1)'
         }}
       >
@@ -283,8 +282,8 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
         </div>
 
         {/* Navigation */}
-        <nav className="flex-1 mt-4 overflow-y-auto">
-          <div className="px-2 space-y-1">
+        <nav className="flex-1 overflow-y-auto overflow-x-hidden" style={{ scrollbarWidth: 'thin' }}>
+          <div className="px-2 space-y-1 pb-4">
             {filteredMenuItems.map((item) => (
               <Tooltip
                 key={item.path}

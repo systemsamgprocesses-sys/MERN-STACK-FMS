@@ -822,15 +822,22 @@ router.get('/analytics', async (req, res) => {
       };
     }
 
-    // Get upcoming tasks
-    const upcomingTasks = await Task.find({
+    // Get upcoming tasks - filter by assignedTo for non-admin users
+    const upcomingTasksQuery = {
       isActive: true,
       status: { $in: ['pending', 'in-progress'] },
       $or: [
         { dueDate: { $gt: now, $lte: new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000) } },
         { nextDueDate: { $gt: now, $lte: new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000) } }
       ]
-    })
+    };
+    
+    // Filter by assignedTo for non-admin users
+    if (isAdmin !== 'true' && userObjectId) {
+      upcomingTasksQuery.assignedTo = userObjectId;
+    }
+    
+    const upcomingTasks = await Task.find(upcomingTasksQuery)
     .populate('assignedBy', 'username email phoneNumber')
     .populate('assignedTo', 'username email phoneNumber')
     .sort({ dueDate: 1, nextDueDate: 1 })

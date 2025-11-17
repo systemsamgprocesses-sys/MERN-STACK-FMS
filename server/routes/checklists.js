@@ -95,6 +95,72 @@ router.get('/dashboard', async (req, res) => {
   }
 });
 
+// Get checklist calendar data
+router.get('/calendar', async (req, res) => {
+  try {
+    const { year, month, userId } = req.query;
+    const targetYear = parseInt(year) || new Date().getFullYear();
+    const targetMonth = parseInt(month) || new Date().getMonth();
+    
+    let query = {
+      startDate: {
+        $gte: new Date(targetYear, targetMonth, 1),
+        $lte: new Date(targetYear, targetMonth + 1, 0, 23, 59, 59)
+      }
+    };
+    
+    if (userId) {
+      query.assignedTo = userId;
+    }
+    
+    const checklists = await Checklist.find(query)
+      .populate('assignedTo', 'username')
+      .sort({ startDate: 1 });
+    
+    // Generate calendar structure
+    const firstDay = new Date(targetYear, targetMonth, 1).getDay();
+    const daysInMonth = new Date(targetYear, targetMonth + 1, 0).getDate();
+    const calendar = [];
+    
+    for (let day = 1; day <= daysInMonth; day++) {
+      const date = new Date(targetYear, targetMonth, day);
+      const dayChecklists = checklists.filter(cl => {
+        const clDate = new Date(cl.startDate);
+        return clDate.getDate() === day &&
+               clDate.getMonth() === targetMonth &&
+               clDate.getFullYear() === targetYear;
+      });
+      
+      const completedCount = dayChecklists.filter(cl => cl.status === 'Submitted').length;
+      const totalCount = dayChecklists.length;
+      
+      // Calculate activity level (0-4 scale)
+      let level = 0;
+      if (totalCount > 0) {
+        const completionRate = completedCount / totalCount;
+        level = completionRate >= 1 ? 4 : completionRate >= 0.75 ? 3 : completionRate >= 0.5 ? 2 : completionRate > 0 ? 1 : 0;
+      }
+      
+      calendar.push({
+        date: date.toISOString().split('T')[0],
+        checklists: dayChecklists,
+        completed: completedCount,
+        total: totalCount,
+        level: level
+      });
+    }
+    
+    res.json({
+      year: targetYear,
+      month: targetMonth,
+      calendar: calendar
+    });
+  } catch (error) {
+    console.error('Error fetching calendar data:', error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
 // Get checklist by ID
 router.get('/:id', async (req, res) => {
   try {

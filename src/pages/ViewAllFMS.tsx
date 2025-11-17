@@ -1,7 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, ChevronDown, ChevronUp, Eye, Printer, Edit } from 'lucide-react';
+import { Plus, ChevronDown, ChevronUp, Eye, Printer, Edit, Download } from 'lucide-react';
 import axios from 'axios';
+import jsPDF from 'jspdf';
+import html2canvas from 'html2canvas';
+import JSZip from 'jszip';
+import { saveAs } from 'file-saver';
 import { address } from '../../utils/ipAddress';
 import { useAuth } from '../contexts/AuthContext';
 import MermaidDiagram from '../components/MermaidDiagram';
@@ -15,6 +19,7 @@ interface FMSTemplate {
   createdBy: string;
   createdOn: string;
   totalTimeFormatted: string;
+  status?: string;
   steps: any[];
 }
 
@@ -36,6 +41,313 @@ const ViewAllFMS: React.FC = () => {
   const [newCategory, setNewCategory] = useState('');
   const [editingFMS, setEditingFMS] = useState<string | null>(null);
   const [usersCache, setUsersCache] = useState<any[]>([]);
+  const [downloadingPdfs, setDownloadingPdfs] = useState(false);
+
+  const buildUsersMap = () => {
+    const map = new Map<string, any>();
+    usersCache.forEach((user: any) => {
+      const key = user?._id || user?.id;
+      if (key) {
+        map.set(key, user);
+      }
+    });
+    return map;
+  };
+
+  const escapeHtml = (value: string | undefined | null) => {
+    if (!value) return '';
+    return value
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  };
+
+  const getStepDurationText = (step: any) => {
+    if (step.whenType === 'ask-on-completion') {
+      return 'Ask on completion';
+    }
+    if (step.whenUnit === 'days+hours') {
+      return `${step.whenDays || 0}d ${step.whenHours || 0}h`;
+    }
+    return `${step.when || 0} ${step.whenUnit || 'days'}`;
+  };
+
+  const formatAssigneeNames = (who: any, usersMap: Map<string, any>) => {
+    if (!Array.isArray(who)) return 'N/A';
+    const resolved = who
+      .map((w: any) => {
+        if (typeof w === 'object' && w !== null) {
+          if (w.username) return w.username;
+          if (w.name) return w.name;
+          if (w._id && usersMap.has(w._id)) {
+            const user = usersMap.get(w._id);
+            return user?.username || user?.name || '';
+          }
+          return w._id ? `ID: ${w._id}` : '';
+        }
+        if (typeof w === 'string') {
+          if (usersMap.has(w)) {
+            const user = usersMap.get(w);
+            return user?.username || user?.name || w;
+          }
+          return w;
+        }
+        return '';
+      })
+      .filter(Boolean);
+
+    return resolved.length ? resolved.join(', ') : 'N/A';
+  };
+
+  const getPrintableStyles = () => `
+    * { box-sizing: border-box; }
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      margin: 0;
+      padding: 12px;
+      line-height: 1.4;
+      color: #333;
+      font-size: 11px;
+      background: #fff;
+    }
+    .header {
+      text-align: center;
+      margin-bottom: 10px;
+      border-bottom: 2px solid #007bff;
+      padding-bottom: 10px;
+    }
+    .header h1 {
+      color: #007bff;
+      margin: 0;
+      font-size: 18px;
+      font-weight: bold;
+    }
+    .header p {
+      margin: 3px 0;
+      color: #666;
+      font-size: 11px;
+    }
+    .category-badge {
+      display: inline-block;
+      background: #28a745;
+      color: white;
+      padding: 3px 10px;
+      border-radius: 14px;
+      font-size: 10px;
+      font-weight: bold;
+      margin-left: 8px;
+    }
+    .fms-info {
+      background: #f8f9fa;
+      padding: 10px;
+      border-radius: 6px;
+      margin-bottom: 10px;
+      border-left: 3px solid #007bff;
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 6px;
+      font-size: 10px;
+    }
+    .fms-info p {
+      margin: 3px 0;
+      font-size: 10px;
+    }
+    .steps-section {
+      margin-top: 8px;
+    }
+    .steps-section h2 {
+      color: #007bff;
+      border-bottom: 1px solid #dee2e6;
+      padding-bottom: 4px;
+      font-size: 13px;
+      margin-bottom: 8px;
+    }
+    .steps-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 8px;
+    }
+    .step {
+      border: 1px solid #e9ecef;
+      border-radius: 6px;
+      padding: 10px;
+      background: white;
+      font-size: 10px;
+      page-break-inside: avoid;
+    }
+    .step-header {
+      font-weight: bold;
+      margin-bottom: 8px;
+      font-size: 11px;
+      color: #495057;
+      display: flex;
+      align-items: center;
+    }
+    .step-number {
+      background: #007bff;
+      color: white;
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: bold;
+      margin-right: 8px;
+      flex-shrink: 0;
+      font-size: 10px;
+    }
+    .detail-row {
+      margin-bottom: 5px;
+      display: flex;
+      align-items: flex-start;
+      font-size: 10px;
+    }
+    .label {
+      font-weight: bold;
+      display: inline-block;
+      width: 60px;
+      color: #495057;
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+      flex-shrink: 0;
+    }
+    .value {
+      flex: 1;
+      font-size: 10px;
+      word-wrap: break-word;
+      white-space: pre-wrap;
+    }
+    .checklist-items {
+      margin: 0;
+      padding-left: 14px;
+      list-style: disc;
+      font-size: 10px;
+    }
+    .checklist-items li {
+      margin-bottom: 2px;
+    }
+    .footer {
+      margin-top: 10px;
+      text-align: center;
+      font-size: 9px;
+      color: #6c757d;
+      border-top: 1px solid #dee2e6;
+      padding-top: 10px;
+    }
+  `;
+
+  const buildPrintableBody = (fms: FMSTemplate, usersMap: Map<string, any>) => `
+    <div class="header">
+      <h1>FMS Template: ${escapeHtml(fms.fmsName)}</h1>
+      <p>FMS ID: ${escapeHtml(fms.fmsId)} <span class="category-badge">${escapeHtml(fms.category || 'General')}</span></p>
+    </div>
+    <div class="fms-info">
+      <p><strong>Created by:</strong> ${escapeHtml(fms.createdBy || '')}</p>
+      <p><strong>Created:</strong> ${escapeHtml(new Date(fms.createdOn).toLocaleDateString())}</p>
+      <p><strong>Category:</strong> ${escapeHtml(fms.category || 'General')}</p>
+      <p><strong>Total Steps:</strong> ${fms.stepCount}</p>
+      <p><strong>Duration:</strong> ${escapeHtml(fms.totalTimeFormatted || '')}</p>
+      <p><strong>Status:</strong> ${escapeHtml(fms.status || 'Active')}</p>
+    </div>
+    <div class="steps-section">
+      <h2>Workflow Steps</h2>
+      <div class="steps-grid">
+        ${fms.steps.map(step => `
+          <div class="step">
+            <div class="step-header">
+              <div class="step-number">${step.stepNo}</div>
+              <div>${escapeHtml(step.what || 'Task Description')}</div>
+            </div>
+            <div class="detail-row">
+              <span class="label">WHO:</span>
+              <span class="value">${escapeHtml(formatAssigneeNames(step.who, usersMap))}</span>
+            </div>
+            <div class="detail-row">
+              <span class="label">HOW:</span>
+              <span class="value">${escapeHtml(step.how || 'Method not specified')}</span>
+            </div>
+            <div class="detail-row">
+              <span class="label">WHEN:</span>
+              <span class="value">${escapeHtml(getStepDurationText(step))}</span>
+            </div>
+            ${step.whenType ? `
+              <div class="detail-row">
+                <span class="label">Type:</span>
+                <span class="value">${escapeHtml(step.whenType === 'fixed' ? 'Fixed' : step.whenType === 'dependent' ? 'Dependent' : 'Ask')}</span>
+              </div>
+            ` : ''}
+            ${step.requiresChecklist && step.checklistItems?.length ? `
+              <div class="detail-row checklist-row">
+                <span class="label">Check:</span>
+                <span class="value">
+                  <ul class="checklist-items">
+                    ${step.checklistItems.map((item: any) => `<li>${escapeHtml(item.text || '')}</li>`).join('')}
+                  </ul>
+                </span>
+              </div>
+            ` : ''}
+            ${step.attachments?.length ? `
+              <div class="detail-row">
+                <span class="label">Files:</span>
+                <span class="value">${step.attachments.length} file(s)</span>
+              </div>
+            ` : ''}
+          </div>
+        `).join('')}
+      </div>
+    </div>
+    <div class="footer">
+      <p><strong>FMS Management System</strong> | Generated on ${escapeHtml(new Date().toLocaleString())}</p>
+    </div>
+  `;
+
+  const buildPrintableDocument = (fms: FMSTemplate, usersMap: Map<string, any>) => `
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <title>FMS Template: ${escapeHtml(fms.fmsName)}</title>
+        <style>
+          @page {
+            size: A4;
+            margin: 0.5cm;
+          }
+          ${getPrintableStyles()}
+        </style>
+      </head>
+      <body>
+        ${buildPrintableBody(fms, usersMap)}
+        <script>
+          window.onload = function() {
+            window.print();
+            window.onafterprint = function() {
+              window.close();
+            };
+          };
+        </script>
+      </body>
+    </html>
+  `;
+
+  const createHiddenPrintableNode = (fms: FMSTemplate, usersMap: Map<string, any>) => {
+    const node = document.createElement('div');
+    node.style.position = 'fixed';
+    node.style.top = '-10000px';
+    node.style.left = '-10000px';
+    node.style.width = '794px';
+    node.style.background = '#ffffff';
+    node.innerHTML = `<style>${getPrintableStyles()}</style>${buildPrintableBody(fms, usersMap)}`;
+    document.body.appendChild(node);
+    return node;
+  };
+
+  const sanitizeFileName = (value: string) => {
+    if (!value) return 'template';
+    return value.replace(/[^a-z0-9-_]+/gi, '_').slice(0, 60) || 'template';
+  };
 
   useEffect(() => {
     fetchFMSTemplates();
@@ -114,98 +426,113 @@ const ViewAllFMS: React.FC = () => {
     setExpandedFMS(expandedFMS === fmsId ? null : fmsId);
   };
 
-  const printFMS = (fms: FMSTemplate) => {
-    const printWindow = window.open('', '_blank');
+  const handlePrintFMS = (fms: FMSTemplate) => {
+    const printWindow = window.open('', '', 'height=600,width=1000');
     if (!printWindow) return;
     
-    const usersMap = new Map();
-    usersCache.forEach(user => {
-      if (user._id || user.id) {
-        usersMap.set(user._id || user.id, user);
-      }
-    });
-    
-    const formatAssignee = (who: any): string => {
-      if (Array.isArray(who)) {
-        return who.map((w: any) => {
-          if (typeof w === 'object' && w !== null) {
-            if (w.username) return w.username;
-            if (w.name) return w.name;
-            if (w._id && usersMap.has(w._id)) return usersMap.get(w._id).username || usersMap.get(w._id).name;
-            return w._id ? w._id.toString().substring(0, 8) : 'Unknown User';
-          } else if (typeof w === 'string') {
-            if (usersMap.has(w)) return usersMap.get(w).username || usersMap.get(w).name;
-            return w.substring(0, 8) + '...';
-          }
-          return 'Unknown User';
-        }).filter(name => name !== 'Unknown User').join(', ');
-      }
-      return 'N/A';
-    };
-    
-    printWindow.document.write(`
+    let stepsHTML = fms.steps.map((step) => `
+      <div style="page-break-inside: avoid; border: 1px solid #ddd; padding: 15px; margin-bottom: 15px; border-radius: 8px;">
+        <h4 style="margin: 0 0 10px 0; color: #333; font-size: 16px;">Step ${step.stepNo}: ${step.what}</h4>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; font-size: 14px;">
+          <div><strong>Who:</strong> ${Array.isArray(step.who) ? step.who.map((w: any) => w.username || w).join(', ') : 'N/A'}</div>
+          <div><strong>How:</strong> ${step.how}</div>
+          <div><strong>Duration:</strong> ${step.whenUnit === 'days+hours' ? `${step.whenDays || 0}d ${step.whenHours || 0}h` : `${step.when} ${step.whenUnit}`}</div>
+          <div><strong>Type:</strong> ${step.whenType === 'fixed' ? 'Fixed Duration' : step.whenType === 'dependent' ? 'Dependent' : 'Ask On Completion'}</div>
+        </div>
+      </div>
+    `).join('');
+
+    const content = `
       <!DOCTYPE html>
       <html>
       <head>
-        <title>FMS Template: ${fms.fmsName}</title>
+        <title>${fms.fmsName} - Print</title>
         <style>
-          body { font-family: Arial, sans-serif; margin: 20px; }
-          .header { text-align: center; margin-bottom: 30px; }
-          .fms-info { background: #f5f5f5; padding: 15px; border-radius: 5px; margin-bottom: 20px; }
-          .step { border: 1px solid #ddd; margin-bottom: 15px; border-radius: 5px; padding: 15px; }
-          .step-header { font-weight: bold; margin-bottom: 10px; }
-          .detail-row { margin-bottom: 8px; }
-          .label { font-weight: bold; display: inline-block; width: 80px; }
-          @media print {
-            body { margin: 0; }
-            .no-print { display: none; }
-          }
+          body { font-family: Arial, sans-serif; margin: 20px; background: white; }
+          h1 { color: #2563eb; margin-bottom: 10px; }
+          .header { border-bottom: 3px solid #2563eb; padding-bottom: 15px; margin-bottom: 20px; }
+          .info { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px; font-size: 14px; }
+          .info div { background: #f3f4f6; padding: 10px; border-radius: 5px; }
+          @media print { body { margin: 0; } }
         </style>
       </head>
       <body>
         <div class="header">
-          <h1>FMS Template: ${fms.fmsName}</h1>
-          <p>FMS ID: ${fms.fmsId}</p>
+          <h1>${fms.fmsName}</h1>
+          <p style="margin: 5px 0; color: #666;">${fms.fmsId}</p>
         </div>
-        
-        <div class="fms-info">
-          <p><strong>Created by:</strong> ${fms.createdBy}</p>
-          <p><strong>Created:</strong> ${new Date(fms.createdOn).toLocaleDateString()}</p>
-          <p><strong>Steps:</strong> ${fms.stepCount}</p>
-          <p><strong>Total Time:</strong> ${fms.totalTimeFormatted}</p>
+        <div class="info">
+          <div><strong>Steps:</strong> ${fms.stepCount}</div>
+          <div><strong>Total Time:</strong> ${fms.totalTimeFormatted}</div>
+          <div><strong>Created By:</strong> ${fms.createdBy}</div>
+          <div><strong>Created On:</strong> ${new Date(fms.createdOn).toLocaleDateString()}</div>
         </div>
-        
-        <h2>Workflow Steps</h2>
-        ${fms.steps.map(step => `
-          <div class="step">
-            <div class="step-header">Step ${step.stepNo}: ${step.what || 'Task Description'}</div>
-            <div class="detail-row"><span class="label">WHO:</span> ${formatAssignee(step.who)}</div>
-            <div class="detail-row"><span class="label">HOW:</span> ${step.how || 'Method not specified'}</div>
-            <div class="detail-row"><span class="label">WHEN:</span> ${step.whenType === 'ask-on-completion' ? 'Ask on completion' : `${step.when || 0} ${step.whenUnit || 'days'}`}</div>
-          </div>
-        `).join('')}
-        
-        <div style="margin-top: 30px; text-align: center; font-size: 12px; color: #666;">
-          <p>Generated on ${new Date().toLocaleString()}</p>
-        </div>
-        
+        <h2 style="color: #333; margin-top: 30px; margin-bottom: 15px;">Steps Details</h2>
+        ${stepsHTML}
         <script>
-          window.onload = function() {
-            window.print();
-            window.onafterprint = function() {
-              window.close();
-            };
-          };
+          window.onload = function() { window.print(); }
         </script>
       </body>
       </html>
-    `);
+    `;
     
+    printWindow.document.write(content);
     printWindow.document.close();
   };
 
+  const printFMS = async (fms: FMSTemplate) => {
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) return;
+
+    const usersMap = buildUsersMap();
+    printWindow.document.write(buildPrintableDocument(fms, usersMap));
+    printWindow.document.close();
+  };
+
+  const downloadAllFmsAsPdf = async () => {
+    if (typeof window === 'undefined' || downloadingPdfs || fmsList.length === 0) return;
+
+    setDownloadingPdfs(true);
+    const usersMap = buildUsersMap();
+
+    try {
+      const zip = new JSZip();
+
+      for (const fms of fmsList) {
+        const node = createHiddenPrintableNode(fms, usersMap);
+
+        try {
+          const canvas = await html2canvas(node, {
+            scale: 2,
+            useCORS: true,
+            backgroundColor: '#ffffff'
+          });
+          const imgData = canvas.toDataURL('image/png');
+          const pdf = new jsPDF('p', 'mm', 'a4');
+          const pdfWidth = pdf.internal.pageSize.getWidth();
+          const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+          pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+          const blob = pdf.output('blob');
+          zip.file(`${sanitizeFileName(fms.fmsId)}-${sanitizeFileName(fms.fmsName)}.pdf`, blob);
+        } catch (pdfError) {
+          console.error(`Failed to render PDF for ${fms.fmsName}`, pdfError);
+        } finally {
+          node.remove();
+        }
+      }
+
+      const zipBlob = await zip.generateAsync({ type: 'blob' });
+      saveAs(zipBlob, `fms-templates-${new Date().toISOString().split('T')[0]}.zip`);
+    } catch (error) {
+      console.error('Error generating PDF bundle:', error);
+    } finally {
+      setDownloadingPdfs(false);
+    }
+  };
+
   const generateMermaidDiagram = (steps: any[], usersCache?: any[]) => {
-    let diagram = 'graph TD\n';
+    // Use LR (left-right) layout for better horizontal flow
+    let diagram = 'graph LR\n';
     const usersMap = new Map();
     
     // Create a cache of users for faster lookup
@@ -217,30 +544,39 @@ const ViewAllFMS: React.FC = () => {
       });
     }
     
+    // Style definitions for better appearance
+    diagram += '    classDef stepBox fill:#e3f2fd,stroke:#1976d2,stroke-width:2px,color:#000\n';
+    diagram += '    classDef stepBoxAlt fill:#f3e5f5,stroke:#7b1fa2,stroke-width:2px,color:#000\n';
+    
     steps.forEach((step, index) => {
       const stepId = `S${step.stepNo}`;
       const nextStepId = index < steps.length - 1 ? `S${steps[index + 1].stepNo}` : null;
       
-      // Enhanced assignee resolution
+      // Enhanced assignee resolution - truncate for compact display
       let assignees = 'N/A';
       if (Array.isArray(step.who)) {
         assignees = step.who.map((w: any): string => {
           if (typeof w === 'object' && w !== null) {
-            // Handle populated user objects
-            if (w.username) return w.username;
-            if (w.name) return w.name;
-            if (w._id && usersMap.has(w._id)) return usersMap.get(w._id).username || usersMap.get(w._id).name;
-            // Fallback for object IDs
-            return w._id ? w._id.toString().substring(0, 8) : 'Unknown User';
+            if (w.username) return w.username.length > 12 ? w.username.substring(0, 12) + '...' : w.username;
+            if (w.name) return w.name.length > 12 ? w.name.substring(0, 12) + '...' : w.name;
+            if (w._id && usersMap.has(w._id)) {
+              const name = usersMap.get(w._id).username || usersMap.get(w._id).name;
+              return name && name.length > 12 ? name.substring(0, 12) + '...' : name;
+            }
+            return w._id ? w._id.toString().substring(0, 8) : 'Unknown';
           } else if (typeof w === 'string') {
-            // Handle string IDs
-            if (usersMap.has(w)) return usersMap.get(w).username || usersMap.get(w).name;
-            return w.substring(0, 8) + '...'; // Truncate for display
+            if (usersMap.has(w)) {
+              const name = usersMap.get(w).username || usersMap.get(w).name;
+              return name && name.length > 12 ? name.substring(0, 12) + '...' : name;
+            }
+            return w.substring(0, 8) + '...';
           }
-          return 'Unknown User';
-        }).filter((name: string) => name !== 'Unknown User').join(', ');
+          return 'Unknown';
+        }).filter((name: string) => name !== 'Unknown').join(', ');
         
         if (!assignees) assignees = 'N/A';
+        // Truncate if too long
+        if (assignees.length > 30) assignees = assignees.substring(0, 30) + '...';
       }
       
       const duration = step.whenUnit === 'days+hours'
@@ -249,14 +585,21 @@ const ViewAllFMS: React.FC = () => {
           ? 'Ask on completion'
           : `${step.when || 0} ${step.whenUnit || 'days'}`;
       
-      // Create a well-formatted step description
-      const stepDescription = step.what || `Step ${step.stepNo}`;
-      const howDescription = step.how || 'Method not specified';
+      // Create compact step description - truncate long text
+      let stepDescription = step.what || `Step ${step.stepNo}`;
+      if (stepDescription.length > 40) stepDescription = stepDescription.substring(0, 40) + '...';
       
-      diagram += `    ${stepId}["<b>Step ${step.stepNo}</b><br/><br/><b>WHAT:</b> ${stepDescription}<br/><br/><b>WHO:</b> ${assignees}<br/><br/><b>HOW:</b> ${howDescription}<br/><br/><b>WHEN:</b> ${duration}"]\n`;
+      let howDescription = step.how || 'Method not specified';
+      if (howDescription.length > 30) howDescription = howDescription.substring(0, 30) + '...';
+      
+      // Use alternating colors for better visual distinction
+      const boxClass = index % 2 === 0 ? 'stepBox' : 'stepBoxAlt';
+      
+      diagram += `    ${stepId}["<b>Step ${step.stepNo}</b><br/><b>WHAT:</b> ${stepDescription}<br/><b>WHO:</b> ${assignees}<br/><b>HOW:</b> ${howDescription}<br/><b>WHEN:</b> ${duration}"]\n`;
+      diagram += `    class ${stepId} ${boxClass}\n`;
       
       if (nextStepId) {
-        diagram += `    ${stepId} --> ${nextStepId}\n`;
+        diagram += `    ${stepId} -->|Next| ${nextStepId}\n`;
       }
     });
     
@@ -265,15 +608,8 @@ const ViewAllFMS: React.FC = () => {
 
   // Helper function to format assignee names in the details view
   const formatAssigneeForDetails = (who: any): string => {
-    if (Array.isArray(who)) {
-      return who.map((w: any) => {
-        if (typeof w === 'object' && w !== null) {
-          return w.username || w.name || 'Unknown User';
-        }
-        return w || 'Unknown User';
-      }).join(', ');
-    }
-    return 'N/A';
+    const usersMap = buildUsersMap();
+    return formatAssigneeNames(who, usersMap);
   };
 
   if (loading) {
@@ -371,6 +707,20 @@ const ViewAllFMS: React.FC = () => {
                 )}
               </div>
             )}
+
+            <button
+              onClick={downloadAllFmsAsPdf}
+              disabled={downloadingPdfs || fmsList.length === 0}
+              className={`px-4 py-2 rounded-lg border text-sm flex items-center gap-2 ${downloadingPdfs || fmsList.length === 0 ? 'opacity-60 cursor-not-allowed' : 'hover:bg-[var(--color-background)]'}`}
+              style={{
+                backgroundColor: 'var(--color-surface)',
+                borderColor: 'var(--color-border)',
+                color: 'var(--color-text)'
+              }}
+            >
+              <Download size={18} />
+              <span>{downloadingPdfs ? 'Preparing PDFs...' : 'Download PDFs'}</span>
+            </button>
 
             <button
               onClick={() => window.print()}
@@ -502,6 +852,26 @@ const ViewAllFMS: React.FC = () => {
                                 <button
                                   onClick={(e) => {
                                     e.stopPropagation();
+                                    handlePrintFMS(fms);
+                                  }}
+                                  className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 flex items-center space-x-2"
+                                >
+                                  <Printer size={16} />
+                                  <span>Print</span>
+                                </button>
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    void printFMS(fms);
+                                  }}
+                                  className="px-4 py-2 bg-[var(--color-secondary)] text-white rounded-lg hover:opacity-90 flex items-center gap-2"
+                                >
+                                  <Printer size={16} />
+                                  Print
+                                </button>
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
                                     navigate(`/start-project?fmsId=${fms._id}`);
                                   }}
                                   className="px-4 py-2 bg-[var(--color-primary)] text-white rounded-lg hover:opacity-90"
@@ -524,15 +894,17 @@ const ViewAllFMS: React.FC = () => {
                                   Workflow Preview
                                 </h4>
                                 <button
-                                  onClick={() => printFMS(fms)}
+                                  onClick={() => void printFMS(fms)}
                                   className="px-4 py-2 bg-[var(--color-primary)] text-white rounded-lg hover:opacity-90 flex items-center gap-2 print:hidden"
                                 >
                                   <Printer size={16} />
                                   Print This FMS
                                 </button>
                               </div>
-                              <div className="bg-white p-6 rounded-lg overflow-auto">
-                                <MermaidDiagram chart={generateMermaidDiagram(fms.steps, usersCache)} />
+                              <div className="bg-white p-6 rounded-lg overflow-auto border border-[var(--color-border)] shadow-sm">
+                                <div className="min-h-[300px] flex items-center justify-center">
+                                  <MermaidDiagram chart={generateMermaidDiagram(fms.steps, usersCache)} />
+                                </div>
                               </div>
                             </div>
                           )}

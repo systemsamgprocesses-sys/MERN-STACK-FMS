@@ -37,7 +37,8 @@ const userSchema = new mongoose.Schema({
     canEditTasks: { type: Boolean, default: false },
     canManageUsers: { type: Boolean, default: false },
     canEditRecurringTaskSchedules: { type: Boolean, default: false },
-    canCompleteTasksOnBehalf: { type: Boolean, default: false }
+    canCompleteTasksOnBehalf: { type: Boolean, default: false },
+    canManageStationery: { type: Boolean, default: false }
   },
   isActive: {
     type: Boolean,

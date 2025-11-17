@@ -20,8 +20,12 @@ import {
   UserCheck,
   Shield,
   Award,
-  HelpCircle, // Added HelpCircle
-  BarChart2, // Added BarChart2
+  Package,
+  ClipboardList,
+  HelpCircle,
+  BarChart2,
+  MessageSquare,
+  Calendar
 } from 'lucide-react';
 
 // Clean and Professional AMG Logo Component
@@ -103,34 +107,41 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
     masterRepetitive: 0,
     myTasks: 0,
     objections: 0,
+    myObjections: 0,
     assignedByMe: 0,
     helpTickets: 0,
+    complaintsInbox: 0,
   });
 
   const menuItems = [
-    { icon: LayoutDashboard, label: 'Dashboard', path: '/dashboard' },
-    { icon: CheckSquare, label: 'Pending Tasks', path: '/pending-tasks', countKey: 'pendingTasks' },
-    { icon: RefreshCw, label: 'Pending Repetitive', path: '/pending-recurring', countKey: 'pendingRepetitive' },
-    { icon: Archive, label: 'Master Tasks', path: '/master-tasks', countKey: 'masterTasks' },
-    { icon: RotateCcw, label: 'Master Repetitive', path: '/master-recurring', countKey: 'masterRepetitive' },
-    { icon: UserPlus, label: 'Assign Task', path: '/assign-task', permission: 'canAssignTasks' },
-    { icon: UserCheck, label: 'Assigned By Me', path: '/assigned-by-me', permission: 'canAssignTasks', countKey: 'assignedByMe' }, // Added Assigned By Me
-    { icon: Zap, label: 'Performance', path: '/performance' },
-    { icon: Settings, label: 'FMS Templates', path: '/fms-templates', permission: 'canAssignTasks' },
-    { icon: Settings, label: 'Start Project', path: '/start-project' },
-    { icon: Settings, label: 'FMS Progress', path: '/fms-progress' },
-    { icon: User, label: 'My Tasks', path: '/admin-tasks', requireAdmin: true, countKey: 'myTasks' },
-    { icon: Settings, label: 'Admin Panel', path: '/admin', requireAdmin: true },
-    { icon: AlertCircle, label: 'Objection Approvals', path: '/objection-approvals', countKey: 'objections' },
-    { icon: Shield, label: 'Audit Logs', path: '/audit-logs', requireSuperAdmin: true },
-    { icon: Award, label: 'Score Logs', path: '/score-logs', requireSuperAdmin: true },
-    // Added Checklist and Help Ticket navigation items
-    { icon: CheckSquare, label: 'Checklists', path: '/checklists' },
-    { icon: BarChart2, label: 'Checklist Dashboard', path: '/checklist-dashboard', requireAdmin: true },
-    { icon: HelpCircle, label: 'Help Tickets', path: '/help-tickets', countKey: 'helpTickets' },
-    { icon: HelpCircle, label: 'Manage Tickets', path: '/admin-help-tickets', requireAdmin: true },
-    { icon: BarChart2, label: 'Purchase Dashboard', path: '/purchase-dashboard', requireAdmin: true },
-    { icon: BarChart2, label: 'Sales Dashboard', path: '/sales-dashboard', requireAdmin: true },
+    { section: 'Tasks', icon: CheckSquare, label: 'Pending Tasks', path: '/pending-tasks', countKey: 'pendingTasks' },
+    { section: 'Tasks', icon: RefreshCw, label: 'Pending Repetitive', path: '/pending-recurring', countKey: 'pendingRepetitive' },
+    { section: 'Tasks', icon: Archive, label: 'Master Tasks', path: '/master-tasks', countKey: 'masterTasks' },
+    { section: 'Tasks', icon: RotateCcw, label: 'Master Repetitive', path: '/master-recurring', countKey: 'masterRepetitive' },
+    { section: 'Tasks', icon: UserPlus, label: 'Assign Task', path: '/assign-task', permission: 'canAssignTasks' },
+    { section: 'Tasks', icon: UserCheck, label: 'Assigned By Me', path: '/assigned-by-me', permission: 'canAssignTasks', countKey: 'assignedByMe' },
+    { section: 'Tasks', icon: Calendar, label: 'Upcoming Tasks', path: '/upcoming-tasks' },
+    { section: 'Management', icon: LayoutDashboard, label: 'Dashboard', path: '/dashboard' },
+    { section: 'Management', icon: Zap, label: 'Performance', path: '/performance' },
+    { section: 'Management', icon: Settings, label: 'FMS Templates', path: '/fms-templates', permission: 'canAssignTasks' },
+    { section: 'Management', icon: Settings, label: 'Start Project', path: '/start-project' },
+    { section: 'Management', icon: Settings, label: 'FMS Progress', path: '/fms-progress' },
+    { section: 'Management', icon: User, label: 'My Tasks', path: '/admin-tasks', requireAdmin: true, countKey: 'myTasks' },
+    { section: 'Management', icon: Settings, label: 'Admin Panel', path: '/admin', requireAdmin: true },
+    { section: 'Workflow', icon: AlertCircle, label: 'Objections Hub', path: '/objections', countKey: 'myObjections' },
+    { section: 'Workflow', icon: AlertCircle, label: 'Objection Approvals', path: '/objection-approvals', countKey: 'objections', requireObjectionApproval: true },
+    { section: 'Workflow', icon: MessageSquare, label: 'Complaints', path: '/complaints', countKey: 'complaintsInbox' },
+    { section: 'Workflow', icon: AlertCircle, label: 'Complaints Dashboard', path: '/complaints-dashboard', permission: 'canViewAllComplaints' },
+    { section: 'Workflow', icon: CheckSquare, label: 'Checklists', path: '/checklists' },
+    { section: 'Workflow', icon: BarChart2, label: 'Checklist Dashboard', path: '/checklist-dashboard', requireAdmin: true },
+    { section: 'Workflow', icon: HelpCircle, label: 'Help Tickets', path: '/help-tickets', countKey: 'helpTickets' },
+    { section: 'Workflow', icon: HelpCircle, label: 'Manage Tickets', path: '/admin-help-tickets', requireAdmin: true },
+    { section: 'Workflow', icon: Package, label: 'New Stationery Request', path: '/stationery-request' },
+    { section: 'Workflow', icon: ClipboardList, label: 'My Stationery Requests', path: '/my-stationery-requests' },
+    { section: 'Analytics', icon: BarChart2, label: 'Purchase Dashboard', path: '/purchase-dashboard', requireAdmin: true },
+    { section: 'Analytics', icon: BarChart2, label: 'Sales Dashboard', path: '/sales-dashboard', requireAdmin: true },
+    { section: 'Admin', icon: Shield, label: 'Audit Logs', path: '/audit-logs', requireSuperAdmin: true },
+    { section: 'Admin', icon: Award, label: 'Score Logs', path: '/score-logs', requireSuperAdmin: true },
   ];
 
   useEffect(() => {
@@ -200,6 +211,27 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
         console.error('Error fetching help tickets:', e);
       }
 
+      let myObjections = 0;
+      try {
+        if (user?.id) {
+          const myObjResponse = await axios.get(`${address}/api/objections/my/${user.id}`);
+          myObjections = (myObjResponse.data?.regular?.length || 0) + (myObjResponse.data?.fms?.length || 0);
+        }
+      } catch (err) {
+        console.error('Error fetching my objections:', err);
+      }
+
+      let complaintsInbox = 0;
+      try {
+        const token = localStorage.getItem('token');
+        const complaintsResponse = await axios.get(`${address}/api/complaints?scope=assigned`, {
+          headers: token ? { Authorization: `Bearer ${token}` } : undefined
+        });
+        complaintsInbox = Array.isArray(complaintsResponse.data) ? complaintsResponse.data.length : 0;
+      } catch (err) {
+        console.error('Error fetching complaints:', err);
+      }
+
       setCounts({
         pendingTasks: countsData.pendingTasks || 0,
         pendingRepetitive: countsData.pendingRepetitive || countsData.recurringPending || 0,
@@ -208,7 +240,9 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
         myTasks: countsData.totalTasks || 0, // For admin, show total tasks
         assignedByMe: countsData.assignedByMe?.total || 0,
         objections: objectionsCount,
+        myObjections,
         helpTickets: helpTicketsCount,
+        complaintsInbox,
       });
     } catch (error) {
       console.error('Error fetching counts:', error);
@@ -221,12 +255,26 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
     // Hide items that require super admin (for non-superadmins)
     if (item.requireSuperAdmin && user?.role !== 'superadmin') return false;
     // Admin can see admin panel and below
-    if (item.requireAdmin && user?.role !== 'admin') return false;
+    if (item.requireAdmin && !['admin', 'superadmin'].includes(user?.role || '')) return false;
     // Check for specific permissions
     if (item.permission && !user?.permissions[item.permission as keyof typeof user.permissions]) return false;
+    if (item.requireObjectionApproval) {
+      const canApprove =
+        ['manager', 'admin', 'superadmin'].includes(user?.role || '') ||
+        user?.permissions?.canAssignTasks;
+      if (!canApprove) return false;
+    }
     // Regular users see the rest
     return true;
   });
+
+  // Group menu items by section
+  const groupedMenuItems = filteredMenuItems.reduce((acc, item) => {
+    const section = item.section || 'Other';
+    if (!acc[section]) acc[section] = [];
+    acc[section].push(item);
+    return acc;
+  }, {} as Record<string, typeof menuItems>);
 
   const toggleCollapse = () => {
     setIsCollapsed(!isCollapsed);
@@ -283,56 +331,65 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
 
         {/* Navigation */}
         <nav className="flex-1 overflow-y-auto overflow-x-hidden" style={{ scrollbarWidth: 'thin' }}>
-          <div className="px-2 space-y-1 pb-4">
-            {filteredMenuItems.map((item) => (
-              <Tooltip
-                key={item.path}
-                content={item.label}
-                show={isCollapsed}
-              >
-                <NavLink
-                  to={item.path}
-                  onClick={onClose}
-                  className={({ isActive }) =>
-                    `flex items-center px-3 py-3 text-sm font-semibold rounded-xl transition-all duration-300 group ${
-                      isActive
-                        ? 'text-white shadow-lg scale-105'
-                        : 'hover:scale-105 hover:translate-x-1'
-                    } ${isCollapsed ? 'justify-center' : ''}`
-                  }
-                  style={({ isActive }) => ({
-                    background: isActive
-                      ? 'linear-gradient(135deg, var(--color-primary), var(--color-secondary))'
-                      : 'transparent',
-                    color: isActive ? 'white' : 'var(--color-text)',
-                  })}
-                  onMouseEnter={(e) => {
-                    if (!e.currentTarget.classList.contains('text-white')) {
-                      e.currentTarget.style.backgroundColor = 'rgba(99, 102, 241, 0.1)';
-                      e.currentTarget.style.borderRadius = '0.75rem';
-                    }
-                  }}
-                  onMouseLeave={(e) => {
-                    if (!e.currentTarget.classList.contains('text-white')) {
-                      e.currentTarget.style.backgroundColor = 'transparent';
-                    }
-                  }}
-                >
-                  <item.icon size={18} className={isCollapsed ? '' : 'mr-3'} />
-                  {!isCollapsed && (
-                    <span className="transition-opacity duration-200 flex-1">
-                      {item.label}
-                    </span>
-                  )}
-                  {item.countKey && counts[item.countKey as keyof typeof counts] > 0 && (
-                     <span className="ml-auto bg-gradient-to-r from-red-500 to-red-600 text-white text-xs font-bold rounded-full px-2 py-0.5 min-w-[1.5rem] text-center shadow-sm border border-red-400">
-                       {counts[item.countKey as keyof typeof counts]}
-                     </span>
-                   )}
-                </NavLink>
-              </Tooltip>
-            ))}
-          </div>
+          {Object.entries(groupedMenuItems).map(([section, items]) => (
+            <div key={section} className="px-2 py-3 border-t first:border-t-0" style={{ borderColor: 'var(--color-border)' }}>
+              {!isCollapsed && (
+                <h3 className="text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: 'var(--color-textSecondary)' }}>
+                  {section}
+                </h3>
+              )}
+              <div className="space-y-1">
+                {items.map((item) => (
+                  <Tooltip
+                    key={item.path}
+                    content={item.label}
+                    show={isCollapsed}
+                  >
+                    <NavLink
+                      to={item.path}
+                      onClick={onClose}
+                      className={({ isActive }) =>
+                        `flex items-center px-3 py-3 text-sm font-semibold rounded-xl transition-all duration-300 group ${
+                          isActive
+                            ? 'text-white shadow-lg scale-105'
+                            : 'hover:scale-105 hover:translate-x-1'
+                        } ${isCollapsed ? 'justify-center' : ''}`
+                      }
+                      style={({ isActive }) => ({
+                        background: isActive
+                          ? 'linear-gradient(135deg, var(--color-primary), var(--color-secondary))'
+                          : 'transparent',
+                        color: isActive ? 'white' : 'var(--color-text)',
+                      })}
+                      onMouseEnter={(e) => {
+                        if (!e.currentTarget.classList.contains('text-white')) {
+                          e.currentTarget.style.backgroundColor = 'rgba(99, 102, 241, 0.1)';
+                          e.currentTarget.style.borderRadius = '0.75rem';
+                        }
+                      }}
+                      onMouseLeave={(e) => {
+                        if (!e.currentTarget.classList.contains('text-white')) {
+                          e.currentTarget.style.backgroundColor = 'transparent';
+                        }
+                      }}
+                    >
+                      <item.icon size={18} className={isCollapsed ? '' : 'mr-3'} />
+                      {!isCollapsed && (
+                        <span className="transition-opacity duration-200 flex-1">
+                          {item.label}
+                        </span>
+                      )}
+                      {item.countKey && counts[item.countKey as keyof typeof counts] > 0 && (
+                         <span className="ml-auto bg-gradient-to-r from-red-500 to-red-600 text-white text-xs font-bold rounded-full px-2 py-0.5 min-w-[1.5rem] text-center shadow-sm border border-red-400">
+                           {counts[item.countKey as keyof typeof counts]}
+                         </span>
+                       )}
+                    </NavLink>
+                  </Tooltip>
+                ))}
+              </div>
+            </div>
+          ))}
         </nav>
       </div>
     </>

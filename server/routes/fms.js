@@ -188,7 +188,8 @@ router.get('/', async (req, res) => {
     }
     
     const fmsList = await FMS.find(query)
-      .populate('createdBy', 'username');
+      .populate('createdBy', 'username email')
+      .populate('steps.who', 'username email name');
     
     const formattedList = fmsList.map(fms => {
       let totalHours = 0;
@@ -229,8 +230,8 @@ router.get('/', async (req, res) => {
 router.get('/:fmsId', async (req, res) => {
   try {
     const fms = await FMS.findOne({ fmsId: req.params.fmsId })
-      .populate('createdBy', 'username')
-      .populate('steps.who', 'username');
+      .populate('createdBy', 'username email')
+      .populate('steps.who', 'username email name');
     
     if (!fms) {
       return res.status(404).json({ success: false, message: 'FMS template not found' });

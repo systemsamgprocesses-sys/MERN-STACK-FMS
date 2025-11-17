@@ -22,8 +22,8 @@ export interface Task {
   taskType: string;
   assignedBy: { username: string; email: string; phoneNumber?: string };
   assignedTo: {
-    _id: any; 
-    username: string; 
+    _id: any;
+    username: string;
     email: string;
     phoneNumber?: string;
   };
@@ -34,6 +34,7 @@ export interface Task {
   revisions: Revision[];
   completedAt?: string;
   completionRemarks?: string;
+  inProgressRemarks?: string;
   createdAt: string;
   attachments: Attachment[];
   completionAttachments?: Attachment[];

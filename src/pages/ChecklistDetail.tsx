@@ -1,8 +1,10 @@
 
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { CheckSquare, Check, Send, Archive, Edit } from 'lucide-react';
+import { CheckSquare, Check, Send, Archive, Edit, Printer, Download } from 'lucide-react';
 import axios from 'axios';
+import jsPDF from 'jspdf';
+import html2canvas from 'html2canvas';
 import { address } from '../../utils/ipAddress';
 
 interface ChecklistItem {
@@ -111,6 +113,36 @@ const ChecklistDetail: React.FC = () => {
     return Math.round((completed / checklist.items.length) * 100);
   };
 
+  const handlePrint = () => {
+    window.print();
+  };
+
+  const handleDownloadPDF = async () => {
+    if (!checklist) return;
+
+    try {
+      const element = document.getElementById('checklist-content');
+      if (!element) return;
+
+      const canvas = await html2canvas(element, {
+        scale: 2,
+        useCORS: true,
+        backgroundColor: '#ffffff'
+      });
+
+      const imgData = canvas.toDataURL('image/png');
+      const pdf = new jsPDF('p', 'mm', 'a4');
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+
+      pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+      pdf.save(`checklist-${checklist.title.replace(/[^a-z0-9]/gi, '_')}.pdf`);
+    } catch (error) {
+      console.error('Error generating PDF:', error);
+      alert('Failed to generate PDF. Please try again.');
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-[--color-background] flex items-center justify-center">
@@ -132,10 +164,28 @@ const ChecklistDetail: React.FC = () => {
       <div className="max-w-4xl mx-auto">
         {/* Header */}
         <div className="mb-6">
-          <h1 className="text-3xl font-bold text-[--color-text] flex items-center gap-2">
-            <CheckSquare className="text-[--color-primary]" />
-            {checklist.title}
-          </h1>
+          <div className="flex items-center justify-between mb-3">
+            <h1 className="text-3xl font-bold text-[--color-text] flex items-center gap-2">
+              <CheckSquare className="text-[--color-primary]" />
+              {checklist.title}
+            </h1>
+            <div className="flex gap-2 print:hidden">
+              <button
+                onClick={handlePrint}
+                className="px-4 py-2 bg-[--color-secondary] text-white rounded-lg hover:opacity-90 flex items-center gap-2"
+              >
+                <Printer size={18} />
+                Print
+              </button>
+              <button
+                onClick={handleDownloadPDF}
+                className="px-4 py-2 bg-[--color-primary] text-white rounded-lg hover:opacity-90 flex items-center gap-2"
+              >
+                <Download size={18} />
+                Download PDF
+              </button>
+            </div>
+          </div>
           <div className="flex items-center gap-4 mt-3 text-sm text-[--color-textSecondary]">
             <span>Assigned to: {checklist.assignedTo.username}</span>
             <span>•</span>
@@ -152,6 +202,8 @@ const ChecklistDetail: React.FC = () => {
           </div>
         </div>
 
+        {/* Printable Content */}
+        <div id="checklist-content">
         {/* Progress */}
         <div className="bg-[--color-surface] rounded-xl p-6 border border-[--color-border] mb-6">
           <div className="flex justify-between items-center mb-2">
@@ -203,8 +255,10 @@ const ChecklistDetail: React.FC = () => {
           </div>
         </div>
 
+        </div> {/* End of printable content */}
+
         {/* Actions */}
-        <div className="flex gap-3">
+        <div className="flex gap-3 print:hidden">
           <button
             onClick={() => navigate('/checklists')}
             className="flex-1 px-6 py-3 border border-[--color-border] text-[--color-text] rounded-lg hover:bg-[--color-border] transition-colors"

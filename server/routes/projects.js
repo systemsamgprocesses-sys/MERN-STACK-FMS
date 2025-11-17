@@ -145,9 +145,9 @@ router.get('/', async (req, res) => {
 
     const projects = await Project.find(query)
       .populate('fmsId', 'fmsName')
-      .populate('tasks.who', 'username')
-      .populate('tasks.completedBy', 'username')
-      .populate('createdBy', 'username')
+      .populate('tasks.who', 'username email name')
+      .populate('tasks.completedBy', 'username email name')
+      .populate('createdBy', 'username email name')
       .sort({ createdAt: -1 });
 
     res.json({ success: true, projects });

@@ -1,5 +1,7 @@
 import express from 'express';
+import jwt from 'jsonwebtoken';
 import User from '../models/User.js';
+import { config } from '../config.js';
 
 const router = express.Router();
 
@@ -20,7 +22,14 @@ router.post('/login', async (req, res) => {
       return res.status(401).json({ message: 'Invalid credentials' });
     }
 
-    // Return user data (without password)
+    // Generate JWT token
+    const token = jwt.sign(
+      { id: user._id, username: user.username, role: user.role },
+      config.jwtSecret,
+      { expiresIn: '7d' } // Token expires in 7 days
+    );
+
+    // Return user data (without password) and token
     const userData = {
       id: user._id,
       username: user.username,
@@ -31,7 +40,8 @@ router.post('/login', async (req, res) => {
 
     res.json({
       message: 'Login successful',
-      user: userData
+      user: userData,
+      token: token
     });
   } catch (error) {
     res.status(500).json({ message: 'Server error', error: error.message });

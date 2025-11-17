@@ -96,8 +96,6 @@ const PendingRecurringTasks: React.FC = () => {
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [view, setView] = useState<'card' | 'table'>(getInitialViewPreference);
-  const [itemsPerPage, setItemsPerPage] = useState(10);
-  const [currentPage, setCurrentPage] = useState(1);
   const [activeSection, setActiveSection] = useState<'daily' | 'cyclic'>('daily');
   const [filter, setFilter] = useState({
     taskType: '',
@@ -110,6 +108,8 @@ const PendingRecurringTasks: React.FC = () => {
   const [showAttachmentsModal, setShowAttachmentsModal] = useState<Attachment[] | null>(null); // State for attachments modal
   const [selectedImagePreview, setSelectedImagePreview] = useState<string | null>(null); // State for full-screen image preview
   const [showFullDescription, setShowFullDescription] = useState<{ [key: string]: boolean }>({}); // State to manage full description visibility
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
 
   const isAdmin = user?.role === 'admin' || user?.permissions?.canViewAllTeamTasks;
 
@@ -206,7 +206,7 @@ const PendingRecurringTasks: React.FC = () => {
     fiveDaysFromNow.setDate(fiveDaysFromNow.getDate() + 5);
     return filteredTasks.filter(task => {
       // Exclude daily tasks and include tasks overdue or due within the next 5 days
-      return task.taskType === 'weekly' || task.taskType === 'monthly' || task.taskType === 'quarterly' || task.taskType === 'yearly' && ((new Date(task.dueDate) <= fiveDaysFromNow && new Date(task.dueDate) >= today) || isOverdue(task.dueDate));
+      return (task.taskType === 'weekly' || task.taskType === 'monthly' || task.taskType === 'quarterly' || task.taskType === 'yearly') && ((new Date(task.dueDate) <= fiveDaysFromNow && new Date(task.dueDate) >= today) || isOverdue(task.dueDate));
     });
   };
 
@@ -214,11 +214,6 @@ const PendingRecurringTasks: React.FC = () => {
     return activeSection === 'daily' ? getDailyTasks() : getCyclicTasks();
   };
 
-  // Calculate pagination
-  const totalPages = Math.ceil(getCurrentTasks().length / itemsPerPage);
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const endIndex = startIndex + itemsPerPage;
-  const currentTasks = getCurrentTasks().slice(startIndex, endIndex);
 
   useEffect(() => {
     fetchTasks();
@@ -231,7 +226,6 @@ const PendingRecurringTasks: React.FC = () => {
   useEffect(() => {
     const filtered = filterTasks(allTasks);
     setFilteredTasks(filtered);
-    setCurrentPage(1); // Reset to first page when filters change
   }, [allTasks, filter]);
 
   useEffect(() => {
@@ -289,14 +283,15 @@ const PendingRecurringTasks: React.FC = () => {
     setFilter({ taskType: '', priority: '', assignedTo: '', search: '' });
   };
 
-  const handlePageChange = (page: number) => {
-    setCurrentPage(Math.max(1, Math.min(page, totalPages)));
+  const handlePageChange = (newPage: number) => {
+    setCurrentPage(newPage);
   };
 
   const handleItemsPerPageChange = (newItemsPerPage: number) => {
     setItemsPerPage(newItemsPerPage);
-    setCurrentPage(1); // Reset to first page
+    setCurrentPage(1); // Reset to first page when items per page changes
   };
+
 
   const handleDeleteTask = async (taskId: string) => {
     try {
@@ -331,7 +326,7 @@ const PendingRecurringTasks: React.FC = () => {
 
   const renderCardView = () => (
     <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-4 gap-6">
-      {currentTasks.map((task) => {
+      {getCurrentTasks().map((task) => {
         const daysUntilDue = getDaysUntilDue(task.dueDate);
         const overdue = isOverdue(task.dueDate);
         const descriptionIsLong = task.description.length > 150; // Define a threshold for "long" description
@@ -468,7 +463,7 @@ const PendingRecurringTasks: React.FC = () => {
             </tr>
           </thead>
           <tbody className="bg-[var(--color-background)] divide-y divide-[var(--color-border)]">
-            {currentTasks.map((task) => {
+           {getCurrentTasks().map((task) => {
               const overdue = isOverdue(task.dueDate);
               const daysUntilDue = getDaysUntilDue(task.dueDate);
               const descriptionIsLong = task.description.length > 150; // Define a threshold for "long" description
@@ -561,14 +556,6 @@ const PendingRecurringTasks: React.FC = () => {
                     )}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                    <button
-                      onClick={() => updateTaskProgress(task._id, 'In Progress')}
-                      className="p-2 text-blue-600 hover:bg-blue-100 rounded-lg transition-all mr-2 disabled:opacity-50 disabled:cursor-not-allowed"
-                      title="Mark as In Progress"
-                      disabled={task.status === 'In Progress'}
-                    >
-                      <Clock size={18} />
-                    </button>
                     <button
                       onClick={() => setShowCompleteModal(task._id)}
                       className="text-[var(--color-success)] hover:opacity-80 transition-all hover:scale-110"
@@ -675,7 +662,7 @@ const PendingRecurringTasks: React.FC = () => {
                   { value: 'yearly', label: 'Yearly' },
                 ]}
                 value={filter.taskType}
-                onChange={(val) => setFilter({ ...filter, taskType: val })}
+                onChange={(selected) => setFilter({ ...filter, taskType: selected?.value || '' })}
                 placeholder="Select task type"
               />
             </div>
@@ -688,7 +675,7 @@ const PendingRecurringTasks: React.FC = () => {
                   { value: 'high', label: 'High' },
                 ]}
                 value={filter.priority}
-                onChange={(val) => setFilter({ ...filter, priority: val })}
+                onChange={(selected) => setFilter({ ...filter, priority: selected?.value || '' })}
                 placeholder="Select priority"
               />
             </div>
@@ -698,7 +685,7 @@ const PendingRecurringTasks: React.FC = () => {
                 <SearchableSelect
                   options={[{ value: '', label: 'All Members' }, ...users.map((user) => ({ value: user._id, label: user.username }))]}
                   value={filter.assignedTo}
-                  onChange={(val) => setFilter({ ...filter, assignedTo: val })}
+                  onChange={(selected) => setFilter({ ...filter, assignedTo: selected?.value || '' })}
                   placeholder="Select team member"
                 />
               </div>
@@ -747,6 +734,15 @@ const PendingRecurringTasks: React.FC = () => {
         </div>
       ) : (
         <>
+          {/* Calculate pagination variables */}
+          {(() => {
+            const currentTasks = getCurrentTasks();
+            const totalPages = Math.ceil(currentTasks.length / itemsPerPage);
+            const startIndex = (currentPage - 1) * itemsPerPage;
+            const endIndex = Math.min(startIndex + itemsPerPage, currentTasks.length);
+            
+            return (
+              <>
           {view === 'card' ? renderCardView() : renderTableView()}
 
           {/* Enhanced Pagination */}
@@ -852,6 +848,9 @@ const PendingRecurringTasks: React.FC = () => {
               </div>
             </div>
           )}
+              </>
+            );
+          })()}
         </>
       )}
 
@@ -860,6 +859,7 @@ const PendingRecurringTasks: React.FC = () => {
         <TaskCompletionModal
           taskId={showCompleteModal}
           taskTitle={completingTask.title}
+          taskType={completingTask.taskType}
           isRecurring={true}
           allowAttachments={taskSettings.pendingRecurringTasks.allowAttachments}
           mandatoryAttachments={taskSettings.pendingRecurringTasks.mandatoryAttachments}

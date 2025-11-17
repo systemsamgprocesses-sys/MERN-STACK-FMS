@@ -22,6 +22,7 @@ const CreateChecklist: React.FC = () => {
     title: '',
     parentTaskId: '',
     assignedTo: '',
+    category: 'custom',
     recurrenceType: 'one-time',
     customUnit: 'days',
     customN: 1,
@@ -30,6 +31,12 @@ const CreateChecklist: React.FC = () => {
   });
 
   const [items, setItems] = useState<ChecklistItem[]>([{ title: '' }]);
+
+  const canCreateChecklist =
+    user?.role === 'superadmin' ||
+    user?.role === 'admin' ||
+    user?.role === 'manager' ||
+    user?.permissions?.canCreateChecklists;
 
   useEffect(() => {
     fetchUsers();
@@ -104,6 +111,7 @@ const CreateChecklist: React.FC = () => {
         createdBy: user?.id,
         parentTaskId: formData.parentTaskId || undefined,
         assignedTo: formData.assignedTo,
+        category: formData.category,
         recurrence: {
           type: formData.recurrenceType,
           customInterval: formData.recurrenceType === 'custom' ? {
@@ -132,6 +140,19 @@ const CreateChecklist: React.FC = () => {
       setLoading(false);
     }
   };
+
+  if (!canCreateChecklist) {
+    return (
+      <div className="min-h-screen bg-[--color-background] p-6 flex items-center justify-center">
+        <div className="max-w-md text-center bg-[--color-surface] border border-[--color-border] rounded-xl p-8">
+          <h2 className="text-2xl font-semibold text-[--color-text] mb-4">Access Restricted</h2>
+          <p className="text-[--color-textSecondary]">
+            You do not have permission to create checklists. Please contact your administrator.
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-[--color-background] p-6">
@@ -176,6 +197,30 @@ const CreateChecklist: React.FC = () => {
                 {users.map(u => (
                   <option key={u._id} value={u._id}>{u.username}</option>
                 ))}
+              </select>
+            </div>
+
+            {/* Category */}
+            <div>
+              <label className="block text-sm font-medium text-[--color-text] mb-2">
+                Category <span className="text-red-500">*</span>
+              </label>
+              <select
+                value={formData.category}
+                onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+                required
+                className="w-full px-4 py-2 border border-[--color-border] rounded-lg bg-[--color-background] text-[--color-text]"
+              >
+                <option value="daily">Daily</option>
+                <option value="weekly">Weekly</option>
+                <option value="monthly">Monthly</option>
+                <option value="quarterly">Quarterly</option>
+                <option value="yearly">Yearly</option>
+                <option value="maintenance">Maintenance</option>
+                <option value="compliance">Compliance</option>
+                <option value="training">Training</option>
+                <option value="audit">Audit</option>
+                <option value="custom">Custom</option>
               </select>
             </div>
 

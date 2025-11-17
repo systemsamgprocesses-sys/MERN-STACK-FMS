@@ -10,7 +10,7 @@ interface HelpTicket {
   description: string;
   priority: string;
   status: string;
-  createdBy: { _id: string; username: string };
+  raisedBy: { _id: string; username: string };
   assignedTo?: { _id: string; username: string };
   createdAt: string;
   adminRemarks: Array<{ by: { username: string }; remark: string; at: string }>;
@@ -82,12 +82,13 @@ const AdminHelpTickets: React.FC = () => {
     try {
       const token = localStorage.getItem('token');
       await axios.patch(
-        `${address}/api/help-tickets/${ticketId}`,
+        `${address}/api/help-tickets/${ticketId}/status`,
         { status },
         { headers: { Authorization: `Bearer ${token}` } }
       );
       fetchTickets();
     } catch (error: any) {
+      console.error('Error updating status:', error);
       alert(error.response?.data?.error || 'Failed to update status');
     }
   };
@@ -166,7 +167,7 @@ const AdminHelpTickets: React.FC = () => {
                         <option value="Closed">Closed</option>
                       </select>
                       <span className="text-sm text-[--color-textSecondary]">
-                        by {ticket.createdBy.username}
+                        by {ticket.raisedBy.username}
                       </span>
                     </div>
                   </div>

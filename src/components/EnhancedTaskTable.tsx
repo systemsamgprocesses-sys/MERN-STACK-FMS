@@ -852,6 +852,15 @@ const EnhancedTaskTable: React.FC<EnhancedTaskTableProps> = ({
                                 <Info size={16} />
                               </button>
                             )}
+                            {task.inProgressRemarks && task.status === 'in-progress' && (
+                              <button
+                                onClick={() => setShowRemarksModal(task)}
+                                className="p-1 text-blue-600 hover:text-blue-900 hover:bg-blue-50 rounded transition-colors"
+                                title="View in-progress remarks"
+                              >
+                                <FileText size={16} />
+                              </button>
+                            )}
                             {onViewTask && (
                               <button
                                 onClick={() => onViewTask(task)}
@@ -1078,18 +1087,22 @@ const EnhancedTaskTable: React.FC<EnhancedTaskTableProps> = ({
         </div>
       )}
 
-      {/* Completion Remarks Modal */}
+      {/* Remarks Modal */}
       {showRemarksModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-xl max-w-lg w-full shadow-2xl">
             <div className="p-6">
               <h3 className="text-lg font-semibold mb-4 flex items-center gap-2 text-gray-900">
                 <Info size={20} />
-                Completion Remarks
+                {showRemarksModal.completedAt && showRemarksModal.completionRemarks
+                  ? 'Completion Remarks'
+                  : 'In-Progress Remarks'}
               </h3>
               <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
                 <p className="text-gray-800 leading-relaxed">
-                  {showRemarksModal.completionRemarks}
+                  {showRemarksModal.completedAt && showRemarksModal.completionRemarks
+                    ? showRemarksModal.completionRemarks
+                    : showRemarksModal.inProgressRemarks}
                 </p>
               </div>
               <div className="mt-6 flex justify-end">

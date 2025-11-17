@@ -24,6 +24,8 @@ import scoreLogRoutes from './routes/scoreLogs.js';
 import checklistRoutes from './routes/checklists.js';
 import checklistCategoryRoutes from './routes/checklistCategories.js';
 import helpTicketRoutes from './routes/helpTickets.js';
+import complaintRoutes from './routes/complaints.js';
+import stationeryRoutes from './routes/stationery.js';
 
 dotenv.config();
 
@@ -36,12 +38,14 @@ const PORT = config.port;
 // Middleware
 const replitDomain = process.env.REPLIT_DEV_DOMAIN;
 const allowedOrigins = [
-  'http://localhost:5173',
-  'http://localhost:5000',
-  'http://localhost:3000',
-  'https://hub.amgrealty.in',
-  'https://task.amgrealty.in',
-  'https://tasks.amgrealty.in',
+ 'http://localhost:5173', // Employee App (Dev)
+  'http://localhost:5174', // HR Portal (Dev)
+  'http://localhost:5000', // (You had this, so I'll keep it)
+  'http://', // The backend itself
+  'https://hub.amgrealty.in', // Main App (Production)
+  'https://task.amgrealty.in', // (Legacy or alternate, good to keep)
+  'https://tasks.amgrealty.in', // (Legacy or alternate, good to keep)
+  'https://hr.amgrealty.in', // HR Portal (Production)
   replitDomain ? `https://${replitDomain}` : null,
   config.corsOrigin
 ].filter(Boolean);
@@ -143,6 +147,8 @@ app.use('/api/checklists', checklistRoutes);
 app.use('/api/checklists/categories', checklistCategoryRoutes);
 app.use('/api/checklists/departments', checklistCategoryRoutes);
 app.use('/api/help-tickets', helpTicketRoutes);
+app.use('/api/complaints', complaintRoutes);
+app.use('/api/stationery', stationeryRoutes);
 
 // Serve frontend in production
 if (config.nodeEnv === 'production') {

@@ -67,10 +67,11 @@ const filterTasks = (tasks: Task[], filter: any) => {
     if (filter.assignedTo && (!task.assignedTo || task.assignedTo._id !== filter.assignedTo)) {
       return false;
     }
-    // Date range filter for due date
+    // Date range filter for due date (also applies to date-range task's endDate)
     if (filter.dateFrom || filter.dateTo) {
-      if (!task.dueDate) return false; // Skip tasks without due date when date filter is applied
-      const taskDate = new Date(task.dueDate);
+      const dateToCheck = filter.taskType === 'date-range' && task.dateRangeEnd ? task.dateRangeEnd : task.dueDate;
+      if (!dateToCheck) return false; // Skip tasks without date when date filter is applied
+      const taskDate = new Date(dateToCheck);
       if (filter.dateFrom) {
         const fromDate = new Date(filter.dateFrom);
         fromDate.setHours(0, 0, 0, 0);
@@ -314,16 +315,39 @@ const MasterTasks: React.FC = () => {
       <ChevronDown size={14} className="text-blue-600" />;
   };
 
-  const isTaskOverdue = (dueDate?: string, status?: string) => {
+  const isTaskOverdue = (dueDate?: string, status?: string, endDate?: string) => {
     if (status === 'completed' || !dueDate) return false;
 
-    const dueDateTime = new Date(dueDate);
+    // For date-range tasks, check against end date; for others, check against dueDate
+    const dateToCheck = endDate || dueDate;
+    const dueDateTime = new Date(dateToCheck);
     dueDateTime.setHours(0, 0, 0, 0);
 
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
     return dueDateTime < today;
+  };
+
+  const getDisplayDateRange = (task: Task): string => {
+    if (task.taskType === 'date-range' && task.dateRangeStart && task.dateRangeEnd) {
+      const startDate = new Date(task.dateRangeStart).toLocaleDateString('en-GB', {
+        day: '2-digit',
+        month: 'numeric',
+        year: 'numeric',
+      });
+      const endDate = new Date(task.dateRangeEnd).toLocaleDateString('en-GB', {
+        day: '2-digit',
+        month: 'numeric',
+        year: 'numeric',
+      });
+      return `${startDate} to ${endDate}`;
+    }
+    return task.dueDate ? new Date(task.dueDate).toLocaleDateString('en-GB', {
+      day: '2-digit',
+      month: 'numeric',
+      year: 'numeric',
+    }) : 'N/A';
   };
 
   const toggleDescriptionExpansion = (taskId: string) => {
@@ -472,23 +496,19 @@ const MasterTasks: React.FC = () => {
                     <span className={`${isDark ? 'text-gray-500' : 'text-gray-400'}`}>No Attachments</span>
                   )}
                 </div>
-                <div className={`flex items-center justify-between p-2 rounded-lg ${isTaskOverdue(task.dueDate, task.status)
+                <div className={`flex items-center justify-between p-2 rounded-lg ${isTaskOverdue(task.dueDate, task.status, task.dateRangeEnd)
                   ? (isDark ? 'bg-red-900' : 'bg-red-50')
                   : (isDark ? 'bg-green-900' : 'bg-green-50')
                   }`}>
                   <span className={`flex items-center ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
                     <Calendar size={14} className="mr-2" />
-                    Due date:
+                    {task.taskType === 'date-range' ? 'Date Range' : 'Due date'}:
                   </span>
-                  <span className={`font-medium ${isTaskOverdue(task.dueDate, task.status)
+                  <span className={`font-medium ${isTaskOverdue(task.dueDate, task.status, task.dateRangeEnd)
                     ? (isDark ? 'text-red-100' : 'text-red-900')
                     : (isDark ? 'text-green-100' : 'text-green-900')
                     }`}>
-                    {task.dueDate ? new Date(task.dueDate).toLocaleDateString('en-GB', {
-                      day: '2-digit',
-                      month: 'numeric',
-                      year: 'numeric',
-                    }) : 'N/A'}
+                    {getDisplayDateRange(task)}
                   </span>
                 </div>
                 {task.completedAt && (
@@ -561,6 +581,9 @@ const MasterTasks: React.FC = () => {
                 </button>
               </th>
               <th className={`px-6 py-4 text-left text-xs font-medium uppercase tracking-wider ${isDark ? 'text-gray-300' : 'text-gray-500'}`}>
+                In Progress Remarks
+              </th>
+              <th className={`px-6 py-4 text-left text-xs font-medium uppercase tracking-wider ${isDark ? 'text-gray-300' : 'text-gray-500'}`}>
                 <button
                   onClick={() => handleSort('priority')}
                   className={`flex items-center space-x-1 transition-colors ${isDark ? 'hover:text-white' : 'hover:text-gray-700'}`}
@@ -583,7 +606,7 @@ const MasterTasks: React.FC = () => {
                   onClick={() => handleSort('dueDate')}
                   className={`flex items-center space-x-1 transition-colors ${isDark ? 'hover:text-white' : 'hover:text-gray-700'}`}
                 >
-                  <span>Due Date</span>
+                  <span>Date Range / Due Date</span>
                   {getSortIcon('dueDate')}
                 </button>
               </th>
@@ -650,6 +673,19 @@ const MasterTasks: React.FC = () => {
                     <StatusBadge status={task.status} isOnHold={task.isOnHold} />
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
+                    <div className={`text-sm ${isDark ? 'text-gray-300' : 'text-gray-900'}`}>
+                      {task.status === 'in-progress' && task.inProgressRemarks ? (
+                        <div className="max-w-xs truncate" title={task.inProgressRemarks}>
+                          {task.inProgressRemarks}
+                        </div>
+                      ) : task.status === 'in-progress' ? (
+                        <span className={`${isDark ? 'text-gray-500' : 'text-gray-400'}`}>No remarks</span>
+                      ) : (
+                        <span className={`${isDark ? 'text-gray-600' : 'text-gray-300'}`}>-</span>
+                      )}
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
                     <PriorityBadge priority={task.priority} />
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
@@ -686,17 +722,13 @@ const MasterTasks: React.FC = () => {
                     )}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className={`text-sm font-medium ${isTaskOverdue(task.dueDate, task.status)
+                    <div className={`text-sm font-medium ${isTaskOverdue(task.dueDate, task.status, task.dateRangeEnd)
                       ? (isDark ? 'text-red-400' : 'text-red-600')
                       : (isDark ? 'text-white' : 'text-gray-900')
                       }`}>
-                      {task.dueDate ? new Date(task.dueDate).toLocaleDateString('en-GB', {
-                        day: '2-digit',
-                        month: 'numeric',
-                        year: 'numeric',
-                      }) : 'N/A'}
+                      {getDisplayDateRange(task)}
                     </div>
-                    {isTaskOverdue(task.dueDate, task.status) && (
+                    {isTaskOverdue(task.dueDate, task.status, task.dateRangeEnd) && (
                       <div className={`text-xs ${isDark ? 'text-red-300' : 'text-red-500'}`}>Overdue</div>
                     )}
                   </td>

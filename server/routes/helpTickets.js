@@ -1,5 +1,6 @@
 import express from 'express';
 import HelpTicket from '../models/HelpTicket.js';
+import { authenticateToken, requireAdmin } from '../middleware/auth.js';
 
 const router = express.Router();
 
@@ -30,7 +31,7 @@ router.get('/', async (req, res) => {
 });
 
 // Get all tickets for admin/superadmin
-router.get('/admin', async (req, res) => {
+router.get('/admin', authenticateToken, requireAdmin, async (req, res) => {
   try {
     const { status, priority } = req.query;
 
@@ -80,7 +81,7 @@ router.post('/', async (req, res) => {
 });
 
 // Add admin remark
-router.post('/:id/remark', async (req, res) => {
+router.post('/:id/remark', authenticateToken, requireAdmin, async (req, res) => {
   try {
     const { remark, by } = req.body;
 
@@ -101,8 +102,30 @@ router.post('/:id/remark', async (req, res) => {
   }
 });
 
-// Update ticket status
-router.patch('/:id', async (req, res) => {
+// Update ticket status (both endpoints for compatibility)
+router.patch('/:id/status', authenticateToken, requireAdmin, async (req, res) => {
+  try {
+    const { status } = req.body;
+
+    const ticket = await HelpTicket.findByIdAndUpdate(
+      req.params.id,
+      { status, updatedAt: new Date() },
+      { new: true }
+    ).populate('raisedBy assignedTo relatedTaskId adminRemarks.by');
+
+    if (!ticket) {
+      return res.status(404).json({ error: 'Ticket not found' });
+    }
+
+    res.json(ticket);
+  } catch (error) {
+    console.error('Error updating ticket status:', error);
+    res.status(500).json({ error: 'Failed to update status' });
+  }
+});
+
+// Update ticket (general update endpoint)
+router.patch('/:id', authenticateToken, requireAdmin, async (req, res) => {
   try {
     const { status } = req.body;
 

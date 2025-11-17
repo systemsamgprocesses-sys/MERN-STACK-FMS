@@ -208,6 +208,7 @@ const Dashboard: React.FC = () => {
   const [selectedTeamMember, setSelectedTeamMember] = useState<string>('all');
   const [showTeamMemberFilter, setShowTeamMemberFilter] = useState(false);
   const [memberTrendData, setMemberTrendData] = useState<any[]>([]);
+  const [teamMemberSearchTerm, setTeamMemberSearchTerm] = useState('');
 
   // const toggleTooltip = () => {
   //   if (scrollRef?.current) {
@@ -383,7 +384,7 @@ const Dashboard: React.FC = () => {
   // Team Member Selector Component
   const TeamMemberSelector = () => {
     const [teamMembers, setTeamMembers] = useState<Array<{id: string, username: string}>>([]);
-    
+
     useEffect(() => {
       const fetchTeamMembers = async () => {
         try {
@@ -396,9 +397,13 @@ const Dashboard: React.FC = () => {
           console.error('Error fetching team members:', error);
         }
       };
-      
+
       fetchTeamMembers();
     }, []);
+
+    const filteredTeamMembers = teamMembers.filter(member =>
+      member.username.toLowerCase().includes(teamMemberSearchTerm.toLowerCase())
+    );
 
     return (
       <div className="relative">
@@ -413,7 +418,7 @@ const Dashboard: React.FC = () => {
         >
           <div className="flex items-center">
             <Users size={16} className="mr-2" />
-            <span>{selectedTeamMember === 'all' ? 'All Team Members' : 
+            <span>{selectedTeamMember === 'all' ? 'All Team Members' :
               teamMembers.find(m => m.id === selectedTeamMember)?.username || 'Select Member'}</span>
             <ChevronDown size={16} className="ml-2" />
           </div>
@@ -421,7 +426,7 @@ const Dashboard: React.FC = () => {
 
         {showTeamMemberFilter && (
           <div
-            className="absolute z-10 mt-2 w-56 rounded-md shadow-lg"
+            className="absolute z-10 mt-2 w-64 rounded-md shadow-lg"
             style={{
               backgroundColor: 'var(--color-surface)',
               borderColor: 'var(--color-border)',
@@ -429,24 +434,42 @@ const Dashboard: React.FC = () => {
             }}
           >
             <div className="rounded-md ring-1 ring-black ring-opacity-5">
-              <div className="py-1">
+              <div className="p-2">
+                <input
+                  type="text"
+                  placeholder="Search team members..."
+                  value={teamMemberSearchTerm}
+                  onChange={(e) => setTeamMemberSearchTerm(e.target.value)}
+                  className="w-full px-3 py-2 text-sm border rounded-md"
+                  style={{
+                    backgroundColor: 'var(--color-background)',
+                    borderColor: 'var(--color-border)',
+                    color: 'var(--color-text)'
+                  }}
+                />
+              </div>
+              <div className="py-1 max-h-48 overflow-y-auto">
                 <button
                   onClick={() => {
                     setSelectedTeamMember('all');
                     setShowTeamMemberFilter(false);
+                    setTeamMemberSearchTerm('');
                   }}
                   className="block w-full px-4 py-2 text-sm text-left hover:bg-gray-100"
+                  style={{ color: 'var(--color-text)' }}
                 >
                   All Team Members
                 </button>
-                {teamMembers.map((member) => (
+                {filteredTeamMembers.map((member) => (
                   <button
                     key={member.id}
                     onClick={() => {
                       setSelectedTeamMember(member.id);
                       setShowTeamMemberFilter(false);
+                      setTeamMemberSearchTerm('');
                     }}
                     className="block w-full px-4 py-2 text-sm text-left hover:bg-gray-100"
+                    style={{ color: 'var(--color-text)' }}
                   >
                     {member.username}
                   </button>
@@ -533,9 +556,10 @@ const Dashboard: React.FC = () => {
         }
       }
 
+      const isAdminOrManager = user?.role === 'admin' || user?.role === 'superadmin' || user?.role === 'manager';
       const params: any = {
-        userId,
-        isAdmin: (user?.role === 'admin' || user?.role === 'superadmin' || user?.role === 'manager') ? 'true' : 'false',
+        userId: isAdminOrManager ? userId : user?.id,
+        isAdmin: isAdminOrManager ? 'true' : 'false',
         includeTeam: 'true',
         includeAllTimeMetrics: viewMode === 'all-time' ? 'true' : 'false'
       };
@@ -569,9 +593,10 @@ const Dashboard: React.FC = () => {
         }
       }
 
+      const isAdminOrManager = user?.role === 'admin' || user?.role === 'superadmin' || user?.role === 'manager';
       const params: any = {
-        userId,
-        isAdmin: (user?.role === 'admin' || user?.role === 'superadmin' || user?.role === 'manager') ? 'true' : 'false',
+        userId: isAdminOrManager ? userId : user?.id,
+        isAdmin: isAdminOrManager ? 'true' : 'false',
         includeTeam: 'true',
         includeAllTimeMetrics: viewMode === 'all-time' ? 'true' : 'false'
       };
@@ -888,12 +913,26 @@ const Dashboard: React.FC = () => {
                 <div className="p-3 rounded-2xl" style={{ backgroundColor: 'var(--color-primary)10' }}>
                   <BarChart3 size={28} style={{ color: 'var(--color-primary)' }} />
                 </div>
-                <div>
-                  <h1 className="text-4xl font-bold tracking-tight" style={{ color: 'var(--color-text)' }}>Dashboard</h1>
-                  <p className="text-[var(--color-textSecondary)] text-sm mt-1">
-                    Welcome back, <span className="font-semibold">{user?.username}</span>!
-                    {(user?.role === 'admin' || user?.role === 'superadmin' || user?.role === 'manager') ? ' 👥 Team Overview' : ' 📊 Your Performance'}
-                  </p>
+                <div className="flex-1">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h1 className="text-4xl font-bold tracking-tight" style={{ color: 'var(--color-text)' }}>Dashboard</h1>
+                      <p className="text-[var(--color-textSecondary)] text-sm mt-1">
+                        Welcome back, <span className="font-semibold">{user?.username}</span>!
+                        {(user?.role === 'admin' || user?.role === 'superadmin' || user?.role === 'manager') ? ' 👥 Team Overview' : ' 📊 Your Performance'}
+                      </p>
+                    </div>
+                    {/* Quick Action Button */}
+                    {(user?.role === 'admin' || user?.role === 'superadmin' || user?.role === 'manager') && (
+                      <button
+                        onClick={() => navigate('/assign-task', { replace: true })}
+                        className="flex items-center gap-2 px-4 py-2 bg-[var(--color-primary)] text-white rounded-xl font-semibold hover:shadow-lg transition-all duration-300 hover:scale-105"
+                      >
+                        <UserCheck size={18} />
+                        <span className="hidden sm:inline">Assign Task</span>
+                      </button>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>
@@ -921,8 +960,11 @@ const Dashboard: React.FC = () => {
 
           {/* Quick Stats Section - Updated with new metrics */}
           <div>
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-2xl font-bold text-[var(--color-text)]">Quick Stats</h2>
+            <div className="flex items-center justify-between mb-8">
+              <div>
+                <h2 className="text-3xl font-bold text-[var(--color-text)]">📊 Quick Stats</h2>
+                <p className="text-sm text-[var(--color-textSecondary)] mt-1">Overview of your tasks and performance</p>
+              </div>
               {(user?.role === 'admin' || user?.role === 'superadmin' || user?.role === 'manager') && <TeamMemberSelector />}
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -930,15 +972,15 @@ const Dashboard: React.FC = () => {
                 onClick={() => navigate('/master-tasks', { replace: true })}
                 className="group cursor-pointer"
               >
-                <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-blue-500 to-blue-600 dark:from-blue-950 dark:to-blue-900 p-6 border border-blue-300 dark:border-blue-800 hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
-                  <div className="flex items-start justify-between mb-4">
-                    <div className="p-3 rounded-xl bg-white/20">
-                      <CheckSquare size={24} className="text-white" />
+                <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-blue-500 to-blue-600 dark:from-blue-950 dark:to-blue-900 p-2 border border-blue-300 dark:border-blue-800 hover:shadow-xl transition-all duration-300 hover:-translate-y-1 min-h-[140px]">
+                  <div className="flex items-start justify-between mb-1">
+                    <div className="p-1.5 rounded-lg bg-white/20">
+                      <CheckSquare size={18} className="text-white" />
                     </div>
                   </div>
-                  <p className="text-white/80 text-sm font-medium mb-2">Total Tasks</p>
-                  <p className="text-3xl font-bold text-white">{displayData?.totalTasks || 0}</p>
-                  <p className="text-xs text-white/70 mt-2 group-hover:text-white transition-colors">Click to view all →</p>
+                  <p className="text-white/80 text-xs font-medium mb-0.5">Total Tasks</p>
+                  <p className="text-xl font-bold text-white">{displayData?.totalTasks || 0}</p>
+                  <p className="text-xs text-white/70 mt-0.5 group-hover:text-white transition-colors">Click to view all →</p>
                 </div>
               </div>
 
@@ -946,21 +988,21 @@ const Dashboard: React.FC = () => {
                 onClick={() => navigate('/pending-tasks', { replace: true })}
                 className="group cursor-pointer"
               >
-                <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-yellow-500 to-yellow-600 dark:from-yellow-950 dark:to-yellow-900 p-6 border border-yellow-300 dark:border-yellow-800 hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
-                  <div className="flex items-start justify-between mb-4">
-                    <div className="p-3 rounded-xl bg-white/20">
-                      <Clock size={24} className="text-white" />
+                <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-yellow-500 to-yellow-600 dark:from-yellow-950 dark:to-yellow-900 p-2 border border-yellow-300 dark:border-yellow-800 hover:shadow-xl transition-all duration-300 hover:-translate-y-1 min-h-[140px]">
+                  <div className="flex items-start justify-between mb-1">
+                    <div className="p-1.5 rounded-lg bg-white/20">
+                      <Clock size={18} className="text-white" />
                     </div>
                   </div>
-                  <p className="text-white/80 text-sm font-medium mb-2">Pending (≤ Today)</p>
-                  <p className="text-3xl font-bold text-white">{displayData?.pendingTasks || 0}</p>
-                  <div className="w-full h-1.5 bg-white/30 rounded-full mt-4 overflow-hidden">
+                  <p className="text-white/80 text-xs font-medium mb-0.5">Pending (≤ Today)</p>
+                  <p className="text-xl font-bold text-white">{displayData?.pendingTasks || 0}</p>
+                  <div className="w-full h-1 bg-white/30 rounded-full mt-1 overflow-hidden">
                     <div
                       className="h-full bg-white transition-all duration-500"
                       style={{ width: `${((displayData?.pendingTasks || 0) / (displayData?.totalTasks || 1)) * 100}%` }}
                     ></div>
                   </div>
-                  <p className="text-xs text-white/70 mt-2 group-hover:text-white transition-colors">Click to view all →</p>
+                  <p className="text-xs text-white/70 mt-0.5 group-hover:text-white transition-colors">Click to view all →</p>
                 </div>
               </div>
 
@@ -968,21 +1010,21 @@ const Dashboard: React.FC = () => {
                 onClick={() => navigate('/master-tasks?status=completed', { replace: true })}
                 className="group cursor-pointer"
               >
-                <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-green-500 to-green-600 dark:from-green-950 dark:to-green-900 p-6 border border-green-300 dark:border-green-800 hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
-                  <div className="flex items-start justify-between mb-4">
-                    <div className="p-3 rounded-xl bg-white/20">
-                      <CheckCircle size={24} className="text-white" />
+                <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-green-500 to-green-600 dark:from-green-950 dark:to-green-900 p-2 border border-green-300 dark:border-green-800 hover:shadow-xl transition-all duration-300 hover:-translate-y-1 min-h-[140px]">
+                  <div className="flex items-start justify-between mb-1">
+                    <div className="p-1.5 rounded-lg bg-white/20">
+                      <CheckCircle size={18} className="text-white" />
                     </div>
                   </div>
-                  <p className="text-white/80 text-sm font-medium mb-2">Completed</p>
-                  <p className="text-3xl font-bold text-white">{displayData?.completedTasks || 0}</p>
-                  <div className="w-full h-1.5 bg-white/30 rounded-full mt-4 overflow-hidden">
+                  <p className="text-white/80 text-xs font-medium mb-0.5">Completed</p>
+                  <p className="text-xl font-bold text-white">{displayData?.completedTasks || 0}</p>
+                  <div className="w-full h-1 bg-white/30 rounded-full mt-1 overflow-hidden">
                     <div
                       className="h-full bg-white transition-all duration-500"
                       style={{ width: `${((displayData?.completedTasks || 0) / (displayData?.totalTasks || 1)) * 100}%` }}
                     ></div>
                   </div>
-                  <p className="text-xs text-white/70 mt-2 group-hover:text-white transition-colors">Click to view all →</p>
+                  <p className="text-xs text-white/70 mt-0.5 group-hover:text-white transition-colors">Click to view all →</p>
                 </div>
               </div>
 
@@ -990,73 +1032,73 @@ const Dashboard: React.FC = () => {
                 onClick={() => navigate('/pending-tasks', { replace: true })}
                 className="group cursor-pointer"
               >
-                <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-red-500 to-red-600 dark:from-red-950 dark:to-red-900 p-6 border border-red-300 dark:border-red-800 hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
-                  <div className="flex items-start justify-between mb-4">
-                    <div className="p-3 rounded-xl bg-white/20">
-                      <AlertTriangle size={24} className="text-white" />
+                <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-red-500 to-red-600 dark:from-red-950 dark:to-red-900 p-2 border border-red-300 dark:border-red-800 hover:shadow-xl transition-all duration-300 hover:-translate-y-1 min-h-[140px]">
+                  <div className="flex items-start justify-between mb-1">
+                    <div className="p-1.5 rounded-lg bg-white/20">
+                      <AlertTriangle size={18} className="text-white" />
                     </div>
                   </div>
-                  <p className="text-white/80 text-sm font-medium mb-2">Overdue (&lt; Today)</p>
-                  <p className="text-3xl font-bold text-white">{displayData?.overdueTasks || 0}</p>
-                  <p className="text-xs text-white/80 font-medium mt-2">⚠️ {displayData?.overduePercentage?.toFixed(1)}% of total</p>
-                  <p className="text-xs text-white/70 mt-2 group-hover:text-white transition-colors">Click to view all →</p>
+                  <p className="text-white/80 text-xs font-medium mb-0.5">Overdue (&lt; Today)</p>
+                  <p className="text-xl font-bold text-white">{displayData?.overdueTasks || 0}</p>
+                  <p className="text-xs text-white/80 font-medium mt-0.5">⚠️ {displayData?.overduePercentage?.toFixed(1)}% of total</p>
+                  <p className="text-xs text-white/70 mt-0.5 group-hover:text-white transition-colors">Click to view all →</p>
                 </div>
               </div>
             </div>
 
             {/* Additional Quick Stats Row */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6 mt-6">
-              <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-purple-500 to-purple-600 dark:from-purple-950 dark:to-purple-900 p-6 border border-purple-300 dark:border-purple-800">
-                <div className="flex items-start justify-between mb-4">
-                  <div className="p-3 rounded-xl bg-white/20">
-                    <Timer size={24} className="text-white" />
+              <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-purple-500 to-purple-600 dark:from-purple-950 dark:to-purple-900 p-2 border border-purple-300 dark:border-purple-800 min-h-[140px]">
+                <div className="flex items-start justify-between mb-1">
+                  <div className="p-1.5 rounded-lg bg-white/20">
+                    <Timer size={18} className="text-white" />
                   </div>
                 </div>
-                <p className="text-white/80 text-sm font-medium mb-2">Upcoming (&gt; Today)</p>
-                <p className="text-3xl font-bold text-white">{displayData?.upcomingTasks || 0}</p>
+                <p className="text-white/80 text-xs font-medium mb-0.5">Upcoming (&gt; Today)</p>
+                <p className="text-xl font-bold text-white">{displayData?.upcomingTasks || 0}</p>
               </div>
 
-              <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-orange-500 to-orange-600 dark:from-orange-950 dark:to-orange-900 p-6 border border-orange-300 dark:border-orange-800">
-                <div className="flex items-start justify-between mb-4">
-                  <div className="p-3 rounded-xl bg-white/20">
-                    <RotateCcw size={24} className="text-white" />
+              <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-orange-500 to-orange-600 dark:from-orange-950 dark:to-orange-900 p-2 border border-orange-300 dark:border-orange-800 min-h-[140px]">
+                <div className="flex items-start justify-between mb-1">
+                  <div className="p-1.5 rounded-lg bg-white/20">
+                    <RotateCcw size={18} className="text-white" />
                   </div>
                 </div>
-                <p className="text-white/80 text-sm font-medium mb-2">In Progress</p>
-                <p className="text-3xl font-bold text-white">{displayData?.inProgressTasks || 0}</p>
+                <p className="text-white/80 text-xs font-medium mb-0.5">In Progress</p>
+                <p className="text-xl font-bold text-white">{displayData?.inProgressTasks || 0}</p>
               </div>
 
-              <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-emerald-500 to-emerald-600 dark:from-emerald-950 dark:to-emerald-900 p-6 border border-emerald-300 dark:border-emerald-800">
-                <div className="flex items-start justify-between mb-4">
-                  <div className="p-3 rounded-xl bg-white/20">
-                    <UserCheck size={24} className="text-white" />
+              <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-emerald-500 to-emerald-600 dark:from-emerald-950 dark:to-emerald-900 p-2 border border-emerald-300 dark:border-emerald-800 min-h-[140px]">
+                <div className="flex items-start justify-between mb-1">
+                  <div className="p-1.5 rounded-lg bg-white/20">
+                    <UserCheck size={18} className="text-white" />
                   </div>
                 </div>
-                <p className="text-white/80 text-sm font-medium mb-2">Assigned By Me</p>
-                <p className="text-3xl font-bold text-white">{displayData?.assignedByMe?.total || 0}</p>
-                <p className="text-xs text-white/80 font-medium mt-2">
+                <p className="text-white/80 text-xs font-medium mb-0.5">Assigned By Me</p>
+                <p className="text-xl font-bold text-white">{displayData?.assignedByMe?.total || 0}</p>
+                <p className="text-xs text-white/80 font-medium mt-0.5">
                   Pending: {displayData?.assignedByMe?.pending || 0} • Completed: {displayData?.assignedByMe?.completed || 0}
                 </p>
               </div>
 
-              <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-indigo-500 to-indigo-600 dark:from-indigo-950 dark:to-indigo-900 p-6 border border-indigo-300 dark:border-indigo-800">
-                <div className="flex items-start justify-between mb-4">
-                  <div className="p-3 rounded-xl bg-white/20">
-                    <Target size={24} className="text-white" />
+              <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-indigo-500 to-indigo-600 dark:from-indigo-950 dark:to-indigo-900 p-2 border border-indigo-300 dark:border-indigo-800 min-h-[140px]">
+                <div className="flex items-start justify-between mb-1">
+                  <div className="p-1.5 rounded-lg bg-white/20">
+                    <Target size={18} className="text-white" />
                   </div>
                 </div>
-                <p className="text-white/80 text-sm font-medium mb-2">FMS Tasks</p>
-                <p className="text-3xl font-bold text-white">{displayData?.fmsTasks || 0}</p>
+                <p className="text-white/80 text-xs font-medium mb-0.5">FMS Tasks</p>
+                <p className="text-xl font-bold text-white">{displayData?.fmsTasks || 0}</p>
               </div>
 
-              <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-teal-500 to-teal-600 dark:from-teal-950 dark:to-teal-900 p-6 border border-teal-300 dark:border-teal-800">
-                <div className="flex items-start justify-between mb-4">
-                  <div className="p-3 rounded-xl bg-white/20">
-                    <Activity size={24} className="text-white" />
+              <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-teal-500 to-teal-600 dark:from-teal-950 dark:to-teal-900 p-2 border border-teal-300 dark:border-teal-800 min-h-[140px]">
+                <div className="flex items-start justify-between mb-1">
+                  <div className="p-1.5 rounded-lg bg-white/20">
+                    <Activity size={18} className="text-white" />
                   </div>
                 </div>
-                <p className="text-white/80 text-sm font-medium mb-2">FMS In Progress</p>
-                <p className="text-3xl font-bold text-white">{displayData?.fmsInProgressTasks || 0}</p>
+                <p className="text-white/80 text-xs font-medium mb-0.5">FMS In Progress</p>
+                <p className="text-xl font-bold text-white">{displayData?.fmsInProgressTasks || 0}</p>
               </div>
             </div>
           </div>
@@ -1253,54 +1295,98 @@ const Dashboard: React.FC = () => {
           )}
 
           {/* Upcoming Tasks Section */}
-          {(user?.role === 'admin' || user?.role === 'superadmin' || user?.role === 'manager') && (
-            <div className="p-4 sm:p-6 lg:p-8">
-              <div className="mb-6">
-                <h2 className="text-2xl font-bold text-[var(--color-text)] mb-2">Upcoming Tasks</h2>
-                <p className="text-sm text-[var(--color-textSecondary)]">Tasks due in the next 7 days</p>
-              </div>
-              <div className="space-y-4 max-h-96 overflow-y-auto">
-                {dashboardData?.upcomingTasks && dashboardData.upcomingTasks.length > 0 ? (
-                  dashboardData.upcomingTasks.map((task: any) => (
-                    <div
-                      key={task._id}
-                      className="p-4 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] hover:shadow-lg transition-all"
-                    >
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1">
-                          <h3 className="text-lg font-bold text-[var(--color-text)] mb-2">{task.title}</h3>
-                          <p className="text-sm text-[var(--color-textSecondary)] mb-3">{task.description}</p>
-                          <div className="flex flex-wrap items-center gap-3 text-sm">
-                            <span className="flex items-center gap-1">
-                              <Users size={14} />
-                              Assigned to: <strong>{task.assignedTo?.username}</strong>
-                            </span>
-                            <span className="flex items-center gap-1">
-                              <Calendar size={14} />
-                              Due: {new Date(task.dueDate).toLocaleDateString()}
-                            </span>
-                            <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
-                              task.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
-                              task.status === 'completed' ? 'bg-green-100 text-green-800' :
-                              'bg-gray-100 text-gray-800'
-                            }`}>
-                              {task.status}
-                            </span>
-                          </div>
+          <div className="p-4 sm:p-6 lg:p-8">
+            <div className="mb-6">
+              <h2 className="text-2xl font-bold text-[var(--color-text)] mb-2">Upcoming Tasks</h2>
+              <p className="text-sm text-[var(--color-textSecondary)]">Tasks due in the future (both cyclic and one-time)</p>
+            </div>
+            <div className="space-y-4 max-h-96 overflow-y-auto">
+              {dashboardData?.upcomingTasks && dashboardData.upcomingTasks.length > 0 ? (
+                dashboardData.upcomingTasks.map((task: any) => (
+                  <div
+                    key={task._id}
+                    className="p-4 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] hover:shadow-lg transition-all"
+                  >
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <h3 className="text-lg font-bold text-[var(--color-text)] mb-2">{task.title}</h3>
+                        <p className="text-sm text-[var(--color-textSecondary)] mb-3">{task.description}</p>
+                        <div className="flex flex-wrap items-center gap-3 text-sm">
+                          <span className="flex items-center gap-1">
+                            <Users size={14} />
+                            Assigned to: <strong>{task.assignedTo?.username}</strong>
+                          </span>
+                          <span className="flex items-center gap-1">
+                            <Calendar size={14} />
+                            Due: {new Date(task.dueDate).toLocaleDateString()}
+                          </span>
+                          <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
+                            task.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                            task.status === 'completed' ? 'bg-green-100 text-green-800' :
+                            'bg-gray-100 text-gray-800'
+                          }`}>
+                            {task.status}
+                          </span>
                         </div>
                       </div>
                     </div>
-                  ))
-                ) : (
-                  <div className="text-center py-12 text-[var(--color-textSecondary)]">
-                    <Calendar size={48} className="mx-auto mb-4 opacity-30" />
-                    <p className="text-lg font-semibold opacity-60">No upcoming tasks</p>
-                    <p className="text-sm opacity-40">Tasks due in the next 7 days will appear here</p>
                   </div>
-                )}
-              </div>
+                ))
+              ) : (
+                <div className="text-center py-12 text-[var(--color-textSecondary)]">
+                  <Calendar size={48} className="mx-auto mb-4 opacity-30" />
+                  <p className="text-lg font-semibold opacity-60">No upcoming tasks</p>
+                  <p className="text-sm opacity-40">Tasks due in the future will appear here</p>
+                </div>
+              )}
             </div>
-          )}
+          </div>
+
+          {/* Completed Tasks Section */}
+          <div className="p-4 sm:p-6 lg:p-8">
+            <div className="mb-6">
+              <h2 className="text-2xl font-bold text-[var(--color-text)] mb-2">Completed Tasks</h2>
+              <p className="text-sm text-[var(--color-textSecondary)]">Recently completed tasks</p>
+            </div>
+            <div className="space-y-4 max-h-96 overflow-y-auto">
+              {dashboardData?.recentActivity && dashboardData.recentActivity.filter(activity => activity.type === 'completed').length > 0 ? (
+                dashboardData.recentActivity.filter(activity => activity.type === 'completed').slice(0, 10).map((activity) => (
+                  <div
+                    key={activity._id}
+                    className="p-4 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] hover:shadow-lg transition-all"
+                  >
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <h3 className="text-lg font-bold text-[var(--color-text)] mb-2">{activity.title}</h3>
+                        <div className="flex flex-wrap items-center gap-3 text-sm">
+                          <span className="flex items-center gap-1">
+                            <Users size={14} />
+                            Completed by: <strong>{activity.username}</strong>
+                          </span>
+                          <span className="flex items-center gap-1">
+                            <CheckCircle size={14} />
+                            Completed: {format(new Date(activity.date), 'MMM d, yyyy')}
+                          </span>
+                          <span className={`px-2 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-800`}>
+                            {activity.taskType}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="ml-4">
+                        <CheckCircle size={24} className="text-green-500" />
+                      </div>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="text-center py-12 text-[var(--color-textSecondary)]">
+                  <CheckCircle size={48} className="mx-auto mb-4 opacity-30" />
+                  <p className="text-lg font-semibold opacity-60">No completed tasks</p>
+                  <p className="text-sm opacity-40">Completed tasks will appear here</p>
+                </div>
+              )}
+            </div>
+          </div>
 
           {/* Enhanced Charts Section */}
           <div className="grid grid-cols-1 lg:grid-cols-10 gap-8">
@@ -1469,10 +1555,25 @@ const Dashboard: React.FC = () => {
                         <div className="absolute left-0 right-0 top-full mt-2 w-full sm:w-64 z-20">
                           <ThemeCard className="p-3 max-h-80 overflow-y-auto" variant="elevated" hover={false}>
                             <div className="space-y-2">
+                              <div className="px-3 py-2">
+                                <input
+                                  type="text"
+                                  placeholder="Search team members..."
+                                  value={teamMemberSearchTerm}
+                                  onChange={(e) => setTeamMemberSearchTerm(e.target.value)}
+                                  className="w-full px-3 py-2 text-sm border rounded-md"
+                                  style={{
+                                    backgroundColor: 'var(--color-background)',
+                                    borderColor: 'var(--color-border)',
+                                    color: 'var(--color-text)'
+                                  }}
+                                />
+                              </div>
                               <button
                                 onClick={() => {
                                   setSelectedTeamMember('all');
                                   setShowTeamMemberFilter(false);
+                                  setTeamMemberSearchTerm('');
                                 }}
                                 className={`w-full text-left px-3 py-3 rounded-xl transition-all duration-200 ${selectedTeamMember === 'all'
                                   ? 'bg-[var(--color-primary)] text-white shadow-lg'
@@ -1491,14 +1592,16 @@ const Dashboard: React.FC = () => {
                                   </div>
                                 </div>
                               </button>
-                              {teamMembersList.map((member, index) => {
+                              {teamMembersList
+                                .filter(member => member.username.toLowerCase().includes(teamMemberSearchTerm.toLowerCase()))
+                                .map((member, index) => {
                                 // Find the corresponding team member ID from dashboardData
                                 // Since teamMembersList only has username, we need to match it
                                 // For now, we'll use username as the identifier for this dropdown
                                 // This creates inconsistency but is needed for member-trend API
-                                const isSelected = selectedTeamMember === member.username || 
+                                const isSelected = selectedTeamMember === member.username ||
                                   (selectedTeamMember !== 'all' && getDisplayName() === member.username);
-                                
+
                                 return (
                                   <button
                                     key={member.username}
@@ -1508,6 +1611,7 @@ const Dashboard: React.FC = () => {
                                       // TODO: Refactor to use consistent ID-based system
                                       setSelectedTeamMember(member.username);
                                       setShowTeamMemberFilter(false);
+                                      setTeamMemberSearchTerm('');
                                     }}
                                     className={`w-full text-left px-3 py-3 rounded-xl transition-all duration-200 ${isSelected
                                       ? 'bg-[var(--color-primary)] text-white shadow-lg'

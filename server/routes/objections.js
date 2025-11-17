@@ -1,5 +1,6 @@
 
 import express from 'express';
+import mongoose from 'mongoose';
 import Task from '../models/Task.js';
 import Project from '../models/Project.js';
 
@@ -181,10 +182,23 @@ router.post('/fms/:projectId/task/:taskIndex', async (req, res) => {
 router.get('/pending/:userId', async (req, res) => {
   try {
     const { userId } = req.params;
+    
+    // Validate and convert userId to ObjectId if possible
+    let objectId;
+    try {
+      objectId = new mongoose.Types.ObjectId(userId);
+    } catch (error) {
+      console.error('Invalid userId format:', userId);
+      return res.json({
+        success: true,
+        regularTasks: [],
+        fmsTasks: []
+      });
+    }
 
     // Get regular tasks where user is the assigner and has at least one pending objection
     const tasks = await Task.find({
-      assignedBy: userId,
+      assignedBy: objectId,
       'objections.status': 'pending',
       isActive: true
     })
@@ -217,7 +231,7 @@ router.get('/pending/:userId', async (req, res) => {
     const fmsObjections = fmsProjects
       .filter(project => {
         // Check if user is in the first step's 'who' array
-        return project.tasks[0]?.who.some(person => person._id.toString() === userId);
+        return project.tasks[0]?.who.some(person => person._id.toString() === objectId.toString());
       })
       .map(project => {
         // Filter tasks to only include those with pending objections
@@ -252,6 +266,105 @@ router.get('/pending/:userId', async (req, res) => {
     });
   } catch (error) {
     console.error('Error fetching pending objections:', error);
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
+// Get my objections (for the ObjectionsHub component)
+router.get('/my/:userId', async (req, res) => {
+  try {
+    const { userId } = req.params;
+    
+    // Validate and convert userId to ObjectId if possible
+    let objectId;
+    try {
+      objectId = new mongoose.Types.ObjectId(userId);
+    } catch (error) {
+      console.error('Invalid userId format:', userId);
+      return res.json({
+        success: true,
+        regular: [],
+        fms: []
+      });
+    }
+
+    // Get regular tasks where user has raised objections
+    const regularTasks = await Task.find({
+      'objections.requestedBy': objectId
+    })
+      .populate('assignedTo', 'username email phoneNumber')
+      .populate('assignedBy', 'username email phoneNumber')
+      .populate('objections.requestedBy', 'username email phoneNumber')
+      .populate('objections.approvedBy', 'username email phoneNumber');
+
+    // Filter and transform regular tasks
+    const filteredRegularTasks = regularTasks
+      .map(task => {
+        const myObjections = task.objections.filter(obj =>
+          obj.requestedBy && obj.requestedBy._id.toString() === objectId.toString()
+        );
+        if (myObjections.length === 0) {
+          return null;
+        }
+        return {
+          taskId: task._id,
+          taskTitle: task.title,
+          taskDueDate: task.dueDate,
+          objections: myObjections
+        };
+      })
+      .filter(task => task !== null);
+
+    // Get FMS projects where user has raised objections
+    const fmsProjects = await Project.find({
+      'tasks.objections.requestedBy': objectId
+    })
+      .populate('tasks.who', 'username email phoneNumber')
+      .populate('tasks.objections.requestedBy', 'username email phoneNumber')
+      .populate('tasks.objections.approvedBy', 'username email phoneNumber');
+
+    // Filter and transform FMS tasks
+    const filteredFMSTasks = fmsProjects
+      .map(project => {
+        const tasksWithMyObjections = project.tasks
+          .map((task, taskIndex) => {
+            const myObjections = task.objections?.filter(obj =>
+              obj.requestedBy && obj.requestedBy._id.toString() === objectId.toString()
+            ) || [];
+            
+            if (myObjections.length === 0) {
+              return null;
+            }
+            
+            return {
+              taskId: `${project._id}-${taskIndex}`,
+              taskTitle: task.what,
+              taskDueDate: task.plannedDueDate,
+              objections: myObjections,
+              isFMS: true,
+              projectId: project._id,
+              projectName: project.projectName,
+              taskIndex
+            };
+          })
+          .filter(task => task !== null);
+        
+        if (tasksWithMyObjections.length === 0) {
+          return null;
+        }
+        
+        return tasksWithMyObjections;
+      })
+      .flat()
+      .filter(task => task !== null);
+
+    res.json({
+      success: true,
+      regular: filteredRegularTasks,
+      fms: filteredFMSTasks
+    });
+  } catch (error) {
+    console.error('Error fetching my objections:', error);
     res.status(500).json({ message: 'Server error', error: error.message });
   }
 });

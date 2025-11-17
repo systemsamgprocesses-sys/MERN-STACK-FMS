@@ -508,9 +508,21 @@ router.post('/', async (req, res) => {
 // Update task
 router.put('/:id', async (req, res) => {
   try {
+    const { status, inProgressRemarks, ...updateData } = req.body;
+
+    // If status is being changed to 'in-progress', require remarks
+    if (status === 'in-progress') {
+      if (!inProgressRemarks || !inProgressRemarks.trim()) {
+        return res.status(400).json({ message: 'Remarks are required when marking task as In Progress' });
+      }
+      updateData.inProgressRemarks = inProgressRemarks.trim();
+    }
+
+    updateData.status = status;
+
     const task = await Task.findByIdAndUpdate(
       req.params.id,
-      req.body, // req.body should now correctly include the attachments array if it's being updated
+      updateData,
       { new: true } // Return the updated document
     ).populate('assignedBy', 'username email phoneNumber')
      .populate('assignedTo', 'username email phoneNumber');
@@ -581,8 +593,8 @@ router.post('/:id/complete', async (req, res) => {
       let plannedDays = Math.ceil((plannedDate - creationDate) / (1000 * 60 * 60 * 24));
       
       // Check if there are approved objections that don't impact score
-      const approvedObjections = task.objections?.filter(obj => 
-        obj.status === 'approved' && obj.type === 'date_change'
+      const approvedObjections = task.objections?.filter(obj =>
+        ['approved', 'resolved'].includes(obj.status) && obj.type === 'date_change'
       ) || [];
       
       const scoreImpactingObjection = approvedObjections.find(obj => obj.impactScore);

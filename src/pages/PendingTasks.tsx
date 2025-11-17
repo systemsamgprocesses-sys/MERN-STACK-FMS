@@ -96,8 +96,6 @@ const PendingTasks: React.FC = () => {
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [view, setView] = useState<'table' | 'card'>(getInitialViewPreference);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage, setItemsPerPage] = useState(10);
   const [sortOrder, setSortOrder] = useState<SortOrder>('none');
   const [filter, setFilter] = useState({
     priority: '',
@@ -114,6 +112,8 @@ const PendingTasks: React.FC = () => {
   const [revisionRemarks, setRevisionRemarks] = useState('');
   const [objectionRemarks, setObjectionRemarks] = useState('');
   const [objectionRequestedDate, setObjectionRequestedDate] = useState('');
+  const [showInProgressModal, setShowInProgressModal] = useState<string | null>(null);
+  const [inProgressRemarks, setInProgressRemarks] = useState('');
   const [showFullDescription, setShowFullDescription] = useState<{ [key: string]: boolean }>({});
   const [fmsTasks, setFmsTasks] = useState<any[]>([]);
   const [showFMSCompleteModal, setShowFMSCompleteModal] = useState<{ projectId: string; taskIndex: number } | null>(null);
@@ -123,16 +123,13 @@ const PendingTasks: React.FC = () => {
   const [showAttachmentsModal, setShowAttachmentsModal] = useState<Attachment[] | null>(null);
   const [selectedImagePreview, setSelectedImagePreview] = useState<string | null>(null);
   const [downloading, setDownloading] = useState<{ [key: string]: boolean }>({});
+  const [pendingTasksPage, setPendingTasksPage] = useState(1);
+  const [tasksPerPage, setTasksPerPage] = useState(10);
 
   const activeFmsTask = showFMSCompleteModal
     ? fmsTasks.find(t => t.projectId === showFMSCompleteModal.projectId && t.taskIndex === showFMSCompleteModal.taskIndex)
     : null;
 
-  // Calculate pagination
-  const totalPages = Math.ceil(tasks.length / itemsPerPage);
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const endIndex = startIndex + itemsPerPage;
-  const currentTasks = tasks.slice(startIndex, endIndex);
 
   // Force card view on mobile
   useEffect(() => {
@@ -154,7 +151,6 @@ const PendingTasks: React.FC = () => {
 
   useEffect(() => {
     applyFiltersAndSort();
-    setCurrentPage(1);
   }, [allTasks, filter, sortOrder]);
 
   const fetchTasks = async () => {
@@ -268,6 +264,20 @@ const PendingTasks: React.FC = () => {
     setPendingTasks(pending);
     setUpcomingTasks(upcoming);
     setTasks(filteredTasks);
+    setPendingTasksPage(1);
+  };
+
+  const getPaginatedPendingTasks = () => {
+    const startIndex = (pendingTasksPage - 1) * tasksPerPage;
+    const endIndex = startIndex + tasksPerPage;
+    return pendingTasks.slice(startIndex, endIndex);
+  };
+
+  const getPendingTasksPages = () => Math.ceil(pendingTasks.length / tasksPerPage);
+
+  const handleTasksPerPageChange = (newItemsPerPage: number) => {
+    setTasksPerPage(newItemsPerPage);
+    setPendingTasksPage(1);
   };
 
   const handleReviseTask = async (taskId: string) => {
@@ -385,7 +395,6 @@ const PendingTasks: React.FC = () => {
   const resetFilters = () => {
     setFilter({ priority: '', assignedTo: '', search: '', dateFrom: '', dateTo: '' });
     setSortOrder('none');
-    setCurrentPage(1);
   };
 
   const toggleSort = () => {
@@ -474,14 +483,6 @@ const PendingTasks: React.FC = () => {
     }
   };
 
-  const handlePageChange = (page: number) => {
-    setCurrentPage(Math.max(1, Math.min(page, totalPages)));
-  };
-
-  const handleItemsPerPageChange = (newItemsPerPage: number) => {
-    setItemsPerPage(newItemsPerPage);
-    setCurrentPage(1);
-  };
 
   const handleTaskCompletion = () => {
     setShowCompleteModal(null);
@@ -592,114 +593,11 @@ const PendingTasks: React.FC = () => {
     setTimeout(() => printWindow.print(), 250);
   };
 
-  // Enhanced Pagination Component
-  const renderEnhancedPagination = () => (
-    <div className="bg-[--color-background] rounded-xl shadow-sm border border-[--color-border] p-4">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        {/* Items per page selector */}
-        <div className="flex items-center space-x-2">
-          <span className="text-sm text-[--color-textSecondary]">Show:</span>
-          <select
-            value={itemsPerPage}
-            onChange={(e) => handleItemsPerPageChange(Number(e.target.value))}
-            className="text-sm px-2 py-1 border border-[--color-border] rounded-lg focus:ring-2 focus:ring-[--color-primary] focus:border-[--color-primary] bg-[--color-surface] text-[--color-text]"
-          >
-            <option value={10}>10</option>
-            <option value={25}>25</option>
-            <option value={50}>50</option>
-            <option value={100}>100</option>
-          </select>
-          <span className="text-sm text-[--color-textSecondary]">per page</span>
-        </div>
 
-        {/* Page info */}
-        <div className="flex items-center">
-          <p className="text-sm text-[--color-textSecondary]">
-            Showing <span className="font-medium">{startIndex + 1}</span> to{' '}
-            <span className="font-medium">{Math.min(endIndex, tasks.length)}</span> of{' '}
-            <span className="font-medium">{tasks.length}</span> results
-          </p>
-        </div>
-
-        {/* Pagination controls */}
-        <div className="flex items-center space-x-1">
-          {/* First page */}
-          <button
-            onClick={() => handlePageChange(1)}
-            disabled={currentPage === 1}
-            className="p-2 text-sm font-medium text-[--color-textSecondary] bg-[--color-surface] border border-[--color-border] rounded-lg hover:bg-[--color-border] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-            title="First page"
-          >
-            <ChevronsLeft size={16} />
-          </button>
-
-          {/* Previous page */}
-          <button
-            onClick={() => handlePageChange(currentPage - 1)}
-            disabled={currentPage === 1}
-            className="p-2 text-sm font-medium text-[--color-textSecondary] bg-[--color-surface] border border-[--color-border] rounded-lg hover:bg-[--color-border] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-            title="Previous page"
-          >
-            <ChevronLeft size={16} />
-          </button>
-
-          {/* Page numbers */}
-          <div className="flex items-center space-x-1">
-            {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-              let pageNumber;
-              if (totalPages <= 5) {
-                pageNumber = i + 1;
-              } else if (currentPage <= 3) {
-                pageNumber = i + 1;
-              } else if (currentPage >= totalPages - 2) {
-                pageNumber = totalPages - 4 + i;
-              } else {
-                pageNumber = currentPage - 2 + i;
-              }
-
-              return (
-                <button
-                  key={pageNumber}
-                  onClick={() => handlePageChange(pageNumber)}
-                  className={`px-3 py-2 text-sm font-medium rounded-lg transition-colors ${currentPage === pageNumber
-                    ? 'bg-[--color-primary] text-white'
-                    : 'text-[--color-textSecondary] bg-[--color-surface] border border-[--color-border] hover:bg-[--color-border]'
-                    }`}
-                >
-                  {pageNumber}
-                </button>
-              );
-            })}
-          </div>
-
-          {/* Next page */}
-          <button
-            onClick={() => handlePageChange(currentPage + 1)}
-            disabled={currentPage === totalPages}
-            className="p-2 text-sm font-medium text-[--color-textSecondary] bg-[--color-surface] border border-[--color-border] rounded-lg hover:bg-[--color-border] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-            title="Next page"
-          >
-            <ChevronRight size={16} />
-          </button>
-
-          {/* Last page */}
-          <button
-            onClick={() => handlePageChange(totalPages)}
-            disabled={currentPage === totalPages}
-            className="p-2 text-sm font-medium text-[--color-textSecondary] bg-[--color-surface] border border-[--color-border] rounded-lg hover:bg-[--color-border] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-            title="Last page"
-          >
-            <ChevronsRight size={16} />
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-
-  const renderCardView = () => (
+  const renderCardView = (tasksToRender: Task[]) => (
     <div className="space-y-6">
       <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-4 gap-6">
-        {currentTasks.map((task) => (
+        {tasksToRender.map((task) => (
           <div
             key={task._id}
             className={`group rounded-xl shadow-sm border hover:shadow-lg transition-all duration-300 overflow-hidden transform hover:-translate-y-1 ${task.dueDate && isOverdue(task.dueDate)
@@ -843,11 +741,10 @@ const PendingTasks: React.FC = () => {
           </div>
         ))}
       </div>
-      {totalPages > 1 && renderEnhancedPagination()}
     </div>
   );
 
-  const renderTableView = () => (
+  const renderTableView = (tasksToRender: Task[]) => (
     <div className="space-y-6">
       <div className={`rounded-xl shadow-sm border border-[--color-border] overflow-hidden ${theme === 'light' ? 'bg-white' : 'bg-[--color-surface]'}`}>
         <div className="overflow-x-auto">
@@ -879,15 +776,13 @@ const PendingTasks: React.FC = () => {
                     {getSortIcon()}
                   </button>
                 </th>
-                {user?.role !== 'admin' && (
-                  <th className="px-6 py-4 text-left text-xs font-medium text-[--color-textSecondary] uppercase tracking-wider">
-                    Actions
-                  </th>
-                )}
+                <th className="px-6 py-4 text-left text-xs font-medium text-[--color-textSecondary] uppercase tracking-wider">
+                  Actions
+                </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-[--color-border]">
-              {currentTasks.map((task, index) => (
+              {tasksToRender.map((task, index) => (
                 <tr
                   key={task._id}
                   className={`transition-all duration-200 hover:bg-[--color-surface] ${theme === 'light'
@@ -987,7 +882,6 @@ const PendingTasks: React.FC = () => {
                       })}
                     </div>
                   </td>
-                  {user?.role !== 'admin' && (
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                       <div className="flex space-x-2 gap-1">
                         <button
@@ -1017,14 +911,12 @@ const PendingTasks: React.FC = () => {
                         </button>
                       </div>
                     </td>
-                  )}
-                </tr>
-              ))}
+                  </tr>
+                ))}
             </tbody>
           </table>
         </div>
       </div>
-      {totalPages > 1 && renderEnhancedPagination()}
     </div>
   );
 
@@ -1040,14 +932,43 @@ const PendingTasks: React.FC = () => {
   const completingTask = getTaskToComplete();
 
   const updateTaskProgress = async (taskId: string, status: string) => {
+    if (status === 'In Progress') {
+      setShowInProgressModal(taskId);
+    } else {
+      try {
+        await axios.put(
+          `${address}/api/tasks/${taskId}`,
+          { status },
+          { headers: { 'Content-Type': 'application/json' } }
+        );
+
+        alert(`Task marked as ${status}`);
+        fetchTasks();
+      } catch (error: any) {
+        console.error('Error updating task status:', error);
+        alert(error.response?.data?.error || 'Failed to update task status');
+      }
+    }
+  };
+
+  const handleMarkInProgress = async () => {
+    if (!showInProgressModal) return;
+
+    if (!inProgressRemarks.trim()) {
+      alert('Please provide remarks for marking as In Progress');
+      return;
+    }
+
     try {
-      await axios.patch(
-        `${address}/api/tasks/${taskId}`,
-        { status },
+      await axios.put(
+        `${address}/api/tasks/${showInProgressModal}`,
+        { status: 'in-progress', inProgressRemarks: inProgressRemarks.trim() },
         { headers: { 'Content-Type': 'application/json' } }
       );
 
-      alert(`Task marked as ${status}`);
+      alert('Task marked as In Progress');
+      setShowInProgressModal(null);
+      setInProgressRemarks('');
       fetchTasks();
     } catch (error: any) {
       console.error('Error updating task status:', error);
@@ -1161,8 +1082,6 @@ const PendingTasks: React.FC = () => {
                   placeholder="All Members"
                   value={filter.assignedTo}
                   onChange={(selected) => setFilter({ ...filter, assignedTo: selected?.value || '' })}
-                  theme={theme}
-                  isMulti={false}
                 />
               </div>
             )}
@@ -1255,37 +1174,82 @@ const PendingTasks: React.FC = () => {
                 <AlertTriangle size={18} className="text-red-500" />
                 Pending Tasks ({pendingTasks.length})
               </h2>
-              {isMobile || view === 'card' ? renderCardView() : renderTableView()}
-            </div>
-          )}
-
-          {/* Upcoming Tasks Section */}
-          {upcomingTasks.length > 0 && (
-            <div className="mt-8">
-              <h2 className="text-md font-semibold text-[--color-text] mb-3 flex items-center gap-2">
-                <Calendar size={18} className="text-blue-500" />
-                Upcoming Tasks ({upcomingTasks.length})
-              </h2>
-              <p className="text-sm text-[--color-textSecondary] mb-3">Tasks with due dates in the future</p>
-              {/* Render upcoming tasks - for now, use same view but with upcoming tasks data */}
-              <div className="space-y-4">
-                {/* Simple list view for upcoming tasks */}
-                {upcomingTasks.map((task) => (
-                  <div key={task._id} className="rounded-lg border border-[--color-border] bg-[--color-surface] p-4">
-                    <div className="flex justify-between items-start mb-2">
-                      <div className="flex-1">
-                        <h4 className="font-medium text-[--color-text]">{task.title}</h4>
-                        <p className="text-sm text-[--color-textSecondary]">{task.description}</p>
-                      </div>
+              {isMobile || view === 'card' ? renderCardView(getPaginatedPendingTasks()) : renderTableView(getPaginatedPendingTasks())}
+              
+              {/* Pending Tasks Pagination */}
+              {getPendingTasksPages() > 1 && (
+                <div className="bg-[--color-background] rounded-xl shadow-sm border border-[--color-border] p-4 mt-4">
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                    {/* Items per page selector */}
+                    <div className="flex items-center space-x-2">
+                      <span className="text-sm text-[--color-textSecondary]">Show:</span>
+                      <select
+                        value={tasksPerPage}
+                        onChange={(e) => handleTasksPerPageChange(Number(e.target.value))}
+                        className="text-sm px-2 py-1 border border-[--color-border] rounded-lg focus:ring-2 focus:ring-[--color-primary] focus:border-[--color-primary] bg-[--color-surface] text-[--color-text]"
+                      >
+                        <option value={10}>10</option>
+                        <option value={25}>25</option>
+                        <option value={50}>50</option>
+                        <option value={100}>100</option>
+                      </select>
+                      <span className="text-sm text-[--color-textSecondary]">per page</span>
                     </div>
-                    <div className="flex gap-2 flex-wrap text-sm">
-                      <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded">Due: {task.dueDate ? new Date(task.dueDate).toLocaleDateString() : 'N/A'}</span>
-                      <span className="px-2 py-1 bg-gray-100 text-gray-800 rounded">{task.priority}</span>
-                      {task.assignedTo && <span className="px-2 py-1 bg-gray-100 text-gray-800 rounded">→ {task.assignedTo.username}</span>}
+
+                    {/* Page info */}
+                    <div className="flex items-center">
+                      <p className="text-sm text-[--color-textSecondary]">
+                        Showing <span className="font-medium">{(pendingTasksPage - 1) * tasksPerPage + 1}</span> to{' '}
+                        <span className="font-medium">{Math.min(pendingTasksPage * tasksPerPage, pendingTasks.length)}</span> of{' '}
+                        <span className="font-medium">{pendingTasks.length}</span> results
+                      </p>
+                    </div>
+
+                    {/* Pagination controls */}
+                    <div className="flex items-center space-x-1">
+                      <button
+                        onClick={() => setPendingTasksPage(1)}
+                        disabled={pendingTasksPage === 1}
+                        className="p-2 text-sm font-medium text-[--color-textSecondary] bg-[--color-surface] border border-[--color-border] rounded-lg hover:bg-[--color-border] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                        title="First page"
+                      >
+                        <ChevronsLeft size={16} />
+                      </button>
+
+                      <button
+                        onClick={() => setPendingTasksPage(Math.max(1, pendingTasksPage - 1))}
+                        disabled={pendingTasksPage === 1}
+                        className="p-2 text-sm font-medium text-[--color-textSecondary] bg-[--color-surface] border border-[--color-border] rounded-lg hover:bg-[--color-border] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                        title="Previous page"
+                      >
+                        <ChevronLeft size={16} />
+                      </button>
+
+                      <span className="text-sm text-[--color-textSecondary] px-3 py-2">
+                        {pendingTasksPage} of {getPendingTasksPages()}
+                      </span>
+
+                      <button
+                        onClick={() => setPendingTasksPage(Math.min(getPendingTasksPages(), pendingTasksPage + 1))}
+                        disabled={pendingTasksPage === getPendingTasksPages()}
+                        className="p-2 text-sm font-medium text-[--color-textSecondary] bg-[--color-surface] border border-[--color-border] rounded-lg hover:bg-[--color-border] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                        title="Next page"
+                      >
+                        <ChevronRight size={16} />
+                      </button>
+
+                      <button
+                        onClick={() => setPendingTasksPage(getPendingTasksPages())}
+                        disabled={pendingTasksPage === getPendingTasksPages()}
+                        className="p-2 text-sm font-medium text-[--color-textSecondary] bg-[--color-surface] border border-[--color-border] rounded-lg hover:bg-[--color-border] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                        title="Last page"
+                      >
+                        <ChevronsRight size={16} />
+                      </button>
                     </div>
                   </div>
-                ))}
-              </div>
+                </div>
+              )}
             </div>
           )}
 
@@ -1304,6 +1268,7 @@ const PendingTasks: React.FC = () => {
         <TaskCompletionModal
           taskId={showCompleteModal}
           taskTitle={completingTask.title}
+          taskType={completingTask.taskType}
           isRecurring={false}
           allowAttachments={taskSettings.pendingTasks.allowAttachments}
           mandatoryAttachments={taskSettings.pendingTasks.mandatoryAttachments}
@@ -1603,6 +1568,53 @@ const PendingTasks: React.FC = () => {
           }}
           isDark={theme === 'dark'}
         />
+      )}
+
+      {/* In Progress Remarks Modal */}
+      {showInProgressModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
+          <div className="rounded-xl max-w-md w-full shadow-2xl transform transition-all bg-[--color-surface]">
+            <div className="p-6">
+              <h3 className="text-lg font-semibold mb-4 flex items-center text-[--color-text]">
+                <Clock size={20} className="text-[--color-primary] mr-2" />
+                Mark Task as In Progress
+              </h3>
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium mb-2 text-[--color-textSecondary]">
+                    Remarks (Mandatory)
+                  </label>
+                  <textarea
+                    value={inProgressRemarks}
+                    onChange={(e) => setInProgressRemarks(e.target.value)}
+                    rows={3}
+                    className="w-full px-3 py-2 border border-[--color-border] rounded-lg focus:ring-2 focus:ring-[--color-primary] focus:border-[--color-primary] transition-colors bg-[--color-background] text-[--color-text]"
+                    placeholder="Please provide remarks for marking this task as In Progress..."
+                    required
+                  />
+                </div>
+              </div>
+              <div className="flex space-x-3 mt-6">
+                <button
+                  onClick={handleMarkInProgress}
+                  className="flex-1 py-2 px-4 rounded-lg font-medium transition-all transform hover:scale-105 text-white bg-gradient-to-r from-[--color-primary] to-[--color-accent]"
+                  disabled={!inProgressRemarks.trim()}
+                >
+                  Mark as In Progress
+                </button>
+                <button
+                  onClick={() => {
+                    setShowInProgressModal(null);
+                    setInProgressRemarks('');
+                  }}
+                  className="flex-1 py-2 px-4 rounded-lg font-medium transition-colors hover:bg-[--color-background] bg-[--color-surface] border border-[--color-border] text-[--color-text]"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* FMS Objection Modal */}

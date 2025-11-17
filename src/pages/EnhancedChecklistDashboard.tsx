@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { 
-  CheckSquare, TrendingUp, Clock, CheckCircle, AlertCircle, 
-  Calendar, Users, Filter, Search, ChevronDown, ChevronUp, 
+import {
+  CheckSquare, TrendingUp, Clock, CheckCircle, AlertCircle,
+  Calendar, Users, Filter, Search, ChevronDown, ChevronUp,
   Eye, Edit3, Archive, Plus, RefreshCw, BarChart3,
-  ArrowRight, CalendarDays, Target, CheckCircle2
+  ArrowRight, CalendarDays, Target, CheckCircle2, ChevronLeft, ChevronRight
 } from 'lucide-react';
 import axios from 'axios';
 import { address } from '../../utils/ipAddress';
@@ -44,6 +44,20 @@ interface DashboardStats {
   averageCompletionTime: number;
 }
 
+interface CalendarDay {
+  date: string;
+  checklists: any[];
+  completed: number;
+  total: number;
+  level: number;
+}
+
+interface CalendarData {
+  year: number;
+  month: number;
+  calendar: CalendarDay[];
+}
+
 interface SectionData {
   title: string;
   count: number;
@@ -66,12 +80,21 @@ const EnhancedChecklistDashboard: React.FC = () => {
   const [priorityFilter, setPriorityFilter] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('');
   const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set(['upcoming', 'active', 'overdue', 'completed']));
-  const [viewMode, setViewMode] = useState<'dashboard' | 'list'>('dashboard');
+  const [viewMode, setViewMode] = useState<'dashboard' | 'list' | 'calendar'>('dashboard');
+  const [calendarData, setCalendarData] = useState<CalendarData | null>(null);
+  const [calendarYear, setCalendarYear] = useState(new Date().getFullYear());
+  const [calendarMonth, setCalendarMonth] = useState(new Date().getMonth());
 
   useEffect(() => {
     fetchUsers();
     fetchChecklists();
   }, [selectedPerson]);
+
+  useEffect(() => {
+    if (viewMode === 'calendar') {
+      fetchCalendarData();
+    }
+  }, [viewMode, calendarYear, calendarMonth, selectedPerson]);
 
   const fetchUsers = async () => {
     try {
@@ -90,14 +113,14 @@ const EnhancedChecklistDashboard: React.FC = () => {
       setLoading(true);
       const token = localStorage.getItem('token');
       const params = selectedPerson ? `?assignedTo=${selectedPerson}` : '';
-      
+
       const response = await axios.get(`${address}/api/checklists${params}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      
+
       const checklists = response.data;
       setAllChecklists(checklists);
-      
+
       // Calculate dashboard statistics
       const calculatedStats = calculateDashboardStats(checklists);
       setStats(calculatedStats);
@@ -105,6 +128,21 @@ const EnhancedChecklistDashboard: React.FC = () => {
       console.error('Error fetching checklists:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchCalendarData = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const params = selectedPerson ? `?userId=${selectedPerson}` : '';
+
+      const response = await axios.get(`${address}/api/checklists/calendar?year=${calendarYear}&month=${calendarMonth}${params}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      setCalendarData(response.data);
+    } catch (error) {
+      console.error('Error fetching calendar data:', error);
     }
   };
 
@@ -365,10 +403,10 @@ const EnhancedChecklistDashboard: React.FC = () => {
 
   const renderSection = (section: SectionData) => {
     const isExpanded = expandedSections.has(section.title.toLowerCase().replace(' ', ''));
-    
+
     return (
       <div key={section.title} className={`bg-white rounded-xl border ${section.borderColor} shadow-sm overflow-hidden`}>
-        <div 
+        <div
           className={`${section.bgColor} p-4 cursor-pointer hover:opacity-80 transition-opacity`}
           onClick={() => toggleSection(section.title.toLowerCase().replace(' ', ''))}
         >
@@ -385,17 +423,17 @@ const EnhancedChecklistDashboard: React.FC = () => {
                   </span>
                 </h3>
                 <p className="text-sm text-gray-600 mt-1">
-                  {section.count === 0 
-                    ? 'No tasks' 
-                    : section.count === 1 
-                      ? '1 task' 
+                  {section.count === 0
+                    ? 'No tasks'
+                    : section.count === 1
+                      ? '1 task'
                       : `${section.count} tasks`
                   }
                 </p>
               </div>
             </div>
             <div className="flex items-center gap-2">
-              <button 
+              <button
                 onClick={(e) => {
                   e.stopPropagation();
                   navigate('/checklists/create', { state: { category: section.title.toLowerCase() } });
@@ -413,7 +451,7 @@ const EnhancedChecklistDashboard: React.FC = () => {
             </div>
           </div>
         </div>
-        
+
         {isExpanded && (
           <div className="p-4">
             {section.items.length === 0 ? (
@@ -428,7 +466,7 @@ const EnhancedChecklistDashboard: React.FC = () => {
                 {section.items.slice(0, 5).map(item => renderTaskCard(item, section.borderColor))}
                 {section.items.length > 5 && (
                   <div className="text-center pt-3 border-t border-gray-100">
-                    <button 
+                    <button
                       onClick={() => navigate('/checklists', { state: { filter: section.title.toLowerCase().replace(' ', '') } })}
                       className={`text-sm ${section.color} hover:underline flex items-center gap-1 mx-auto`}
                     >
@@ -441,6 +479,139 @@ const EnhancedChecklistDashboard: React.FC = () => {
             )}
           </div>
         )}
+      </div>
+    );
+  };
+
+  const renderCalendarView = () => {
+    if (!calendarData) {
+      return (
+        <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-8">
+          <div className="text-center">
+            <RefreshCw className="h-8 w-8 animate-spin text-blue-600 mx-auto mb-4" />
+            <p className="text-gray-600">Loading calendar data...</p>
+          </div>
+        </div>
+      );
+    }
+
+    const monthNames = [
+      'January', 'February', 'March', 'April', 'May', 'June',
+      'July', 'August', 'September', 'October', 'November', 'December'
+    ];
+
+    const navigateMonth = (direction: 'prev' | 'next') => {
+      let newMonth = calendarMonth;
+      let newYear = calendarYear;
+
+      if (direction === 'prev') {
+        newMonth--;
+        if (newMonth < 0) {
+          newMonth = 11;
+          newYear--;
+        }
+      } else {
+        newMonth++;
+        if (newMonth > 11) {
+          newMonth = 0;
+          newYear++;
+        }
+      }
+
+      setCalendarMonth(newMonth);
+      setCalendarYear(newYear);
+    };
+
+    const getLevelColor = (level: number) => {
+      switch (level) {
+        case 0: return 'bg-gray-100';
+        case 1: return 'bg-green-200';
+        case 2: return 'bg-green-300';
+        case 3: return 'bg-green-400';
+        case 4: return 'bg-green-500';
+        default: return 'bg-gray-100';
+      }
+    };
+
+    return (
+      <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+        <div className="p-6 border-b border-gray-200">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-xl font-semibold text-gray-900 flex items-center gap-2">
+              <Calendar className="h-5 w-5 text-blue-600" />
+              Checklist Activity Calendar
+            </h2>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => navigateMonth('prev')}
+                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </button>
+              <h3 className="text-lg font-medium text-gray-900 min-w-[140px] text-center">
+                {monthNames[calendarMonth]} {calendarYear}
+              </h3>
+              <button
+                onClick={() => navigateMonth('next')}
+                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+              >
+                <ChevronRight className="h-4 w-4" />
+              </button>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-4 text-sm text-gray-600">
+            <span>Less</span>
+            {[0, 1, 2, 3, 4].map(level => (
+              <div key={level} className={`w-3 h-3 rounded-sm ${getLevelColor(level)}`} />
+            ))}
+            <span>More</span>
+            <span className="ml-4">• Activity based on checklist completions</span>
+          </div>
+        </div>
+
+        <div className="p-6">
+          <div className="grid grid-cols-7 gap-1 mb-2">
+            {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
+              <div key={day} className="text-center text-sm font-medium text-gray-500 py-2">
+                {day}
+              </div>
+            ))}
+          </div>
+
+          <div className="grid grid-cols-7 gap-1">
+            {/* Empty cells for days before the first day of the month */}
+            {Array.from({ length: new Date(calendarYear, calendarMonth, 1).getDay() }, (_, i) => (
+              <div key={`empty-${i}`} className="aspect-square" />
+            ))}
+
+            {/* Calendar days */}
+            {calendarData.calendar.map((day, index) => (
+              <div
+                key={day.date}
+                className={`aspect-square rounded-lg border border-gray-200 hover:border-gray-300 transition-colors cursor-pointer group relative`}
+                onClick={() => {
+                  if (day.checklists.length > 0) {
+                    // Could show a tooltip or modal with checklist details
+                    console.log('Day clicked:', day);
+                  }
+                }}
+              >
+                <div className={`w-full h-full rounded-lg ${getLevelColor(day.level)} flex items-center justify-center text-sm font-medium transition-all group-hover:scale-105`}>
+                  {new Date(day.date).getDate()}
+                </div>
+
+                {day.checklists.length > 0 && (
+                  <div className="absolute bottom-0 left-0 right-0 h-1 bg-blue-500 rounded-b-lg opacity-0 group-hover:opacity-100 transition-opacity" />
+                )}
+              </div>
+            ))}
+          </div>
+
+          <div className="mt-6 text-center text-sm text-gray-600">
+            <p>Click on active days to view checklist details</p>
+          </div>
+        </div>
       </div>
     );
   };
@@ -476,6 +647,40 @@ const EnhancedChecklistDashboard: React.FC = () => {
           </div>
           
           <div className="flex items-center gap-4 mt-6 lg:mt-0">
+            {/* View Toggle */}
+            <div className="flex items-center gap-2 mr-4">
+              <button
+                onClick={() => setViewMode('dashboard')}
+                className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                  viewMode === 'dashboard'
+                    ? 'bg-blue-100 text-blue-700 border border-blue-200'
+                    : 'text-gray-600 hover:bg-gray-100'
+                }`}
+              >
+                Dashboard
+              </button>
+              <button
+                onClick={() => setViewMode('calendar')}
+                className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                  viewMode === 'calendar'
+                    ? 'bg-blue-100 text-blue-700 border border-blue-200'
+                    : 'text-gray-600 hover:bg-gray-100'
+                }`}
+              >
+                Calendar
+              </button>
+              <button
+                onClick={() => setViewMode('list')}
+                className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                  viewMode === 'list'
+                    ? 'bg-blue-100 text-blue-700 border border-blue-200'
+                    : 'text-gray-600 hover:bg-gray-100'
+                }`}
+              >
+                List
+              </button>
+            </div>
+
             {/* Filters */}
             <div className="flex items-center gap-3">
               <div className="relative">
@@ -501,6 +706,24 @@ const EnhancedChecklistDashboard: React.FC = () => {
                 <option value="urgent">Urgent</option>
               </select>
               
+              <select
+                value={categoryFilter}
+                onChange={(e) => setCategoryFilter(e.target.value)}
+                className="px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
+              >
+                <option value="">All Categories</option>
+                <option value="daily">Daily</option>
+                <option value="weekly">Weekly</option>
+                <option value="monthly">Monthly</option>
+                <option value="quarterly">Quarterly</option>
+                <option value="yearly">Yearly</option>
+                <option value="maintenance">Maintenance</option>
+                <option value="compliance">Compliance</option>
+                <option value="training">Training</option>
+                <option value="audit">Audit</option>
+                <option value="custom">Custom</option>
+              </select>
+
               <select
                 value={selectedPerson}
                 onChange={(e) => setSelectedPerson(e.target.value)}
@@ -600,10 +823,27 @@ const EnhancedChecklistDashboard: React.FC = () => {
           </div>
         </div>
 
-        {/* Task Sections */}
-        <div className="space-y-6">
-          {taskSections.map(section => renderSection(section))}
-        </div>
+        {/* Content based on view mode */}
+        {viewMode === 'dashboard' && (
+          <div className="space-y-6">
+            {taskSections.map(section => renderSection(section))}
+          </div>
+        )}
+
+        {viewMode === 'calendar' && (
+          <div className="space-y-6">
+            {renderCalendarView()}
+          </div>
+        )}
+
+        {viewMode === 'list' && (
+          <div className="space-y-6">
+            {/* List view can be added later */}
+            <div className="text-center py-12">
+              <p className="text-gray-500">List view coming soon...</p>
+            </div>
+          </div>
+        )}
 
         {/* Recent Activity */}
         {stats.recentSubmissions.length > 0 && (

@@ -26,7 +26,8 @@ import {
   BarChart2,
   MessageSquare,
   Calendar,
-  Activity
+  Activity,
+  ListTodo
 } from 'lucide-react';
 
 // Clean and Professional AMG Logo Component
@@ -122,6 +123,8 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
     { section: 'FMS', icon: Settings, label: 'Manage FMS Categories', path: '/fms-categories', requireAdmin: true, highlight: true },
     
     // Checklists Section
+    { section: 'Checklists', icon: ListTodo, label: 'Pending Checklists', path: '/pending-checklists', highlight: true },
+    { section: 'Checklists', icon: Calendar, label: 'Checklist Calendar', path: '/checklist-calendar', highlight: true },
     { section: 'Checklists', icon: CheckSquare, label: 'My Checklists', path: '/checklists', highlight: true },
     { section: 'Checklists', icon: BarChart2, label: 'Checklist Dashboard', path: '/checklist-dashboard', permission: 'canViewAllChecklists', highlight: true },
     { section: 'Checklists', icon: Settings, label: 'Manage Checklist Categories', path: '/checklist-categories', requireAdmin: true, highlight: true },

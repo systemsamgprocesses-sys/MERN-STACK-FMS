@@ -887,11 +887,25 @@ const ViewAllFMS: React.FC = () => {
                                           setEditingFMS(fms._id);
                                         }}
                                         className="p-2 hover:bg-[var(--color-background)] rounded-full"
+                                        title="Edit Category"
                                       >
                                         <Edit size={16} className="text-[var(--color-textSecondary)]" />
                                       </button>
                                     )}
                                   </div>
+                                )}
+                                {user?.role === 'superadmin' && (
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      navigate(`/create-fms?edit=${fms._id}`);
+                                    }}
+                                    className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 flex items-center space-x-2"
+                                    title="Edit FMS Template (Super Admin Only)"
+                                  >
+                                    <Edit size={16} />
+                                    <span>Edit FMS</span>
+                                  </button>
                                 )}
                                 <button
                                   onClick={(e) => {

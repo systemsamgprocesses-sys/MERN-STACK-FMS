@@ -3,6 +3,7 @@ import Checklist from '../models/Checklist.js';
 import mongoose from 'mongoose';
 import ChecklistCategory from '../models/ChecklistCategory.js';
 import ChecklistDepartment from '../models/ChecklistDepartment.js';
+import { authenticateToken } from '../middleware/auth.js';
 
 const router = express.Router();
 
@@ -17,7 +18,7 @@ const isSuperAdmin = (req, res, next) => {
 };
 
 // Get all checklists with category and department support
-router.get('/', async (req, res) => {
+router.get('/', authenticateToken, async (req, res) => {
   try {
     const { userId, isAdmin, category, department } = req.query;
     const query = {};
@@ -96,7 +97,7 @@ router.put('/:id/categorize', isSuperAdmin, async (req, res) => {
 });
 
 // Get available categories
-router.get('/categories', async (req, res) => {
+router.get('/categories', authenticateToken, async (req, res) => {
   try {
     const [categoryDocs, counts] = await Promise.all([
       ChecklistCategory.find().sort({ name: 1 }),
@@ -145,7 +146,7 @@ router.get('/categories', async (req, res) => {
 });
 
 // Get available departments
-router.get('/departments', async (req, res) => {
+router.get('/departments', authenticateToken, async (req, res) => {
   try {
     const [departmentDocs, counts] = await Promise.all([
       ChecklistDepartment.find().sort({ name: 1 }),

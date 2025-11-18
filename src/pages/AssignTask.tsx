@@ -366,6 +366,19 @@ const AssignTask: React.FC = () => {
                 />
               </div>
 
+              {/* Voice Recorder */}
+              <div>
+                <label className="block text-sm font-medium mb-1.5" style={{ color: isDark ? '#e5e7eb' : '#374151' }}>
+                  Voice Recording
+                </label>
+                <VoiceRecorder
+                  ref={voiceRecorderRef}
+                  onRecordingComplete={handleVoiceRecordingComplete}
+                  onRecordingDeleted={handleVoiceRecordingDeleted}
+                  isDark={isDark}
+                />
+              </div>
+
               <div className="grid grid-cols-3 gap-4">
                 <div>
                   <label className="block text-sm font-medium mb-1.5" style={{ color: isDark ? '#e5e7eb' : '#374151' }}>
@@ -862,19 +875,6 @@ const AssignTask: React.FC = () => {
                     ))}
                   </div>
                 )}
-              </div>
-
-              {/* Voice Recorder */}
-              <div>
-                <label className="block text-sm font-medium mb-1.5" style={{ color: isDark ? '#e5e7eb' : '#374151' }}>
-                  Voice Recording
-                </label>
-                <VoiceRecorder
-                  ref={voiceRecorderRef}
-                  onRecordingComplete={handleVoiceRecordingComplete}
-                  onRecordingDeleted={handleVoiceRecordingDeleted}
-                  isDark={isDark}
-                />
               </div>
 
               {/* File Upload */}

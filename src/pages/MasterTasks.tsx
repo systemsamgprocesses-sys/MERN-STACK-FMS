@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { Archive, History, Filter, Search, Trash2, Users, Calendar, ChevronDown, ChevronUp, ArrowUpDown, Eye, Paperclip, FileText, Edit3, RotateCcw, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Info, Download, ExternalLink } from 'lucide-react';
+import { Archive, History, Filter, Search, Trash2, Users, Calendar, ChevronDown, ChevronUp, ArrowUpDown, Eye, Paperclip, FileText, Edit3, RotateCcw, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Info, Download, ExternalLink, Pause } from 'lucide-react';
 import axios from 'axios';
 import ViewToggle from '../components/ViewToggle';
 import StatusBadge from '../components/StatusBadge';
 import PriorityBadge from '../components/PriorityBadge';
 import { useTheme } from '../contexts/ThemeContext';
 import { EditTaskModal } from '../components/EditTaskModal';
+import { SuperAdminTaskEditModal } from '../components/SuperAdminTaskEditModal';
 import { address } from '../../utils/ipAddress';
 import { Task } from "../types/Task";
 import ConfirmDeleteModal from '../components/ConfirmDeleteModal';
@@ -117,6 +118,7 @@ const MasterTasks: React.FC = () => {
   const [showAttachmentsModal, setShowAttachmentsModal] = useState<{ attachments: Attachment[], type: 'task' | 'completion' } | null>(null);
   const [selectedImagePreview, setSelectedImagePreview] = useState<string | null>(null);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
+  const [editingStatusTask, setEditingStatusTask] = useState<Task | null>(null);
   const [showRemarksModal, setShowRemarksModal] = useState<Task | null>(null);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [taskIdToDelete, setTaskIdToDelete] = useState<string | null>(null);
@@ -256,10 +258,12 @@ const MasterTasks: React.FC = () => {
     }
 
     try {
-      const response = await fetch(`${address}/api/tasks/${taskId}?role=${user?.role}`, {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`${address}/api/tasks/${taskId}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify(updates),
       });
@@ -417,7 +421,25 @@ const MasterTasks: React.FC = () => {
                       <History size={16} />
                     </button>
                   )}
-                  {task.status !== 'completed' && user?.role === 'superadmin' && (
+                  {user?.role === 'superadmin' && (
+                    <>
+                      <button
+                        onClick={() => setEditingTask(task)}
+                        className={`p-2 rounded-lg transition-colors ${isDark ? 'text-green-400 hover:bg-green-900' : 'text-green-600 hover:bg-green-50'}`}
+                        title="Edit task details (Super Admin)"
+                      >
+                        <Edit3 size={16} />
+                      </button>
+                      <button
+                        onClick={() => setEditingStatusTask(task)}
+                        className={`p-2 rounded-lg transition-colors ${isDark ? 'text-purple-400 hover:bg-purple-900' : 'text-purple-600 hover:bg-purple-50'}`}
+                        title="Edit task status & hold (Super Admin)"
+                      >
+                        <Pause size={16} />
+                      </button>
+                    </>
+                  )}
+                  {task.status !== 'completed' && user?.role !== 'superadmin' && (
                     <button
                       onClick={() => setEditingTask(task)}
                       className={`p-2 rounded-lg transition-colors ${isDark ? 'text-green-400 hover:bg-green-900' : 'text-green-600 hover:bg-green-50'}`}
@@ -782,14 +804,29 @@ const MasterTasks: React.FC = () => {
                             <History size={16} />
                           </button>
                         )}
-                        {task.status !== 'completed' && user?.role === 'superadmin' && (
-                          <button
-                            onClick={() => setEditingTask(task)}
-                            className={`p-1 rounded transition-colors ${isDark ? 'text-green-400 hover:bg-green-900' : 'text-green-600 hover:bg-green-50'}`}
-                            title="Edit task (Super Admin only)"
-                          >
-                            <Edit3 size={16} />
-                          </button>
+                        {user?.role === 'superadmin' && (
+                          <>
+                            <button
+                              onClick={() => {
+                              if (user?.role === 'superadmin') {
+                                setEditingStatusTask(task);
+                              } else {
+                                setEditingTask(task);
+                              }
+                            }}
+                              className={`p-1 rounded transition-colors ${isDark ? 'text-green-400 hover:bg-green-900' : 'text-green-600 hover:bg-green-50'}`}
+                              title="Edit task details (Super Admin)"
+                            >
+                              <Edit3 size={16} />
+                            </button>
+                            <button
+                              onClick={() => setEditingStatusTask(task)}
+                              className={`p-1 rounded transition-colors ${isDark ? 'text-purple-400 hover:bg-purple-900' : 'text-purple-600 hover:bg-purple-50'}`}
+                              title="Edit task status & hold (Super Admin)"
+                            >
+                              <Pause size={16} />
+                            </button>
+                          </>
                         )}
                         {user?.permissions.canDeleteTasks && (
                           <>
@@ -1426,6 +1463,14 @@ const MasterTasks: React.FC = () => {
           task={editingTask}
           users={users}
           onSave={handleEditTask}
+        />
+      )}
+      {editingStatusTask && (
+        <SuperAdminTaskEditModal
+          isOpen={!!editingStatusTask}
+          onClose={() => setEditingStatusTask(null)}
+          task={editingStatusTask}
+          onSuccess={fetchTasks}
         />
       )}
     </div>

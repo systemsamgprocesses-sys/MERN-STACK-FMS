@@ -3,13 +3,16 @@ import Task from '../models/Task.js';
 import User from '../models/User.js';
 import ScoreLog from '../models/ScoreLog.js';
 import { checkPermission } from '../middleware/permissions.js';
+import { authenticateToken } from '../middleware/auth.js';
 
 const router = express.Router();
 
 // Middleware to check if user is superadmin
 const isSuperAdmin = (req, res, next) => {
-  const { role } = req.query;
-  if (role === 'superadmin') {
+  if (!req.user) {
+    return res.status(401).json({ message: 'Authentication required' });
+  }
+  if (req.user.role === 'superadmin') {
     return next();
   }
   return res.status(403).json({ message: 'Access denied. Only Super Admin can perform this action.' });
@@ -516,10 +519,11 @@ router.post('/', async (req, res) => {
 });
 
 // Update task - Only Super Admin can edit tasks
-router.put('/:id', isSuperAdmin, async (req, res) => {
+router.put('/:id', authenticateToken, isSuperAdmin, async (req, res) => {
   try {
-    const { status, inProgressRemarks, ...updateData } = req.body;
+    const { status, inProgressRemarks, isOnHold, ...updateData } = req.body;
 
+    // Super admin can change status from any status to any status
     // If status is being changed to 'in-progress', require remarks
     if (status === 'in-progress') {
       if (!inProgressRemarks || !inProgressRemarks.trim()) {
@@ -528,7 +532,29 @@ router.put('/:id', isSuperAdmin, async (req, res) => {
       updateData.inProgressRemarks = inProgressRemarks.trim();
     }
 
-    updateData.status = status;
+    // Super admin can set status to any value including changing completed to pending
+    if (status !== undefined) {
+      updateData.status = status;
+      
+      // If changing from completed to pending, clear completedAt
+      if (status === 'pending' || status === 'in-progress') {
+        const currentTask = await Task.findById(req.params.id);
+        if (currentTask && currentTask.status === 'completed') {
+          updateData.completedAt = null;
+          updateData.completionRemarks = null;
+          updateData.completionScore = null;
+        }
+      }
+    }
+
+    // Super admin can hold/unhold tasks
+    if (isOnHold !== undefined) {
+      updateData.isOnHold = isOnHold;
+      // If putting on hold, set status to pending
+      if (isOnHold === true && !status) {
+        updateData.status = 'pending';
+      }
+    }
 
     const task = await Task.findByIdAndUpdate(
       req.params.id,

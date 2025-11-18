@@ -52,6 +52,23 @@ const MultiLevelTaskCompletionModal: React.FC<MultiLevelTaskCompletionModalProps
     fetchUsers();
   }, []);
 
+  // Update checklist when task prop changes
+  useEffect(() => {
+    if (task.requiresChecklist && task.checklistItems && Array.isArray(task.checklistItems)) {
+      setChecklistItems(task.checklistItems.map((item: any) => ({ ...item })));
+    } else {
+      setChecklistItems([]);
+    }
+    // Reset completion type when task changes
+    setCompletionType('complete');
+    setForwardTo('');
+    setForwardDate('');
+    setForwardRemarks('');
+    setCompletionRemarks('');
+    setAttachments([]);
+    setErrors({});
+  }, [task]);
+
   const fetchUsers = async () => {
     try {
       const response = await axios.get(`${address}/api/users`);
@@ -246,6 +263,14 @@ const MultiLevelTaskCompletionModal: React.FC<MultiLevelTaskCompletionModalProps
 
         {/* Body */}
         <div className="p-6 space-y-6">
+          {/* Info Banner for Multi-Level Tasks */}
+          <div className="p-3 rounded-lg bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800">
+            <p className="text-sm text-blue-700 dark:text-blue-300">
+              <strong>Multi-Level Task:</strong> You can either complete this task or forward it to another person. 
+              {task.requiresChecklist && ' Please complete the checklist items below.'}
+            </p>
+          </div>
+
           {/* Completion Type Selection */}
           <div>
             <label className="block text-sm font-semibold mb-3" style={{ color: 'var(--color-text)' }}>
@@ -301,38 +326,48 @@ const MultiLevelTaskCompletionModal: React.FC<MultiLevelTaskCompletionModalProps
           </div>
 
           {/* Checklist (if required) */}
-          {task.requiresChecklist && checklistItems.length > 0 && (
+          {task.requiresChecklist && (
             <div>
               <label className="block text-sm font-semibold mb-2" style={{ color: 'var(--color-text)' }}>
                 Task Checklist {completionType === 'complete' && <span className="text-red-500">*</span>}
               </label>
-              <div 
-                className="p-4 rounded-lg space-y-2"
-                style={{ backgroundColor: 'var(--color-background)', border: '1px solid var(--color-border)' }}
-              >
-                {checklistItems.map((item: any, index: number) => (
-                  <div key={item.id} className="flex items-center gap-3">
-                    <input
-                      type="checkbox"
-                      checked={item.completed}
-                      onChange={() => toggleChecklistItem(index)}
-                      className="w-5 h-5 rounded accent-blue-500"
-                    />
-                    <span 
-                      className={item.completed ? 'line-through' : ''}
-                      style={{ color: item.completed ? 'var(--color-textSecondary)' : 'var(--color-text)' }}
-                    >
-                      {item.text}
-                    </span>
+              {checklistItems.length > 0 ? (
+                <>
+                  <div 
+                    className="p-4 rounded-lg space-y-2"
+                    style={{ backgroundColor: 'var(--color-background)', border: '1px solid var(--color-border)' }}
+                  >
+                    {checklistItems.map((item: any, index: number) => (
+                      <div key={item.id || index} className="flex items-center gap-3">
+                        <input
+                          type="checkbox"
+                          checked={item.completed || false}
+                          onChange={() => toggleChecklistItem(index)}
+                          className="w-5 h-5 rounded accent-blue-500"
+                        />
+                        <span 
+                          className={item.completed ? 'line-through' : ''}
+                          style={{ color: item.completed ? 'var(--color-textSecondary)' : 'var(--color-text)' }}
+                        >
+                          {item.text}
+                        </span>
+                      </div>
+                    ))}
                   </div>
-                ))}
-              </div>
-              {errors.checklist && (
-                <p className="text-red-500 text-sm mt-1">{errors.checklist}</p>
+                  {errors.checklist && (
+                    <p className="text-red-500 text-sm mt-1">{errors.checklist}</p>
+                  )}
+                  <p className="text-xs mt-2" style={{ color: 'var(--color-textSecondary)' }}>
+                    {checklistItems.filter((i: any) => i.completed).length} of {checklistItems.length} completed
+                  </p>
+                </>
+              ) : (
+                <div className="p-4 rounded-lg border border-yellow-300 bg-yellow-50 dark:bg-yellow-900/20">
+                  <p className="text-sm text-yellow-700 dark:text-yellow-300">
+                    This task requires a checklist, but no checklist items were found. Please contact the administrator.
+                  </p>
+                </div>
               )}
-              <p className="text-xs mt-2" style={{ color: 'var(--color-textSecondary)' }}>
-                {checklistItems.filter((i: any) => i.completed).length} of {checklistItems.length} completed
-              </p>
             </div>
           )}
 
@@ -341,7 +376,7 @@ const MultiLevelTaskCompletionModal: React.FC<MultiLevelTaskCompletionModalProps
             <>
               <div>
                 <label className="block text-sm font-semibold mb-2" style={{ color: 'var(--color-text)' }}>
-                  Forward To <span className="text-red-500">*</span>
+                  Forward To (New Assignee) <span className="text-red-500">*</span>
                 </label>
                 <select
                   value={forwardTo}

@@ -6,11 +6,23 @@ import User from '../models/User.js';
 import multer from 'multer';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { authenticateToken } from '../middleware/auth.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const router = express.Router();
+
+// Middleware to check if user is superadmin
+const isSuperAdmin = (req, res, next) => {
+  if (!req.user) {
+    return res.status(401).json({ message: 'Authentication required' });
+  }
+  if (req.user.role === 'superadmin') {
+    return next();
+  }
+  return res.status(403).json({ success: false, message: 'Access denied. Only Super Admin can perform this action.' });
+};
 
 // File upload configuration
 const storage = multer.diskStorage({
@@ -248,6 +260,153 @@ router.get('/:fmsId', async (req, res) => {
     res.json({ success: true, fms });
   } catch (error) {
     console.error('Get FMS error:', error);
+    res.status(500).json({ success: false, message: 'Server error', error: error.message });
+  }
+});
+
+// Update FMS template - Super Admin only
+router.put('/:id', authenticateToken, isSuperAdmin, upload.array('files', 10), async (req, res) => {
+  try {
+    const {
+      fmsName,
+      category,
+      steps,
+      frequency,
+      frequencySettings,
+      shiftSundayToMonday
+    } = req.body;
+
+    const fms = await FMS.findById(req.params.id);
+    if (!fms) {
+      return res.status(404).json({ success: false, message: 'FMS template not found' });
+    }
+
+    // Validate required fields if provided
+    if (fmsName !== undefined && (!fmsName || !fmsName.trim())) {
+      return res.status(400).json({ success: false, message: 'FMS name cannot be empty' });
+    }
+
+    // Update FMS name if provided
+    if (fmsName !== undefined) {
+      fms.fmsName = fmsName.trim();
+    }
+
+    // Update category if provided
+    if (category !== undefined) {
+      fms.category = category || 'General';
+    }
+
+    // Update frequency if provided
+    if (frequency !== undefined) {
+      fms.frequency = frequency || 'one-time';
+    }
+
+    // Update frequency settings if provided
+    if (frequencySettings !== undefined) {
+      let parsedFrequencySettings = typeof frequencySettings === 'string'
+        ? JSON.parse(frequencySettings || '{}')
+        : (frequencySettings || {});
+
+      fms.frequencySettings = {
+        includeSunday: parsedFrequencySettings.includeSunday ?? fms.frequencySettings?.includeSunday ?? true,
+        shiftSundayToMonday: parsedFrequencySettings.shiftSundayToMonday ?? (shiftSundayToMonday === 'true' || shiftSundayToMonday === true) ?? fms.frequencySettings?.shiftSundayToMonday ?? false,
+        weeklyDays: parsedFrequencySettings.weeklyDays || fms.frequencySettings?.weeklyDays || [],
+        monthlyDay: parsedFrequencySettings.monthlyDay ?? fms.frequencySettings?.monthlyDay,
+        yearlyDuration: parsedFrequencySettings.yearlyDuration ?? fms.frequencySettings?.yearlyDuration
+      };
+    }
+
+    // Update steps if provided
+    if (steps !== undefined) {
+      let parsedSteps = typeof steps === 'string' ? JSON.parse(steps) : steps;
+
+      if (!Array.isArray(parsedSteps) || parsedSteps.length === 0) {
+        return res.status(400).json({ success: false, message: 'At least one step is required' });
+      }
+
+      // Validate and convert step data
+      parsedSteps = parsedSteps.map((step, index) => {
+        // Validate required fields
+        if (!step.what || !step.how) {
+          throw new Error(`Step ${index + 1}: Missing required fields (what/how)`);
+        }
+        if (!step.who || !Array.isArray(step.who) || step.who.length === 0) {
+          throw new Error(`Step ${index + 1}: At least one assignee is required`);
+        }
+
+        // Ensure who array contains valid ObjectIds
+        step.who = step.who.map(id => {
+          if (typeof id === 'string' && id.length === 24) {
+            return id; // MongoDB will handle string to ObjectId conversion
+          }
+          throw new Error(`Step ${index + 1}: Invalid user ID format`);
+        });
+
+        // Handle triggersFMSId if provided
+        if (step.triggersFMSId && typeof step.triggersFMSId === 'string' && step.triggersFMSId.length === 24) {
+          // Keep as string, MongoDB will convert
+        } else if (step.triggersFMSId) {
+          delete step.triggersFMSId; // Remove invalid triggersFMSId
+        }
+
+        // Default whenType if missing
+        if (!step.whenType) {
+          step.whenType = index === 0 ? 'fixed' : 'dependent';
+        }
+
+        if (!['fixed', 'dependent', 'ask-on-completion'].includes(step.whenType)) {
+          throw new Error(`Step ${index + 1}: Invalid whenType`);
+        }
+
+        if (step.whenType === 'ask-on-completion') {
+          step.when = 0;
+          step.whenDays = 0;
+          step.whenHours = 0;
+          step.whenUnit = 'days';
+        }
+
+        step.requireAttachments = step.requireAttachments === true || step.requireAttachments === 'true';
+        step.mandatoryAttachments = step.mandatoryAttachments === true || step.mandatoryAttachments === 'true';
+
+        return step;
+      });
+
+      // Process file uploads if any
+      if (req.files && req.files.length > 0) {
+        const fileMap = {};
+        req.files.forEach(file => {
+          const stepIndex = parseInt(file.fieldname.split('-')[1]);
+          if (!fileMap[stepIndex]) fileMap[stepIndex] = [];
+          fileMap[stepIndex].push({
+            filename: file.filename,
+            originalName: file.originalname,
+            path: file.path,
+            size: file.size,
+            uploadedBy: req.user._id,
+            uploadedAt: new Date()
+          });
+        });
+
+        parsedSteps.forEach((step, index) => {
+          if (fileMap[index]) {
+            // Merge new files with existing attachments or replace if needed
+            step.attachments = [...(step.attachments || []), ...fileMap[index]];
+          }
+        });
+      }
+
+      fms.steps = parsedSteps;
+    }
+
+    await fms.save();
+
+    const updatedFms = await FMS.findById(fms._id)
+      .populate('createdBy', 'username email')
+      .populate('steps.who', 'username email name');
+
+    res.json({ success: true, message: 'FMS template updated successfully', fms: updatedFms });
+  } catch (error) {
+    console.error('Update FMS error:', error);
     res.status(500).json({ success: false, message: 'Server error', error: error.message });
   }
 });

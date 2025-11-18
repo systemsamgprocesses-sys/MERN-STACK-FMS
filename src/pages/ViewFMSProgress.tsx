@@ -23,6 +23,7 @@ interface MultiLevelTask {
   assignedBy: { username: string; email: string };
   assignedTo: { username: string; email: string };
   forwardedBy?: { username: string; email: string };
+  forwardedAt?: string;
   forwardingHistory: Array<{
     from: { username: string };
     to: { username: string };
@@ -52,9 +53,11 @@ const ViewFMSProgress: React.FC = () => {
   const [files, setFiles] = useState<File[]>([]);
   const [taskPlannedDate, setTaskPlannedDate] = useState('');
   const [forwardTo, setForwardTo] = useState('');
+  const [forwardDate, setForwardDate] = useState('');
   const [forwardRemarks, setForwardRemarks] = useState('');
   const [users, setUsers] = useState<any[]>([]);
   const [showForwardModal, setShowForwardModal] = useState(false);
+  const [forwarding, setForwarding] = useState(false);
 
   useEffect(() => {
     fetchProjects();
@@ -90,6 +93,51 @@ const ViewFMSProgress: React.FC = () => {
       setMultiLevelTasks(response.data);
     } catch (error) {
       console.error('Error fetching multi-level tasks:', error);
+    }
+  };
+
+  const handleForwardTask = async () => {
+    if (!selectedMultiLevelTask) return;
+
+    // Validation
+    if (!forwardTo) {
+      alert('Please select a user to forward this task to');
+      return;
+    }
+    if (!forwardDate) {
+      alert('Please select a due date for the forwarded task');
+      return;
+    }
+    if (!forwardRemarks.trim()) {
+      alert('Please provide remarks for forwarding');
+      return;
+    }
+
+    setForwarding(true);
+    try {
+      const response = await axios.post(
+        `${address}/api/tasks/${selectedMultiLevelTask._id}/forward`,
+        {
+          forwardTo,
+          remarks: forwardRemarks,
+          dueDate: forwardDate
+        }
+      );
+
+      if (response.data) {
+        alert('Task forwarded successfully!');
+        setShowForwardModal(false);
+        setForwardTo('');
+        setForwardDate('');
+        setForwardRemarks('');
+        setSelectedMultiLevelTask(null);
+        fetchMultiLevelTasks();
+      }
+    } catch (error: any) {
+      console.error('Error forwarding task:', error);
+      alert(error.response?.data?.message || 'Failed to forward task');
+    } finally {
+      setForwarding(false);
     }
   };
 
@@ -572,11 +620,19 @@ const ViewFMSProgress: React.FC = () => {
                         </div>
                         <div className="flex items-center gap-2 text-[var(--color-textSecondary)]">
                           <Users size={14} />
-                          <span>Assigned to: {task.assignedTo.username}</span>
+                          <span>Assigned to: <strong className="text-[var(--color-text)]">{task.assignedTo.username}</strong></span>
                           {task.forwardedBy && (
-                            <span className="text-xs">(forwarded by {task.forwardedBy.username})</span>
+                            <span className="text-xs bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 px-2 py-0.5 rounded">
+                              (forwarded by {task.forwardedBy.username})
+                            </span>
                           )}
                         </div>
+                        {task.forwardedAt && (
+                          <div className="flex items-center gap-2 text-xs text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 px-2 py-1 rounded">
+                            <ArrowRight size={12} />
+                            <span>Forwarded on: {new Date(task.forwardedAt).toLocaleDateString()}</span>
+                          </div>
+                        )}
                         {task.requiresChecklist && (
                           <div className="flex items-center gap-2 text-[var(--color-textSecondary)]">
                             <CheckSquare size={14} />
@@ -608,6 +664,9 @@ const ViewFMSProgress: React.FC = () => {
                             onClick={(e) => {
                               e.stopPropagation();
                               setSelectedMultiLevelTask(task);
+                              setForwardTo('');
+                              setForwardDate('');
+                              setForwardRemarks('');
                               setShowForwardModal(true);
                             }}
                             className="px-4 py-2 bg-[var(--color-primary)] text-white rounded-lg hover:opacity-90 text-sm font-medium flex-1"
@@ -621,6 +680,103 @@ const ViewFMSProgress: React.FC = () => {
                 })}
               </div>
             )}
+          </div>
+        )}
+
+        {/* Forward Task Modal */}
+        {showForwardModal && selectedMultiLevelTask && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-[var(--color-surface)] rounded-lg p-6 max-w-lg w-full max-h-[90vh] overflow-y-auto">
+              <h3 className="text-xl font-bold text-[var(--color-text)] mb-4 flex items-center gap-2">
+                <ArrowRight size={24} style={{ color: 'var(--color-primary)' }} />
+                Forward Multi-Level Task
+              </h3>
+              <p className="text-sm text-[var(--color-textSecondary)] mb-4">{selectedMultiLevelTask.title}</p>
+              
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-[var(--color-text)] mb-2">
+                    Forward To (New Assignee) <span className="text-red-500">*</span>
+                  </label>
+                  <select
+                    value={forwardTo}
+                    onChange={(e) => setForwardTo(e.target.value)}
+                    className="w-full px-4 py-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] text-[var(--color-text)]"
+                  >
+                    <option value="">Select user...</option>
+                    {users
+                      .filter((u: any) => u._id !== user?.id && u._id !== selectedMultiLevelTask.assignedTo._id)
+                      .map((u: any) => (
+                        <option key={u._id} value={u._id}>
+                          {u.username} ({u.email})
+                        </option>
+                      ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-[var(--color-text)] mb-2">
+                    New Due Date <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="date"
+                    value={forwardDate}
+                    onChange={(e) => setForwardDate(e.target.value)}
+                    min={new Date().toISOString().split('T')[0]}
+                    className="w-full px-4 py-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] text-[var(--color-text)]"
+                  />
+                  <p className="text-xs text-[var(--color-textSecondary)] mt-1">
+                    Select the due date for the forwarded task
+                  </p>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-[var(--color-text)] mb-2">
+                    Forwarding Remarks <span className="text-red-500">*</span>
+                  </label>
+                  <textarea
+                    value={forwardRemarks}
+                    onChange={(e) => setForwardRemarks(e.target.value)}
+                    rows={4}
+                    placeholder="Explain why you're forwarding this task..."
+                    className="w-full px-4 py-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] text-[var(--color-text)] resize-none"
+                  />
+                </div>
+              </div>
+
+              <div className="flex items-center justify-end space-x-3 mt-6">
+                <button
+                  onClick={() => {
+                    setShowForwardModal(false);
+                    setForwardTo('');
+                    setForwardDate('');
+                    setForwardRemarks('');
+                    setSelectedMultiLevelTask(null);
+                  }}
+                  disabled={forwarding}
+                  className="px-4 py-2 border border-[var(--color-border)] text-[var(--color-text)] rounded-lg hover:bg-[var(--color-background)] disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleForwardTask}
+                  disabled={forwarding}
+                  className="px-4 py-2 bg-[var(--color-primary)] text-white rounded-lg hover:opacity-90 disabled:opacity-50 flex items-center gap-2"
+                >
+                  {forwarding ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                      Forwarding...
+                    </>
+                  ) : (
+                    <>
+                      <ArrowRight size={16} />
+                      Forward Task
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
           </div>
         )}
 

@@ -39,6 +39,10 @@ import SalesDashboard from './pages/SalesDashboard';
 import StationeryRequestForm from './pages/StationeryRequestForm';
 import MyStationeryRequests from './pages/MyStationeryRequests';
 import CategoryManagement from './pages/CategoryManagement';
+import ChecklistCalendar from './pages/ChecklistCalendar';
+import ChecklistTemplateForm from './pages/ChecklistTemplateForm';
+import ChecklistOccurrenceDetail from './pages/ChecklistOccurrenceDetail';
+import PendingChecklists from './pages/PendingChecklists';
 
 function App() {
   return (
@@ -72,6 +76,10 @@ function App() {
                   <Route path="/checklists/create" element={<ProtectedRoute><CreateChecklist /></ProtectedRoute>} />
                   <Route path="/checklists/:id" element={<ProtectedRoute><ChecklistDetail /></ProtectedRoute>} />
                   <Route path="/checklist-dashboard" element={<ProtectedRoute><ChecklistDashboard /></ProtectedRoute>} />
+                  <Route path="/checklist-calendar" element={<ProtectedRoute><ChecklistCalendar /></ProtectedRoute>} />
+                  <Route path="/checklist-template/create" element={<ProtectedRoute><ChecklistTemplateForm /></ProtectedRoute>} />
+                  <Route path="/checklist-occurrence/:id" element={<ProtectedRoute><ChecklistOccurrenceDetail /></ProtectedRoute>} />
+                  <Route path="/pending-checklists" element={<ProtectedRoute><PendingChecklists /></ProtectedRoute>} />
                   <Route path="/help-tickets" element={<ProtectedRoute><HelpTickets /></ProtectedRoute>} />
                   <Route path="/admin-help-tickets" element={<ProtectedRoute><AdminHelpTickets /></ProtectedRoute>} />
                   <Route path="/complaints" element={<ProtectedRoute><Complaints /></ProtectedRoute>} />

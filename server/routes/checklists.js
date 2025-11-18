@@ -76,6 +76,43 @@ router.get('/dashboard', async (req, res) => {
       return acc;
     }, {});
     
+    // Get category breakdown
+    const byCategory = allChecklists.reduce((acc, cl) => {
+      const cat = cl.category || 'General';
+      acc[cat] = (acc[cat] || 0) + 1;
+      return acc;
+    }, {});
+
+    // Get department breakdown
+    const byDepartment = allChecklists.reduce((acc, cl) => {
+      const dept = cl.department || 'General';
+      acc[dept] = (acc[dept] || 0) + 1;
+      return acc;
+    }, {});
+
+    // Get submissions by category and frequency (daily basis)
+    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const todayEnd = new Date(todayStart);
+    todayEnd.setHours(23, 59, 59, 999);
+
+    const todaySubmissions = await Checklist.find({
+      ...query,
+      status: 'Submitted',
+      submittedAt: { $gte: todayStart, $lte: todayEnd }
+    });
+
+    const todayByCategory = todaySubmissions.reduce((acc, cl) => {
+      const cat = cl.category || 'General';
+      acc[cat] = (acc[cat] || 0) + 1;
+      return acc;
+    }, {});
+
+    const todayByFrequency = todaySubmissions.reduce((acc, cl) => {
+      const freq = cl.recurrence.type;
+      acc[freq] = (acc[freq] || 0) + 1;
+      return acc;
+    }, {});
+    
     const recentSubmissions = await Checklist.find({ ...query, status: 'Submitted' })
       .populate('createdBy assignedTo')
       .sort({ submittedAt: -1 })
@@ -87,6 +124,10 @@ router.get('/dashboard', async (req, res) => {
       pending,
       overdue,
       byRecurrence,
+      byCategory,
+      byDepartment,
+      todayByCategory,
+      todayByFrequency,
       recentSubmissions
     });
   } catch (error) {

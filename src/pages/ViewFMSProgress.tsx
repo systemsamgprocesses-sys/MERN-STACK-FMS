@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { CheckSquare, Clock, AlertCircle, Upload, RotateCcw, Printer } from 'lucide-react';
+import { CheckSquare, Clock, AlertCircle, Upload, RotateCcw, Printer, ArrowRight, Users } from 'lucide-react';
 import axios from 'axios';
 import { address } from '../../utils/ipAddress';
 
@@ -16,20 +16,60 @@ interface Project {
   createdBy: { username: string };
 }
 
+interface MultiLevelTask {
+  _id: string;
+  title: string;
+  description: string;
+  assignedBy: { username: string; email: string };
+  assignedTo: { username: string; email: string };
+  forwardedBy?: { username: string; email: string };
+  forwardingHistory: Array<{
+    from: { username: string };
+    to: { username: string };
+    forwardedAt: string;
+    remarks: string;
+  }>;
+  status: string;
+  priority: string;
+  dueDate: string;
+  requiresChecklist: boolean;
+  checklistItems: Array<{ id: string; text: string; completed: boolean }>;
+  checklistProgress: number;
+  createdAt: string;
+}
+
 const ViewFMSProgress: React.FC = () => {
   const { user } = useAuth();
+  const [activeTab, setActiveTab] = useState<'fms' | 'multilevel'>('fms');
   const [projects, setProjects] = useState<Project[]>([]);
+  const [multiLevelTasks, setMultiLevelTasks] = useState<MultiLevelTask[]>([]);
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
+  const [selectedMultiLevelTask, setSelectedMultiLevelTask] = useState<MultiLevelTask | null>(null);
   const [loading, setLoading] = useState(true);
   const [selectedTask, setSelectedTask] = useState<any>(null);
   const [taskStatus, setTaskStatus] = useState('');
   const [taskNotes, setTaskNotes] = useState('');
   const [files, setFiles] = useState<File[]>([]);
   const [taskPlannedDate, setTaskPlannedDate] = useState('');
+  const [forwardTo, setForwardTo] = useState('');
+  const [forwardRemarks, setForwardRemarks] = useState('');
+  const [users, setUsers] = useState<any[]>([]);
+  const [showForwardModal, setShowForwardModal] = useState(false);
 
   useEffect(() => {
     fetchProjects();
+    fetchMultiLevelTasks();
+    fetchUsers();
   }, []);
+
+  const fetchUsers = async () => {
+    try {
+      const response = await axios.get(`${address}/api/users`);
+      setUsers(response.data);
+    } catch (error) {
+      console.error('Error fetching users:', error);
+    }
+  };
 
   const fetchProjects = async () => {
     try {
@@ -41,6 +81,15 @@ const ViewFMSProgress: React.FC = () => {
       console.error('Error fetching projects:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchMultiLevelTasks = async () => {
+    try {
+      const response = await axios.get(`${address}/api/tasks/multi-level?userId=${user?.id}&role=${user?.role}`);
+      setMultiLevelTasks(response.data);
+    } catch (error) {
+      console.error('Error fetching multi-level tasks:', error);
     }
   };
 
@@ -165,8 +214,8 @@ const ViewFMSProgress: React.FC = () => {
               <RotateCcw size={28} style={{ color: 'var(--color-primary)' }} />
             </div>
             <div>
-              <h1 className="text-4xl font-bold text-[var(--color-text)]">FMS Project Progress</h1>
-              <p className="text-[var(--color-textSecondary)] text-sm mt-1">Track and manage project tasks seamlessly</p>
+              <h1 className="text-4xl font-bold text-[var(--color-text)]">Task Progress Management</h1>
+              <p className="text-[var(--color-textSecondary)] text-sm mt-1">Track FMS projects and multi-level tasks</p>
             </div>
           </div>
           <button
@@ -178,16 +227,67 @@ const ViewFMSProgress: React.FC = () => {
           </button>
         </div>
 
-        {projects.length === 0 ? (
-          <div className="text-center py-20">
-            <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl mb-4" style={{ backgroundColor: 'var(--color-primary)10' }}>
-              <RotateCcw size={40} style={{ color: 'var(--color-primary)' }} />
+        {/* Tabs */}
+        <div className="mb-6 flex gap-2 border-b border-[var(--color-border)]">
+          <button
+            onClick={() => {
+              setActiveTab('fms');
+              setSelectedProject(null);
+              setSelectedMultiLevelTask(null);
+            }}
+            className={`px-6 py-3 font-semibold transition-all relative ${
+              activeTab === 'fms'
+                ? 'text-[var(--color-primary)] border-b-2 border-[var(--color-primary)]'
+                : 'text-[var(--color-textSecondary)] hover:text-[var(--color-text)]'
+            }`}
+          >
+            <div className="flex items-center gap-2">
+              <RotateCcw size={18} />
+              FMS Projects
+              {projects.length > 0 && (
+                <span className="px-2 py-0.5 rounded-full text-xs bg-[var(--color-primary)] text-white">
+                  {projects.length}
+                </span>
+              )}
             </div>
-            <p className="text-[var(--color-textSecondary)] text-lg font-medium">No projects found</p>
-            <p className="text-[var(--color-textSecondary)] text-sm">Create a project to get started</p>
-          </div>
-        ) : (
-          <div className="space-y-8">
+          </button>
+          <button
+            onClick={() => {
+              setActiveTab('multilevel');
+              setSelectedProject(null);
+              setSelectedMultiLevelTask(null);
+            }}
+            className={`px-6 py-3 font-semibold transition-all relative ${
+              activeTab === 'multilevel'
+                ? 'text-[var(--color-primary)] border-b-2 border-[var(--color-primary)]'
+                : 'text-[var(--color-textSecondary)] hover:text-[var(--color-text)]'
+            }`}
+          >
+            <div className="flex items-center gap-2">
+              <Users size={18} />
+              Multi Level Tasks
+              {multiLevelTasks.length > 0 && (
+                <span className="px-2 py-0.5 rounded-full text-xs bg-[var(--color-accent)] text-white">
+                  {multiLevelTasks.length}
+                </span>
+              )}
+            </div>
+          </button>
+        </div>
+
+        {/* FMS Projects Tab Content */}
+        {activeTab === 'fms' && (
+          <>
+            {projects.length === 0 ? (
+              <div className="text-center py-20">
+                <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl mb-4" style={{ backgroundColor: 'var(--color-primary)10' }}>
+                  <RotateCcw size={40} style={{ color: 'var(--color-primary)' }} />
+                </div>
+                <p className="text-[var(--color-textSecondary)] text-lg font-medium">No projects found</p>
+                <p className="text-[var(--color-textSecondary)] text-sm">Create a project to get started</p>
+              </div>
+            ) : (
+              <div className="space-y-8">
             {/* Projects Grid */}
             <div>
               <h2 className="text-2xl font-bold text-[var(--color-text)] mb-6 flex items-center">
@@ -410,7 +510,120 @@ const ViewFMSProgress: React.FC = () => {
               )}
             </div>
           </div>
+            )}
+          </>
         )}
+
+        {/* Multi Level Tasks Tab Content */}
+        {activeTab === 'multilevel' && (
+          <div className="space-y-6">
+            {multiLevelTasks.length === 0 ? (
+              <div className="text-center py-20">
+                <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl mb-4" style={{ backgroundColor: 'var(--color-accent)10' }}>
+                  <Users size={40} style={{ color: 'var(--color-accent)' }} />
+                </div>
+                <p className="text-[var(--color-textSecondary)] text-lg font-medium">No multi-level tasks found</p>
+                <p className="text-[var(--color-textSecondary)] text-sm">Multi-level tasks will appear here</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {multiLevelTasks.map((task) => {
+                  const isOverdue = new Date(task.dueDate) < new Date() && task.status !== 'completed';
+                  const isMyTask = (task.assignedTo as any)._id === user?.id || (task.assignedTo as any)._id?.toString() === user?.id;
+                  
+                  return (
+                    <div
+                      key={task._id}
+                      className={`p-6 rounded-2xl border-2 transition-all cursor-pointer hover:shadow-lg ${
+                        isMyTask
+                          ? 'border-[var(--color-primary)] bg-[var(--color-primary)]/5'
+                          : 'border-[var(--color-border)] bg-[var(--color-surface)]'
+                      }`}
+                      onClick={() => setSelectedMultiLevelTask(task)}
+                    >
+                      <div className="flex items-start justify-between mb-4">
+                        <div className="flex-1">
+                          <h3 className="text-lg font-bold text-[var(--color-text)] mb-2">
+                            {task.title}
+                          </h3>
+                          <p className="text-sm text-[var(--color-textSecondary)] line-clamp-2">
+                            {task.description}
+                          </p>
+                        </div>
+                        <span
+                          className={`px-3 py-1 rounded-full text-xs font-semibold ${
+                            task.status === 'completed'
+                              ? 'bg-green-100 text-green-800'
+                              : task.status === 'in-progress'
+                              ? 'bg-blue-100 text-blue-800'
+                              : isOverdue
+                              ? 'bg-red-100 text-red-800'
+                              : 'bg-yellow-100 text-yellow-800'
+                          }`}
+                        >
+                          {task.status === 'completed' ? 'Completed' : isOverdue ? 'Overdue' : task.status}
+                        </span>
+                      </div>
+
+                      <div className="space-y-2 text-sm">
+                        <div className="flex items-center gap-2 text-[var(--color-textSecondary)]">
+                          <Clock size={14} />
+                          <span>Due: {new Date(task.dueDate).toLocaleDateString()}</span>
+                        </div>
+                        <div className="flex items-center gap-2 text-[var(--color-textSecondary)]">
+                          <Users size={14} />
+                          <span>Assigned to: {task.assignedTo.username}</span>
+                          {task.forwardedBy && (
+                            <span className="text-xs">(forwarded by {task.forwardedBy.username})</span>
+                          )}
+                        </div>
+                        {task.requiresChecklist && (
+                          <div className="flex items-center gap-2 text-[var(--color-textSecondary)]">
+                            <CheckSquare size={14} />
+                            <span>Checklist: {task.checklistProgress}% complete</span>
+                          </div>
+                        )}
+                      </div>
+
+                      {task.forwardingHistory.length > 0 && (
+                        <div className="mt-4 pt-4 border-t border-[var(--color-border)]">
+                          <p className="text-xs font-semibold text-[var(--color-text)] mb-2">
+                            Forwarding History
+                          </p>
+                          <div className="flex items-center gap-1 text-xs text-[var(--color-textSecondary)]">
+                            {task.forwardingHistory.slice(-3).map((h, idx) => (
+                              <React.Fragment key={idx}>
+                                {h.from.username}
+                                <ArrowRight size={12} />
+                              </React.Fragment>
+                            ))}
+                            {task.assignedTo.username}
+                          </div>
+                        </div>
+                      )}
+
+                      {isMyTask && task.status !== 'completed' && (
+                        <div className="mt-4 flex gap-2">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSelectedMultiLevelTask(task);
+                              setShowForwardModal(true);
+                            }}
+                            className="px-4 py-2 bg-[var(--color-primary)] text-white rounded-lg hover:opacity-90 text-sm font-medium flex-1"
+                          >
+                            Forward Task
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
+
         {selectedTask && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
             <div className="bg-[var(--color-surface)] rounded-lg p-6 max-w-lg w-full mx-4 max-h-[90vh] overflow-y-auto">

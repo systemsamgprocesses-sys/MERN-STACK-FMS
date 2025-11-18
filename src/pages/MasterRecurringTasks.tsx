@@ -257,8 +257,8 @@ const MasterRecurringTasks: React.FC = () => {
   // Check if current user is admin
   const isAdmin = user?.role === 'admin' || user?.permissions?.canViewAllTeamTasks || false;
 
-  // Check if user can edit recurring task schedules
-  const canEditRecurringTaskSchedules = user?.permissions?.canEditRecurringTaskSchedules || false;
+  // Only superadmin can edit tasks
+  const canEditRecurringTaskSchedules = user?.role === 'superadmin';
 
   // Check if user can delete tasks
   const canDeleteTasks = user?.permissions?.canDeleteTasks || false;
@@ -355,6 +355,12 @@ const MasterRecurringTasks: React.FC = () => {
   };
 
   const handleSaveMasterTask = async (masterTask: MasterTask) => {
+    // Only superadmin can edit tasks
+    if (user?.role !== 'superadmin') {
+      alert('Access denied. Only Super Admin can edit tasks.');
+      return;
+    }
+
     try {
       // Prepare update data - only basic fields, no scheduling fields
       const updateData: any = {
@@ -364,16 +370,18 @@ const MasterRecurringTasks: React.FC = () => {
         assignedTo: editFormData.assignedTo,
       };
 
-      // Update all tasks in the group
+      // Update all tasks in the group - pass role in query params
       await Promise.all(masterTask.tasks.map(task =>
-        axios.put(`${address}/api/tasks/${task._id}`, updateData)
+        axios.put(`${address}/api/tasks/${task._id}?role=${user?.role}`, updateData)
       ));
 
       setEditingMasterTask(null);
       setEditFormData({});
       fetchTasks();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error saving master task:', error);
+      const errorMessage = error.response?.data?.message || 'Failed to update task';
+      alert(errorMessage);
     }
   };
 

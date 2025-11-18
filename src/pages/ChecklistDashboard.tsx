@@ -13,6 +13,9 @@ interface DashboardStats {
    overdue: number;
    byRecurrence: Record<string, number>;
    byCategory: Record<string, number>;
+   byDepartment: Record<string, number>;
+   todayByCategory: Record<string, number>;
+   todayByFrequency: Record<string, number>;
    recentSubmissions: Array<{
      _id: string;
      title: string;
@@ -112,16 +115,25 @@ const ChecklistDashboard: React.FC = () => {
 
   const fetchCalendarData = async () => {
     try {
+      setCalendarData(null); // Reset calendar data before fetching new data
       const token = localStorage.getItem('token');
-      const params = selectedPerson ? `?userId=${selectedPerson}` : '';
+      const params = new URLSearchParams({
+        year: calendarYear.toString(),
+        month: calendarMonth.toString()
+      });
+      
+      if (selectedPerson) {
+        params.append('userId', selectedPerson);
+      }
 
-      const response = await axios.get(`${address}/api/checklists/calendar?year=${calendarYear}&month=${calendarMonth}${params}`, {
+      const response = await axios.get(`${address}/api/checklists/calendar?${params.toString()}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
 
       setCalendarData(response.data);
     } catch (error) {
       console.error('Error fetching calendar data:', error);
+      setCalendarData(null);
     }
   };
 
@@ -440,6 +452,85 @@ const ChecklistDashboard: React.FC = () => {
 
         {viewMode === 'dashboard' && (
           <>
+            {/* Today's Submissions by Category and Frequency */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+              {/* Today's Submissions by Category */}
+              <div className="bg-[--color-surface] rounded-xl p-6 border border-[--color-border]">
+                <h3 className="text-lg font-semibold text-[--color-text] mb-4">Today's Submissions by Category</h3>
+                {stats.todayByCategory && Object.keys(stats.todayByCategory).length > 0 ? (
+                  <div className="space-y-3">
+                    {Object.entries(stats.todayByCategory).map(([category, count]) => (
+                      <div key={category} className="flex items-center justify-between p-3 bg-[--color-background] rounded-lg">
+                        <span className="text-[--color-text] font-medium">{category}</span>
+                        <span className="px-3 py-1 bg-[--color-primary] text-white rounded-full text-sm font-bold">{count}</span>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-[--color-textSecondary] text-center py-4">No submissions today</p>
+                )}
+              </div>
+
+              {/* Today's Submissions by Frequency */}
+              <div className="bg-[--color-surface] rounded-xl p-6 border border-[--color-border]">
+                <h3 className="text-lg font-semibold text-[--color-text] mb-4">Today's Submissions by Frequency</h3>
+                {stats.todayByFrequency && Object.keys(stats.todayByFrequency).length > 0 ? (
+                  <div className="space-y-3">
+                    {Object.entries(stats.todayByFrequency).map(([frequency, count]) => (
+                      <div key={frequency} className="flex items-center justify-between p-3 bg-[--color-background] rounded-lg">
+                        <span className="text-[--color-text] font-medium capitalize">{frequency}</span>
+                        <span className="px-3 py-1 bg-green-600 text-white rounded-full text-sm font-bold">{count}</span>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-[--color-textSecondary] text-center py-4">No submissions today</p>
+                )}
+              </div>
+            </div>
+
+            {/* All-Time Breakdowns */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+              {/* By Category */}
+              <div className="bg-[--color-surface] rounded-xl p-6 border border-[--color-border]">
+                <h3 className="text-lg font-semibold text-[--color-text] mb-4">By Category</h3>
+                <div className="space-y-2">
+                  {Object.entries(stats.byCategory || {}).map(([category, count]) => (
+                    <div key={category} className="flex items-center justify-between text-sm">
+                      <span className="text-[--color-text]">{category}</span>
+                      <span className="px-2 py-1 bg-[--color-border] text-[--color-text] rounded text-xs font-medium">{count}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* By Department */}
+              <div className="bg-[--color-surface] rounded-xl p-6 border border-[--color-border]">
+                <h3 className="text-lg font-semibold text-[--color-text] mb-4">By Department</h3>
+                <div className="space-y-2">
+                  {Object.entries(stats.byDepartment || {}).map(([department, count]) => (
+                    <div key={department} className="flex items-center justify-between text-sm">
+                      <span className="text-[--color-text]">{department}</span>
+                      <span className="px-2 py-1 bg-[--color-border] text-[--color-text] rounded text-xs font-medium">{count}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* By Recurrence */}
+              <div className="bg-[--color-surface] rounded-xl p-6 border border-[--color-border]">
+                <h3 className="text-lg font-semibold text-[--color-text] mb-4">By Recurrence</h3>
+                <div className="space-y-2">
+                  {Object.entries(stats.byRecurrence || {}).map(([recurrence, count]) => (
+                    <div key={recurrence} className="flex items-center justify-between text-sm">
+                      <span className="text-[--color-text] capitalize">{recurrence}</span>
+                      <span className="px-2 py-1 bg-[--color-border] text-[--color-text] rounded text-xs font-medium">{count}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
             {/* Layout: Left Panel | Calendar (Middle) | Right Panel */}
             <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 mb-8">
               {/* Left Panel - Checklist Completion Status */}
@@ -484,7 +575,7 @@ const ChecklistDashboard: React.FC = () => {
               </div>
 
               {/* Center - Calendar */}
-              <div className="lg:col-span-2">
+              <div className="lg:col-span-2" key={`calendar-${calendarYear}-${calendarMonth}-${selectedPerson}`}>
                 {renderCalendarView()}
               </div>
 
@@ -603,8 +694,8 @@ const ChecklistDashboard: React.FC = () => {
 
                         {/* Daily Grid */}
                         <div className="grid grid-cols-7 gap-1">
-                          {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((day) => (
-                            <div key={day} className="text-center text-xs font-medium text-[--color-textSecondary]">
+                          {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((day, dayIdx) => (
+                            <div key={`${day}-${dayIdx}`} className="text-center text-xs font-medium text-[--color-textSecondary]">
                               {day}
                             </div>
                           ))}

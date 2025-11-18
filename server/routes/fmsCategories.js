@@ -1,8 +1,19 @@
 import express from 'express';
 import FMS from '../models/FMS.js';
 import mongoose from 'mongoose';
+import FMSCategory from '../models/FMSCategory.js';
 
 const router = express.Router();
+
+// Middleware to check if user is superadmin
+const isSuperAdmin = (req, res, next) => {
+  const { role } = req.query;
+  const roleFromBody = req.body?.role;
+  if (role === 'superadmin' || roleFromBody === 'superadmin') {
+    return next();
+  }
+  return res.status(403).json({ success: false, message: 'Access denied. Only Super Admin can manage categories.' });
+};
 
 // Get all FMS templates with category support
 router.get('/', async (req, res) => {
@@ -67,8 +78,8 @@ router.get('/', async (req, res) => {
   }
 });
 
-// Update FMS category (Admin/Superadmin only)
-router.put('/:id/category', async (req, res) => {
+// Update FMS category (Superadmin only)
+router.put('/:id/category', isSuperAdmin, async (req, res) => {
   try {
     const { category } = req.body;
     if (!category) {
@@ -98,24 +109,43 @@ router.put('/:id/category', async (req, res) => {
 // Get available categories
 router.get('/categories', async (req, res) => {
   try {
-    const categories = await FMS.aggregate([
-      {
-        $group: {
-          _id: '$category',
-          count: { $sum: 1 }
+    const [categoryDocs, counts] = await Promise.all([
+      FMSCategory.find().sort({ name: 1 }),
+      FMS.aggregate([
+        {
+          $group: {
+            _id: '$category',
+            count: { $sum: 1 }
+          }
         }
-      },
-      {
-        $project: {
-          name: { $ifNull: ['$_id', 'Uncategorized'] },
-          count: 1,
-          _id: 0
-        }
-      },
-      {
-        $sort: { name: 1 }
-      }
+      ])
     ]);
+
+    const countMap = counts.reduce((acc, item) => {
+      const key = item._id || 'Uncategorized';
+      acc[key] = item.count;
+      return acc;
+    }, {});
+
+    let categories = [];
+
+    if (categoryDocs.length > 0) {
+      categories = categoryDocs.map(doc => ({
+        name: doc.name,
+        count: countMap[doc.name] || 0
+      }));
+    } else {
+      // Fallback if no categories have been manually created yet
+      categories = Object.entries(countMap).map(([name, count]) => ({
+        name,
+        count
+      }));
+    }
+
+    // Ensure "General" always exists
+    if (!categories.some(cat => cat.name === 'General')) {
+      categories.unshift({ name: 'General', count: countMap['General'] || 0 });
+    }
 
     res.json({
       success: true,
@@ -123,6 +153,67 @@ router.get('/categories', async (req, res) => {
     });
   } catch (error) {
     console.error('Error fetching categories:', error);
+    res.status(500).json({ success: false, message: 'Server error', error: error.message });
+  }
+});
+
+// Add new category (Superadmin only)
+router.post('/categories', isSuperAdmin, async (req, res) => {
+  try {
+    const { name } = req.body;
+    if (!name || !name.trim()) {
+      return res.status(400).json({ success: false, message: 'Category name is required' });
+    }
+
+    const trimmedName = name.trim();
+
+    // Check if category already exists
+    const exists = await FMSCategory.findOne({ name: trimmedName });
+    if (exists) {
+      return res.status(400).json({ success: false, message: 'Category already exists' });
+    }
+
+    await FMSCategory.create({ name: trimmedName });
+
+    res.json({
+      success: true,
+      message: 'Category created successfully'
+    });
+  } catch (error) {
+    console.error('Error adding category:', error);
+    res.status(500).json({ success: false, message: 'Server error', error: error.message });
+  }
+});
+
+// Update category name (Superadmin only)
+router.put('/categories/update', isSuperAdmin, async (req, res) => {
+  try {
+    const { oldName, newName } = req.body;
+    if (!oldName || !newName) {
+      return res.status(400).json({ success: false, message: 'Both old and new category names are required' });
+    }
+
+    const trimmedNewName = newName.trim();
+
+    // Update stored category record
+    await FMSCategory.findOneAndUpdate(
+      { name: oldName },
+      { name: trimmedNewName },
+      { upsert: true, new: true }
+    );
+
+    // Update all FMS with the old category name
+    const result = await FMS.updateMany(
+      { category: oldName },
+      { $set: { category: trimmedNewName } }
+    );
+
+    res.json({
+      success: true,
+      message: `Successfully updated ${result.modifiedCount} FMS template(s)`
+    });
+  } catch (error) {
+    console.error('Error updating category:', error);
     res.status(500).json({ success: false, message: 'Server error', error: error.message });
   }
 });

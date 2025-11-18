@@ -16,6 +16,8 @@ interface HelpTicket {
   createdBy: { _id: string; username: string };
   createdAt: string;
   adminRemarks: Array<{ by: { username: string }; remark: string; at: string }>;
+  otp?: string;
+  otpExpiresAt?: string;
 }
 
 const HelpTickets: React.FC = () => {
@@ -24,6 +26,7 @@ const HelpTickets: React.FC = () => {
   const [tickets, setTickets] = useState<HelpTicket[]>([]);
   const [loading, setLoading] = useState(true);
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [newTicketCode, setNewTicketCode] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -57,17 +60,33 @@ const HelpTickets: React.FC = () => {
     e.preventDefault();
     try {
       const token = localStorage.getItem('token');
-      await axios.post(`${address}/api/help-tickets`, {
+      const response = await axios.post(`${address}/api/help-tickets`, {
         ...formData,
         raisedBy: user?.id,
       }, {
         headers: { Authorization: `Bearer ${token}` },
       });
+      
+      // Show the closure code to the user
+      setNewTicketCode(response.data.otp);
       setShowCreateModal(false);
       setFormData({ title: '', description: '', priority: 'medium' });
       fetchTickets();
     } catch (error: any) {
       alert(error.response?.data?.error || 'Failed to create ticket');
+    }
+  };
+
+  const getClosureCode = async (ticketId: string) => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.get(
+        `${address}/api/help-tickets/${ticketId}/get-closure-code`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      alert(`Your Help Ticket Closing Code: ${response.data.otp}\n\n${response.data.message}`);
+    } catch (error: any) {
+      alert(error.response?.data?.error || 'Failed to get closure code');
     }
   };
 
@@ -84,6 +103,8 @@ const HelpTickets: React.FC = () => {
     switch (status) {
       case 'Open': return 'bg-blue-100 text-blue-800';
       case 'In Progress': return 'bg-yellow-100 text-yellow-800';
+      case 'Resolved - Pending Verification': return 'bg-purple-100 text-purple-800';
+      case 'Verified & Closed': return 'bg-green-100 text-green-800';
       case 'Closed': return 'bg-green-100 text-green-800';
       default: return 'bg-gray-100 text-gray-800';
     }
@@ -175,8 +196,48 @@ const HelpTickets: React.FC = () => {
                     </div>
                   </div>
                 )}
+
+                {/* Show closure code */}
+                {ticket.status !== 'Verified & Closed' && (
+                  <div className="mt-4 pt-4 border-t border-[--color-border]">
+                    <button
+                      onClick={() => getClosureCode(ticket._id)}
+                      className="text-sm text-blue-600 hover:text-blue-800 font-medium"
+                    >
+                      📋 View My Closing Code
+                    </button>
+                    <p className="text-xs text-gray-500 mt-2">
+                      Share this code with the admin when your issue is resolved
+                    </p>
+                  </div>
+                )}
               </div>
             ))}
+          </div>
+        )}
+
+        {/* Closure Code Success Modal */}
+        {newTicketCode && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-xl p-8 max-w-md w-full shadow-2xl">
+              <h2 className="text-2xl font-bold text-gray-900 mb-4">✅ Ticket Created!</h2>
+              <div className="bg-yellow-50 border-2 border-yellow-400 rounded-lg p-4 mb-4">
+                <p className="text-sm font-semibold text-yellow-900 mb-2">⚠️ IMPORTANT - Save This Code!</p>
+                <p className="text-xs text-yellow-800 mb-3">
+                  You will need this code to close the ticket after it's resolved. Do not share this code with anyone unless your issue is resolved.
+                </p>
+                <div className="bg-white p-4 rounded-lg border-2 border-yellow-400">
+                  <p className="text-xs text-gray-600 mb-1">Your Help Ticket Closing Code:</p>
+                  <p className="text-3xl font-bold text-center text-gray-900 tracking-wider">{newTicketCode}</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setNewTicketCode(null)}
+                className="w-full px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-semibold"
+              >
+                I've Saved the Code
+              </button>
+            </div>
           </div>
         )}
 

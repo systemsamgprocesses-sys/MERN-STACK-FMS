@@ -37,18 +37,38 @@ const Checklists: React.FC = () => {
     recurrence: '',
     dateFrom: '',
     dateTo: '',
+    category: '',
+    department: '',
   });
+  const [categories, setCategories] = useState<string[]>([]);
+  const [departments, setDepartments] = useState<string[]>([]);
 
   useEffect(() => {
     fetchChecklists();
+    fetchCategories();
+    fetchDepartments();
   }, [filters]);
 
   const fetchChecklists = async () => {
     try {
       const token = localStorage.getItem('token');
       const params = new URLSearchParams();
+      
+      // Add user context to filter checklists where the user is assigned
+      if (user?.id) {
+        params.append('userId', user.id);
+      }
+      if (user?.role) {
+        params.append('role', user.role);
+      }
+      
+      // Add only assigned to user
+      params.append('assignedTo', user?.id || '');
+      
       Object.entries(filters).forEach(([key, value]) => {
-        if (value) params.append(key, value);
+        if (value && key !== 'assignedTo') { // Don't override assignedTo
+          params.append(key, value);
+        }
       });
 
       const response = await axios.get(`${address}/api/checklists?${params}`, {
@@ -59,6 +79,30 @@ const Checklists: React.FC = () => {
       console.error('Error fetching checklists:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchCategories = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.get(`${address}/api/checklist-categories/categories`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setCategories(response.data.categories?.map((c: any) => c.name) || []);
+    } catch (error) {
+      console.error('Error fetching categories:', error);
+    }
+  };
+
+  const fetchDepartments = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.get(`${address}/api/checklist-categories/departments`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setDepartments(response.data.departments?.map((d: any) => d.name) || []);
+    } catch (error) {
+      console.error('Error fetching departments:', error);
     }
   };
 
@@ -689,7 +733,7 @@ const Checklists: React.FC = () => {
         {/* Filters */}
         {showFilters && (
           <div className="bg-[--color-surface] rounded-xl p-4 mb-6 border border-[--color-border]">
-            <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-7 gap-4">
               <div>
                 <label className="block text-sm font-medium text-[--color-text] mb-1">Status</label>
                 <select
@@ -702,6 +746,32 @@ const Checklists: React.FC = () => {
                   <option value="Active">Active</option>
                   <option value="Submitted">Submitted</option>
                   <option value="Archived">Archived</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-[--color-text] mb-1">Category</label>
+                <select
+                  value={filters.category}
+                  onChange={(e) => setFilters({ ...filters, category: e.target.value })}
+                  className="w-full px-3 py-2 border border-[--color-border] rounded-lg bg-[--color-background] text-[--color-text]"
+                >
+                  <option value="">All</option>
+                  {categories.map(cat => (
+                    <option key={cat} value={cat}>{cat}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-[--color-text] mb-1">Department</label>
+                <select
+                  value={filters.department}
+                  onChange={(e) => setFilters({ ...filters, department: e.target.value })}
+                  className="w-full px-3 py-2 border border-[--color-border] rounded-lg bg-[--color-background] text-[--color-text]"
+                >
+                  <option value="">All</option>
+                  {departments.map(dept => (
+                    <option key={dept} value={dept}>{dept}</option>
+                  ))}
                 </select>
               </div>
               <div>
@@ -740,7 +810,7 @@ const Checklists: React.FC = () => {
               </div>
               <div className="flex items-end">
                 <button
-                  onClick={() => setFilters({ status: '', assignedTo: '', recurrence: '', dateFrom: '', dateTo: '' })}
+                  onClick={() => setFilters({ status: '', assignedTo: '', recurrence: '', dateFrom: '', dateTo: '', category: '', department: '' })}
                   className="w-full px-3 py-2 bg-[--color-accent] text-white rounded-lg hover:bg-[--color-accent]/80"
                 >
                   Clear Filters

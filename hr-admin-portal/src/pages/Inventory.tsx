@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import { address } from '../utils/ipAddress';
 import { toast } from 'react-toastify';
-import { Plus, Edit2, X, Save, Trash2, Package, Upload, Download } from 'lucide-react';
+import { Plus, Edit2, X, Save, Trash2, Package, Upload, Download, PackagePlus, Settings } from 'lucide-react';
 
 interface StationeryItem {
   _id: string;
@@ -23,6 +23,18 @@ const Inventory: React.FC = () => {
   const [currentItem, setCurrentItem] = useState<Partial<StationeryItem>>({});
   const [isImporting, setIsImporting] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  
+  // Stock In modal
+  const [showStockInModal, setShowStockInModal] = useState(false);
+  const [stockInItem, setStockInItem] = useState<StationeryItem | null>(null);
+  const [stockInQuantity, setStockInQuantity] = useState<number>(0);
+  const [stockInRemarks, setStockInRemarks] = useState('');
+  
+  // Stock Adjustment modal
+  const [showAdjustModal, setShowAdjustModal] = useState(false);
+  const [adjustItem, setAdjustItem] = useState<StationeryItem | null>(null);
+  const [adjustQuantity, setAdjustQuantity] = useState<number>(0);
+  const [adjustReason, setAdjustReason] = useState('');
 
   const categories = ['Writing', 'Paper', 'Binding', 'Storage', 'General', 'Office Supplies'];
 
@@ -173,6 +185,75 @@ Sticky Notes,Office Supplies,50,packs,Yellow sticky notes`;
     toast.success('Sample CSV downloaded!');
   };
 
+  const handleStockIn = async () => {
+    if (!stockInItem || stockInQuantity <= 0) {
+      toast.error('Please enter a valid quantity.');
+      return;
+    }
+
+    try {
+      const token = localStorage.getItem('hr_token');
+      const response = await axios.post(
+        `${address}/api/stationery/hr/stock-in/${stockInItem._id}`,
+        { quantity: stockInQuantity, remarks: stockInRemarks },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      
+      toast.success(response.data.message);
+      fetchInventory();
+      setShowStockInModal(false);
+      setStockInItem(null);
+      setStockInQuantity(0);
+      setStockInRemarks('');
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'Failed to add stock.');
+    }
+  };
+
+  const handleStockAdjust = async () => {
+    if (!adjustItem || adjustQuantity < 0) {
+      toast.error('Please enter a valid quantity.');
+      return;
+    }
+
+    if (!adjustReason.trim()) {
+      toast.error('Please provide a reason for adjustment.');
+      return;
+    }
+
+    try {
+      const token = localStorage.getItem('hr_token');
+      const response = await axios.post(
+        `${address}/api/stationery/hr/stock-adjust/${adjustItem._id}`,
+        { newQuantity: adjustQuantity, reason: adjustReason },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      
+      toast.success(response.data.message);
+      fetchInventory();
+      setShowAdjustModal(false);
+      setAdjustItem(null);
+      setAdjustQuantity(0);
+      setAdjustReason('');
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'Failed to adjust stock.');
+    }
+  };
+
+  const openStockInModal = (item: StationeryItem) => {
+    setStockInItem(item);
+    setStockInQuantity(0);
+    setStockInRemarks('');
+    setShowStockInModal(true);
+  };
+
+  const openAdjustModal = (item: StationeryItem) => {
+    setAdjustItem(item);
+    setAdjustQuantity(item.quantity);
+    setAdjustReason('');
+    setShowAdjustModal(true);
+  };
+
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
@@ -287,7 +368,23 @@ Sticky Notes,Office Supplies,50,packs,Yellow sticky notes`;
                       {item.isActive ? 'Active' : 'Inactive'}
                     </span>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-3">
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
+                    <button
+                      onClick={() => openStockInModal(item)}
+                      className="text-green-600 hover:text-green-900 inline-flex items-center gap-1"
+                      title="Add Stock"
+                    >
+                      <PackagePlus size={14} />
+                      Stock In
+                    </button>
+                    <button
+                      onClick={() => openAdjustModal(item)}
+                      className="text-orange-600 hover:text-orange-900 inline-flex items-center gap-1"
+                      title="Adjust Stock"
+                    >
+                      <Settings size={14} />
+                      Adjust
+                    </button>
                     <button
                       onClick={() => handleOpenModal(item)}
                       className="text-blue-600 hover:text-blue-900 inline-flex items-center gap-1"
@@ -309,6 +406,166 @@ Sticky Notes,Office Supplies,50,packs,Yellow sticky notes`;
               ))}
             </tbody>
           </table>
+        </div>
+      )}
+
+      {/* Stock In Modal */}
+      {showStockInModal && stockInItem && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
+          <div className="bg-white p-8 rounded-lg w-full max-w-md shadow-2xl">
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
+                <PackagePlus className="text-green-600" size={28} />
+                Stock In
+              </h2>
+              <button
+                onClick={() => setShowStockInModal(false)}
+                className="text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                <X size={24} />
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <p className="text-sm text-gray-600 mb-1">Item</p>
+                <p className="text-lg font-semibold text-gray-900">{stockInItem.name}</p>
+                <p className="text-sm text-gray-600 mt-2">Current Stock: <span className="font-semibold">{stockInItem.quantity} {stockInItem.unit}</span></p>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Quantity to Add <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="number"
+                  min="1"
+                  value={stockInQuantity}
+                  onChange={(e) => setStockInQuantity(parseInt(e.target.value) || 0)}
+                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                  placeholder="Enter quantity to add"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Remarks (Optional)
+                </label>
+                <textarea
+                  rows={3}
+                  value={stockInRemarks}
+                  onChange={(e) => setStockInRemarks(e.target.value)}
+                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                  placeholder="Supplier name, invoice number, etc."
+                ></textarea>
+              </div>
+
+              {stockInQuantity > 0 && (
+                <div className="bg-green-50 border border-green-200 rounded-lg p-3">
+                  <p className="text-sm text-gray-700">
+                    New Stock: <span className="font-bold text-green-700">{stockInItem.quantity + stockInQuantity} {stockInItem.unit}</span>
+                  </p>
+                </div>
+              )}
+            </div>
+
+            <div className="flex justify-end gap-3 mt-6 pt-6 border-t">
+              <button
+                onClick={() => setShowStockInModal(false)}
+                className="px-6 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-medium transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleStockIn}
+                className="flex items-center gap-2 px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium transition-colors"
+              >
+                <PackagePlus size={16} />
+                Add Stock
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Stock Adjustment Modal */}
+      {showAdjustModal && adjustItem && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
+          <div className="bg-white p-8 rounded-lg w-full max-w-md shadow-2xl">
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
+                <Settings className="text-orange-600" size={28} />
+                Adjust Stock
+              </h2>
+              <button
+                onClick={() => setShowAdjustModal(false)}
+                className="text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                <X size={24} />
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <p className="text-sm text-gray-600 mb-1">Item</p>
+                <p className="text-lg font-semibold text-gray-900">{adjustItem.name}</p>
+                <p className="text-sm text-gray-600 mt-2">Current Stock: <span className="font-semibold">{adjustItem.quantity} {adjustItem.unit}</span></p>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  New Quantity <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  value={adjustQuantity}
+                  onChange={(e) => setAdjustQuantity(parseInt(e.target.value) || 0)}
+                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                  placeholder="Enter new quantity"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Reason for Adjustment <span className="text-red-500">*</span>
+                </label>
+                <textarea
+                  rows={3}
+                  value={adjustReason}
+                  onChange={(e) => setAdjustReason(e.target.value)}
+                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                  placeholder="Damaged stock, inventory count correction, etc."
+                ></textarea>
+              </div>
+
+              {adjustQuantity >= 0 && adjustQuantity !== adjustItem.quantity && (
+                <div className={`${adjustQuantity > adjustItem.quantity ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'} border rounded-lg p-3`}>
+                  <p className="text-sm text-gray-700">
+                    Difference: <span className={`font-bold ${adjustQuantity > adjustItem.quantity ? 'text-green-700' : 'text-red-700'}`}>
+                      {adjustQuantity > adjustItem.quantity ? '+' : ''}{adjustQuantity - adjustItem.quantity} {adjustItem.unit}
+                    </span>
+                  </p>
+                </div>
+              )}
+            </div>
+
+            <div className="flex justify-end gap-3 mt-6 pt-6 border-t">
+              <button
+                onClick={() => setShowAdjustModal(false)}
+                className="px-6 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-medium transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleStockAdjust}
+                className="flex items-center gap-2 px-6 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 font-medium transition-colors"
+              >
+                <Settings size={16} />
+                Adjust Stock
+              </button>
+            </div>
+          </div>
         </div>
       )}
 

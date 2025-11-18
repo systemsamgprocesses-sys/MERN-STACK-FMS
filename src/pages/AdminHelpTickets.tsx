@@ -14,6 +14,7 @@ interface HelpTicket {
   assignedTo?: { _id: string; username: string };
   createdAt: string;
   adminRemarks: Array<{ by: { username: string }; remark: string; at: string }>;
+  otp?: string;
 }
 
 const AdminHelpTickets: React.FC = () => {
@@ -22,6 +23,9 @@ const AdminHelpTickets: React.FC = () => {
   const [selectedTicket, setSelectedTicket] = useState<string | null>(null);
   const [remark, setRemark] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const [showCloseModal, setShowCloseModal] = useState(false);
+  const [ticketToClose, setTicketToClose] = useState<string | null>(null);
+  const [closingCode, setClosingCode] = useState('');
 
   useEffect(() => {
     fetchTickets();
@@ -80,7 +84,15 @@ const AdminHelpTickets: React.FC = () => {
 
   const updateStatus = async (ticketId: string, status: string) => {
     try {
+      // If trying to close, show modal to enter code
+      if (status === 'Verified & Closed') {
+        setTicketToClose(ticketId);
+        setShowCloseModal(true);
+        return;
+      }
+
       const token = localStorage.getItem('token');
+      // For other status changes
       await axios.patch(
         `${address}/api/help-tickets/${ticketId}/status`,
         { status },
@@ -90,6 +102,30 @@ const AdminHelpTickets: React.FC = () => {
     } catch (error: any) {
       console.error('Error updating status:', error);
       alert(error.response?.data?.error || 'Failed to update status');
+    }
+  };
+
+  const closeTicketWithCode = async () => {
+    if (!ticketToClose || !closingCode.trim()) {
+      alert('Please enter the closing code from the user');
+      return;
+    }
+
+    try {
+      const token = localStorage.getItem('token');
+      await axios.post(
+        `${address}/api/help-tickets/${ticketToClose}/verify-otp`,
+        { otp: closingCode.trim() },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      
+      alert('Ticket closed successfully!');
+      setShowCloseModal(false);
+      setClosingCode('');
+      setTicketToClose(null);
+      fetchTickets();
+    } catch (error: any) {
+      alert(error.response?.data?.error || 'Failed to close ticket. Please verify the closing code with the user.');
     }
   };
 
@@ -106,6 +142,8 @@ const AdminHelpTickets: React.FC = () => {
     switch (status) {
       case 'Open': return 'bg-blue-100 text-blue-800';
       case 'In Progress': return 'bg-yellow-100 text-yellow-800';
+      case 'Resolved - Pending Verification': return 'bg-purple-100 text-purple-800';
+      case 'Verified & Closed': return 'bg-green-100 text-green-800';
       case 'Closed': return 'bg-green-100 text-green-800';
       default: return 'bg-gray-100 text-gray-800';
     }
@@ -161,10 +199,12 @@ const AdminHelpTickets: React.FC = () => {
                         value={ticket.status}
                         onChange={(e) => updateStatus(ticket._id, e.target.value)}
                         className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(ticket.status)} border-none`}
+                        disabled={ticket.status === 'Verified & Closed'}
                       >
                         <option value="Open">Open</option>
                         <option value="In Progress">In Progress</option>
-                        <option value="Closed">Closed</option>
+                        <option value="Verified & Closed">Close (Need User Code)</option>
+                        {(ticket.status === 'Verified & Closed') && <option value="Verified & Closed">Verified & Closed</option>}
                       </select>
                       <span className="text-sm text-[--color-textSecondary]">
                         by {ticket.raisedBy.username}
@@ -229,6 +269,49 @@ const AdminHelpTickets: React.FC = () => {
                 </div>
               </div>
             ))}
+          </div>
+        )}
+
+        {/* Close Ticket Modal - Admin enters user's code */}
+        {showCloseModal && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-xl p-8 max-w-md w-full shadow-2xl">
+              <h2 className="text-2xl font-bold text-gray-900 mb-4">Close Help Ticket</h2>
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+                <p className="text-sm text-blue-900 font-medium">
+                  ⚠️ Ask the user for their 6-digit Help Ticket Closing Code
+                </p>
+                <p className="text-xs text-blue-700 mt-1">
+                  The user received this code when they created the ticket. They can view it in their ticket details.
+                </p>
+              </div>
+              <input
+                type="text"
+                value={closingCode}
+                onChange={(e) => setClosingCode(e.target.value)}
+                placeholder="Enter user's 6-digit code"
+                maxLength={6}
+                className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg text-center text-2xl font-bold tracking-wider mb-4"
+              />
+              <div className="flex gap-3">
+                <button
+                  onClick={() => {
+                    setShowCloseModal(false);
+                    setClosingCode('');
+                    setTicketToClose(null);
+                  }}
+                  className="flex-1 px-6 py-3 border-2 border-gray-300 text-gray-700 rounded-lg hover:bg-gray-100 font-semibold"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={closeTicketWithCode}
+                  className="flex-1 px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 font-semibold"
+                >
+                  Close Ticket
+                </button>
+              </div>
+            </div>
           </div>
         )}
       </div>

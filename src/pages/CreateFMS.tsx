@@ -33,6 +33,8 @@ const CreateFMS: React.FC = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [fmsName, setFmsName] = useState('');
+  const [category, setCategory] = useState('General');
+  const [categories, setCategories] = useState<string[]>([]);
   const [steps, setSteps] = useState<Step[]>([{
     stepNo: 1,
     what: '',
@@ -64,6 +66,7 @@ const CreateFMS: React.FC = () => {
   useEffect(() => {
     fetchUsers();
     fetchFmsList();
+    fetchCategories();
   }, []);
 
   const fetchUsers = async () => {
@@ -77,11 +80,26 @@ const CreateFMS: React.FC = () => {
 
   const fetchFmsList = async () => {
     try {
-      const response = await axios.get(`${address}/api/fms`);
+      const params = {
+        userId: user?.id,
+        isAdmin: (user?.role === 'admin' || user?.role === 'superadmin') ? 'true' : 'false'
+      };
+      const response = await axios.get(`${address}/api/fms`, { params });
       setFmsList(response.data.fmsList || []);
     } catch (error) {
       console.error('Error fetching FMS list:', error);
       setFmsList([]);
+    }
+  };
+
+  const fetchCategories = async () => {
+    try {
+      const response = await axios.get(`${address}/api/fms-categories/categories`);
+      const categoryNames = response.data.categories?.map((c: any) => c.name) || ['General'];
+      setCategories(categoryNames.length > 0 ? categoryNames : ['General']);
+    } catch (error) {
+      console.error('Error fetching categories:', error);
+      setCategories(['General']);
     }
   };
 
@@ -231,6 +249,7 @@ const CreateFMS: React.FC = () => {
     try {
       const formData = new FormData();
       formData.append('fmsName', fmsName);
+      formData.append('category', category);
       formData.append('createdBy', user?.id || '');
       formData.append('frequency', frequency);
       formData.append('frequencySettings', JSON.stringify(frequencySettings));
@@ -394,18 +413,35 @@ const CreateFMS: React.FC = () => {
           )}
         </div>
 
-        <div className="mb-6">
-          <label className="block text-sm font-medium text-[var(--color-text)] mb-2">
-            FMS Template Name *
-          </label>
-          <input
-            type="text"
-            value={fmsName}
-            onChange={(e) => setFmsName(e.target.value)}
-            className="w-full px-4 py-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text)]"
-            placeholder="Enter template name"
-          />
-          {errors.fmsName && <p className="text-[var(--color-error)] text-sm mt-1">{errors.fmsName}</p>}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+          <div>
+            <label className="block text-sm font-medium text-[var(--color-text)] mb-2">
+              FMS Template Name *
+            </label>
+            <input
+              type="text"
+              value={fmsName}
+              onChange={(e) => setFmsName(e.target.value)}
+              className="w-full px-4 py-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text)]"
+              placeholder="Enter template name"
+            />
+            {errors.fmsName && <p className="text-[var(--color-error)] text-sm mt-1">{errors.fmsName}</p>}
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-[var(--color-text)] mb-2">
+              Category *
+            </label>
+            <select
+              value={category}
+              onChange={(e) => setCategory(e.target.value)}
+              className="w-full px-4 py-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text)]"
+            >
+              {categories.map(cat => (
+                <option key={cat} value={cat}>{cat}</option>
+              ))}
+            </select>
+          </div>
         </div>
 
         {steps.map((step, index) => {

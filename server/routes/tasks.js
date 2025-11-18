@@ -2,8 +2,18 @@ import express from 'express';
 import Task from '../models/Task.js';
 import User from '../models/User.js';
 import ScoreLog from '../models/ScoreLog.js';
+import { checkPermission } from '../middleware/permissions.js';
 
 const router = express.Router();
+
+// Middleware to check if user is superadmin
+const isSuperAdmin = (req, res, next) => {
+  const { role } = req.query;
+  if (role === 'superadmin') {
+    return next();
+  }
+  return res.status(403).json({ message: 'Access denied. Only Super Admin can perform this action.' });
+};
 
 // --- Helper Functions for Date Calculations ---
 
@@ -272,7 +282,7 @@ router.get('/pending', async (req, res) => {
     const { userId, taskType } = req.query;
     const query = {
       isActive: true,
-      status: { $in: ['pending', 'overdue'] } // Only show pending or overdue
+      status: { $in: ['pending', 'in-progress', 'overdue'] } // Include pending, in-progress, and overdue
     };
 
     if (userId) query.assignedTo = userId; // Filter by assigned user if provided
@@ -505,8 +515,8 @@ router.post('/', async (req, res) => {
   }
 });
 
-// Update task
-router.put('/:id', async (req, res) => {
+// Update task - Only Super Admin can edit tasks
+router.put('/:id', isSuperAdmin, async (req, res) => {
   try {
     const { status, inProgressRemarks, ...updateData } = req.body;
 
@@ -582,15 +592,26 @@ router.post('/:id/complete', async (req, res) => {
     task.lastCompletedDate = new Date();
 
     // 2. Calculate scoring
-    const creationDate = new Date(task.creationDate || task.createdAt);
+    // For date-range tasks, use startDate as creation and endDate as due date
+    let creationDate;
+    let targetDate;
+    
+    if (task.taskCategory === 'date-range' && task.startDate && task.endDate) {
+      creationDate = new Date(task.startDate);
+      targetDate = new Date(task.endDate);
+      console.log(`Date-range task: Using startDate ${task.startDate} to endDate ${task.endDate} for scoring`);
+    } else {
+      creationDate = new Date(task.creationDate || task.createdAt);
+      targetDate = new Date(task.originalPlannedDate || task.dueDate);
+    }
+    
     const completionDate = new Date(task.completedAt);
     const actualDays = Math.ceil((completionDate - creationDate) / (1000 * 60 * 60 * 24));
     task.actualCompletionDays = actualDays;
 
     // Calculate score based on planned days
-    if (task.dueDate) {
-      let plannedDate = new Date(task.originalPlannedDate || task.dueDate);
-      let plannedDays = Math.ceil((plannedDate - creationDate) / (1000 * 60 * 60 * 24));
+    if (targetDate) {
+      let plannedDays = Math.ceil((targetDate - creationDate) / (1000 * 60 * 60 * 24));
       
       // Check if there are approved objections that don't impact score
       const approvedObjections = task.objections?.filter(obj =>
@@ -606,9 +627,8 @@ router.post('/:id/complete', async (req, res) => {
         task.completionScore = plannedDays / extendedDays;
         task.scoreImpacted = true;
       } else {
-        // Full marks if completed within any approved extension that doesn't impact score
-        // or within original planned date
-        if (actualDays <= Math.ceil((new Date(task.dueDate) - creationDate) / (1000 * 60 * 60 * 24))) {
+        // Full marks if completed within target date
+        if (actualDays <= plannedDays) {
           task.completionScore = 1.0;
         } else {
           task.completionScore = plannedDays / actualDays;
@@ -625,21 +645,27 @@ router.post('/:id/complete', async (req, res) => {
 
     // Log the score
     try {
+      const plannedDays = Math.ceil((targetDate - creationDate) / (1000 * 60 * 60 * 24));
+      
       const scoreLog = new ScoreLog({
         taskId: task._id,
         userId: task.assignedTo,
         taskTitle: task.title,
         taskType: task.taskType,
+        taskCategory: task.taskCategory || 'regular',
         score: task.completionScore,
         scorePercentage: task.completionScore * 100,
-        plannedDays: task.plannedDaysCount || 0,
+        plannedDays: plannedDays,
         actualDays: actualDays,
+        startDate: task.taskCategory === 'date-range' ? task.startDate : undefined,
+        endDate: task.taskCategory === 'date-range' ? task.endDate : undefined,
         completedAt: task.completedAt,
         wasOnTime: task.completionScore >= 1.0,
         scoreImpacted: task.scoreImpacted,
         impactReason: task.scoreImpacted ? 'Date extension with score impact' : null
       });
       await scoreLog.save();
+      console.log(`Score log created for task ${task._id} with ${plannedDays} planned days and ${actualDays} actual days`);
     } catch (logError) {
       console.error('Error saving score log:', logError);
       // Don't fail the completion if logging fails
@@ -709,6 +735,115 @@ router.delete('/:id', async (req, res) => {
     res.json({ message: 'Task deleted successfully' });
   } catch (error) {
     console.error('Error deleting task:', error);
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
+// Forward multi-level task to another user
+router.post('/:id/forward', async (req, res) => {
+  try {
+    const { forwardTo, remarks, dueDate, checklistItems } = req.body;
+    const task = await Task.findById(req.params.id);
+
+    if (!task) {
+      return res.status(404).json({ message: 'Task not found' });
+    }
+
+    if (task.taskCategory !== 'multi-level') {
+      return res.status(400).json({ message: 'Only multi-level tasks can be forwarded' });
+    }
+
+    // Add to forwarding history
+    task.forwardingHistory.push({
+      from: task.assignedTo,
+      to: forwardTo,
+      forwardedAt: new Date(),
+      remarks: remarks || ''
+    });
+
+    // Update current assignment
+    task.forwardedBy = task.assignedTo;
+    task.assignedTo = forwardTo;
+    task.forwardedTo = forwardTo;
+    task.forwardedAt = new Date();
+    
+    // Update due date if provided
+    if (dueDate) {
+      task.dueDate = new Date(dueDate);
+    }
+    
+    // Update checklist if provided
+    if (checklistItems && task.requiresChecklist) {
+      task.checklistItems = checklistItems;
+    }
+
+    await task.save();
+
+    const populatedTask = await Task.findById(task._id)
+      .populate('assignedBy', 'username email phoneNumber')
+      .populate('assignedTo', 'username email phoneNumber')
+      .populate('forwardedBy', 'username email phoneNumber')
+      .populate('forwardingHistory.from forwardingHistory.to', 'username email');
+
+    res.json({
+      message: 'Task forwarded successfully',
+      task: populatedTask
+    });
+  } catch (error) {
+    console.error('Error forwarding task:', error);
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
+// Get multi-level tasks (for FMS Progress section)
+router.get('/multi-level', async (req, res) => {
+  try {
+    const { userId, role } = req.query;
+    
+    let query = { taskCategory: 'multi-level', isActive: true };
+    
+    // If not admin, show only tasks assigned to the user
+    if (role !== 'admin' && role !== 'superadmin' && role !== 'manager') {
+      query.assignedTo = userId;
+    }
+
+    const tasks = await Task.find(query)
+      .populate('assignedBy', 'username email phoneNumber')
+      .populate('assignedTo', 'username email phoneNumber')
+      .populate('forwardedBy', 'username email phoneNumber')
+      .populate('forwardingHistory.from forwardingHistory.to', 'username email')
+      .sort({ createdAt: -1 });
+
+    res.json(tasks);
+  } catch (error) {
+    console.error('Error fetching multi-level tasks:', error);
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
+// Update task checklist items
+router.put('/:id/checklist', async (req, res) => {
+  try {
+    const { checklistItems } = req.body;
+    const task = await Task.findById(req.params.id);
+
+    if (!task) {
+      return res.status(404).json({ message: 'Task not found' });
+    }
+
+    task.checklistItems = checklistItems;
+    await task.save(); // This will trigger the pre-save hook to calculate progress
+
+    const populatedTask = await Task.findById(task._id)
+      .populate('assignedBy', 'username email phoneNumber')
+      .populate('assignedTo', 'username email phoneNumber');
+
+    res.json({
+      message: 'Checklist updated successfully',
+      task: populatedTask
+    });
+  } catch (error) {
+    console.error('Error updating checklist:', error);
     res.status(500).json({ message: 'Server error', error: error.message });
   }
 });

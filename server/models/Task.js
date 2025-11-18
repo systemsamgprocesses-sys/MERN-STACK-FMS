@@ -57,6 +57,15 @@ const objectionSchema = new mongoose.Schema({
 });
 
 
+// Checklist schema for tasks
+const checklistItemSchema = new mongoose.Schema({
+  id: { type: String, required: true },
+  text: { type: String, required: true },
+  completed: { type: Boolean, default: false },
+  completedAt: Date,
+  completedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' }
+});
+
 const taskSchema = new mongoose.Schema({
   title: {
     type: String,
@@ -75,6 +84,47 @@ const taskSchema = new mongoose.Schema({
   originalTaskType: {
     type: String,
     enum: ['one-time', 'daily', 'weekly', 'monthly', 'quarterly', 'yearly']
+  },
+  // New field for task category
+  taskCategory: {
+    type: String,
+    enum: ['regular', 'multi-level', 'date-range'],
+    default: 'regular'
+  },
+  // Multi-level task fields
+  canBeForwarded: {
+    type: Boolean,
+    default: false
+  },
+  forwardedTo: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User'
+  },
+  forwardedBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User'
+  },
+  forwardedAt: Date,
+  forwardingHistory: [{
+    from: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+    to: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+    forwardedAt: { type: Date, default: Date.now },
+    remarks: String
+  }],
+  // Date-range task fields
+  startDate: Date,
+  endDate: Date,
+  // Checklist support for all tasks
+  requiresChecklist: {
+    type: Boolean,
+    default: false
+  },
+  checklistItems: [checklistItemSchema],
+  checklistProgress: {
+    type: Number,
+    default: 0,
+    min: 0,
+    max: 100
   },
   assignedBy: {
     type: mongoose.Schema.Types.ObjectId,
@@ -110,6 +160,7 @@ const taskSchema = new mongoose.Schema({
   },
   completedAt: Date,
   completionRemarks: String,
+  inProgressRemarks: String,
   completionAttachments: [{
     filename: String,
     originalName: String,
@@ -212,11 +263,22 @@ const taskSchema = new mongoose.Schema({
   timestamps: true
 });
 
+// Pre-save hook to calculate checklist progress
+taskSchema.pre('save', function(next) {
+  if (this.requiresChecklist && this.checklistItems && this.checklistItems.length > 0) {
+    const completedCount = this.checklistItems.filter(item => item.completed).length;
+    this.checklistProgress = Math.round((completedCount / this.checklistItems.length) * 100);
+  }
+  next();
+});
+
 // Index for better query performance
 taskSchema.index({ assignedTo: 1, status: 1 });
 taskSchema.index({ taskType: 1, status: 1 });
 taskSchema.index({ dueDate: 1 });
 taskSchema.index({ taskGroupId: 1 });
 taskSchema.index({ originalTaskType: 1 });
+taskSchema.index({ taskCategory: 1 });
+taskSchema.index({ forwardedTo: 1 });
 
 export default mongoose.model('Task', taskSchema);

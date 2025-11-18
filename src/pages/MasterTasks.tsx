@@ -249,8 +249,14 @@ const MasterTasks: React.FC = () => {
   };
 
   const handleEditTask = async (taskId: string, updates: any) => {
+    // Only superadmin can edit tasks
+    if (user?.role !== 'superadmin') {
+      alert('Access denied. Only Super Admin can edit tasks.');
+      throw new Error('Access denied');
+    }
+
     try {
-      const response = await fetch(`${address}/api/tasks/${taskId}`, {
+      const response = await fetch(`${address}/api/tasks/${taskId}?role=${user?.role}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -261,10 +267,12 @@ const MasterTasks: React.FC = () => {
       if (response.ok) {
         await fetchTasks();
       } else {
-        throw new Error('Failed to update task');
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to update task');
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error updating task:', error);
+      alert(error.message || 'Failed to update task');
       throw error;
     }
   };
@@ -409,11 +417,11 @@ const MasterTasks: React.FC = () => {
                       <History size={16} />
                     </button>
                   )}
-                  {task.status !== 'completed' && user?.permissions.canEditTasks && (
+                  {task.status !== 'completed' && user?.role === 'superadmin' && (
                     <button
                       onClick={() => setEditingTask(task)}
                       className={`p-2 rounded-lg transition-colors ${isDark ? 'text-green-400 hover:bg-green-900' : 'text-green-600 hover:bg-green-50'}`}
-                      title="Edit task"
+                      title="Edit task (Super Admin only)"
                     >
                       <Edit3 size={16} />
                     </button>
@@ -774,11 +782,11 @@ const MasterTasks: React.FC = () => {
                             <History size={16} />
                           </button>
                         )}
-                        {task.status !== 'completed' && user?.permissions.canEditTasks && (
+                        {task.status !== 'completed' && user?.role === 'superadmin' && (
                           <button
                             onClick={() => setEditingTask(task)}
                             className={`p-1 rounded transition-colors ${isDark ? 'text-green-400 hover:bg-green-900' : 'text-green-600 hover:bg-green-50'}`}
-                            title="Edit task"
+                            title="Edit task (Super Admin only)"
                           >
                             <Edit3 size={16} />
                           </button>

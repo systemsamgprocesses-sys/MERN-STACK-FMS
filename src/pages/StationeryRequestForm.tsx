@@ -9,7 +9,6 @@ import 'react-toastify/dist/ReactToastify.css';
 interface StationeryItem {
   _id: string;
   name: string;
-  quantity: number;
   category: string;
 }
 
@@ -25,7 +24,6 @@ const StationeryRequestForm: React.FC = () => {
   const [requestItems, setRequestItems] = useState<RequestItem[]>([{ item: '', quantity: 1 }]);
   const [userRemarks, setUserRemarks] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [searchTerm, setSearchTerm] = useState('');
 
   useEffect(() => {
     const fetchItems = async () => {
@@ -90,15 +88,6 @@ const StationeryRequestForm: React.FC = () => {
     }
   };
 
-  const getAvailableStock = (itemId: string) => {
-    const item = inventory.find(i => i._id === itemId);
-    return item ? item.quantity : 0;
-  };
-
-  const filteredInventory = inventory.filter(item =>
-    item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    item.category.toLowerCase().includes(searchTerm.toLowerCase())
-  );
 
   return (
     <div className="container mx-auto p-6 max-w-4xl">
@@ -143,16 +132,6 @@ const StationeryRequestForm: React.FC = () => {
           Request Items
         </h2>
 
-        <div className="mb-4">
-          <input
-            type="text"
-            placeholder="🔍 Search items by name or category..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-          />
-        </div>
-
         {requestItems.map((reqItem, index) => (
           <div key={index} className="flex items-start gap-3 mb-4 p-4 bg-gray-50 rounded-lg">
             <div className="flex-grow">
@@ -164,9 +143,9 @@ const StationeryRequestForm: React.FC = () => {
                 required
               >
                 <option value="">-- Select Item --</option>
-                {filteredInventory.map((item) => (
+                {inventory.map((item) => (
                   <option key={item._id} value={item._id}>
-                    {item.name} (Stock: {item.quantity})
+                    {item.name} ({item.category})
                   </option>
                 ))}
               </select>
@@ -176,7 +155,6 @@ const StationeryRequestForm: React.FC = () => {
               <input
                 type="number"
                 min="1"
-                max={getAvailableStock(reqItem.item)}
                 value={reqItem.quantity}
                 onChange={(e) => handleItemChange(index, 'quantity', parseInt(e.target.value) || 1)}
                 className="w-full p-3 border border-gray-300 rounded-md mt-1 focus:ring-2 focus:ring-blue-500 focus:border-transparent"

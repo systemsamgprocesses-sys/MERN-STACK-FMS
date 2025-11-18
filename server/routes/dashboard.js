@@ -1382,9 +1382,10 @@ router.get('/counts', async (req, res) => {
       yearlyCompleted
     ] = await Promise.all([
       Task.countDocuments({ ...baseQuery }),
-      // Pending: tasks with dueDate <= Today (regardless of status, but typically pending/in-progress)
+      // Pending: tasks with dueDate <= Today and status is pending or in-progress (not completed)
       Task.countDocuments({
         ...baseQuery,
+        status: { $nin: statusVariants.completed },
         $or: [
           { dueDate: { $lte: today } },
           { nextDueDate: { $lte: today } }

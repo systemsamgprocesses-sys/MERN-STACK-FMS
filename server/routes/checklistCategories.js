@@ -1,8 +1,20 @@
 import express from 'express';
 import Checklist from '../models/Checklist.js';
 import mongoose from 'mongoose';
+import ChecklistCategory from '../models/ChecklistCategory.js';
+import ChecklistDepartment from '../models/ChecklistDepartment.js';
 
 const router = express.Router();
+
+// Middleware to check if user is superadmin
+const isSuperAdmin = (req, res, next) => {
+  const { role } = req.query;
+  const roleFromBody = req.body?.role;
+  if (role === 'superadmin' || roleFromBody === 'superadmin') {
+    return next();
+  }
+  return res.status(403).json({ success: false, message: 'Access denied. Only Super Admin can manage categories.' });
+};
 
 // Get all checklists with category and department support
 router.get('/', async (req, res) => {
@@ -54,8 +66,8 @@ router.get('/', async (req, res) => {
   }
 });
 
-// Update checklist category and department (Admin/Superadmin only)
-router.put('/:id/categorize', async (req, res) => {
+// Update checklist category and department (Superadmin only)
+router.put('/:id/categorize', isSuperAdmin, async (req, res) => {
   try {
     const { category, department } = req.body;
     
@@ -84,26 +96,43 @@ router.put('/:id/categorize', async (req, res) => {
 });
 
 // Get available categories
-router.get('/categories/list', async (req, res) => {
+router.get('/categories', async (req, res) => {
   try {
-    const categories = await Checklist.aggregate([
-      {
-        $group: {
-          _id: '$category',
-          count: { $sum: 1 }
+    const [categoryDocs, counts] = await Promise.all([
+      ChecklistCategory.find().sort({ name: 1 }),
+      Checklist.aggregate([
+        {
+          $group: {
+            _id: '$category',
+            count: { $sum: 1 }
+          }
         }
-      },
-      {
-        $project: {
-          name: { $ifNull: ['$_id', 'General'] },
-          count: 1,
-          _id: 0
-        }
-      },
-      {
-        $sort: { name: 1 }
-      }
+      ])
     ]);
+
+    const countMap = counts.reduce((acc, item) => {
+      const key = item._id || 'General';
+      acc[key] = item.count;
+      return acc;
+    }, {});
+
+    let categories = [];
+
+    if (categoryDocs.length > 0) {
+      categories = categoryDocs.map(doc => ({
+        name: doc.name,
+        count: countMap[doc.name] || 0
+      }));
+    } else {
+      categories = Object.entries(countMap).map(([name, count]) => ({
+        name,
+        count
+      }));
+    }
+
+    if (!categories.some(cat => cat.name === 'General')) {
+      categories.unshift({ name: 'General', count: countMap['General'] || 0 });
+    }
 
     res.json({
       success: true,
@@ -116,26 +145,43 @@ router.get('/categories/list', async (req, res) => {
 });
 
 // Get available departments
-router.get('/departments/list', async (req, res) => {
+router.get('/departments', async (req, res) => {
   try {
-    const departments = await Checklist.aggregate([
-      {
-        $group: {
-          _id: '$department',
-          count: { $sum: 1 }
+    const [departmentDocs, counts] = await Promise.all([
+      ChecklistDepartment.find().sort({ name: 1 }),
+      Checklist.aggregate([
+        {
+          $group: {
+            _id: '$department',
+            count: { $sum: 1 }
+          }
         }
-      },
-      {
-        $project: {
-          name: { $ifNull: ['$_id', 'General'] },
-          count: 1,
-          _id: 0
-        }
-      },
-      {
-        $sort: { name: 1 }
-      }
+      ])
     ]);
+
+    const countMap = counts.reduce((acc, item) => {
+      const key = item._id || 'General';
+      acc[key] = item.count;
+      return acc;
+    }, {});
+
+    let departments = [];
+
+    if (departmentDocs.length > 0) {
+      departments = departmentDocs.map(doc => ({
+        name: doc.name,
+        count: countMap[doc.name] || 0
+      }));
+    } else {
+      departments = Object.entries(countMap).map(([name, count]) => ({
+        name,
+        count
+      }));
+    }
+
+    if (!departments.some(dep => dep.name === 'General')) {
+      departments.unshift({ name: 'General', count: countMap['General'] || 0 });
+    }
 
     res.json({
       success: true,
@@ -147,22 +193,24 @@ router.get('/departments/list', async (req, res) => {
   }
 });
 
-// Add new category (Admin/Superadmin only)
-router.post('/categories', async (req, res) => {
+// Add new category (Superadmin only)
+router.post('/categories', isSuperAdmin, async (req, res) => {
   try {
     const { name } = req.body;
-    if (!name) {
+    if (!name || !name.trim()) {
       return res.status(400).json({ success: false, message: 'Category name is required' });
     }
 
+    const trimmedName = name.trim();
+
     // Check if category already exists
-    const exists = await Checklist.findOne({ category: name });
+    const exists = await ChecklistCategory.findOne({ name: trimmedName });
     if (exists) {
       return res.status(400).json({ success: false, message: 'Category already exists' });
     }
 
-    // Create a dummy checklist with the new category to establish it
-    // This is just for category tracking purposes
+    await ChecklistCategory.create({ name: trimmedName });
+
     res.json({
       success: true,
       message: 'Category created successfully'
@@ -173,19 +221,23 @@ router.post('/categories', async (req, res) => {
   }
 });
 
-// Add new department (Admin/Superadmin only)
-router.post('/departments', async (req, res) => {
+// Add new department (Superadmin only)
+router.post('/departments', isSuperAdmin, async (req, res) => {
   try {
     const { name } = req.body;
-    if (!name) {
+    if (!name || !name.trim()) {
       return res.status(400).json({ success: false, message: 'Department name is required' });
     }
 
+    const trimmedName = name.trim();
+
     // Check if department already exists
-    const exists = await Checklist.findOne({ department: name });
+    const exists = await ChecklistDepartment.findOne({ name: trimmedName });
     if (exists) {
       return res.status(400).json({ success: false, message: 'Department already exists' });
     }
+
+    await ChecklistDepartment.create({ name: trimmedName });
 
     res.json({
       success: true,
@@ -193,6 +245,70 @@ router.post('/departments', async (req, res) => {
     });
   } catch (error) {
     console.error('Error adding department:', error);
+    res.status(500).json({ success: false, message: 'Server error', error: error.message });
+  }
+});
+
+// Update category name (Superadmin only)
+router.put('/categories/update', isSuperAdmin, async (req, res) => {
+  try {
+    const { oldName, newName } = req.body;
+    if (!oldName || !newName) {
+      return res.status(400).json({ success: false, message: 'Both old and new category names are required' });
+    }
+
+    const trimmedNewName = newName.trim();
+
+    await ChecklistCategory.findOneAndUpdate(
+      { name: oldName },
+      { name: trimmedNewName },
+      { upsert: true, new: true }
+    );
+
+    // Update all checklists with the old category name
+    const result = await Checklist.updateMany(
+      { category: oldName },
+      { $set: { category: trimmedNewName } }
+    );
+
+    res.json({
+      success: true,
+      message: `Successfully updated ${result.modifiedCount} checklist(s)`
+    });
+  } catch (error) {
+    console.error('Error updating category:', error);
+    res.status(500).json({ success: false, message: 'Server error', error: error.message });
+  }
+});
+
+// Update department name (Superadmin only)
+router.put('/departments/update', isSuperAdmin, async (req, res) => {
+  try {
+    const { oldName, newName } = req.body;
+    if (!oldName || !newName) {
+      return res.status(400).json({ success: false, message: 'Both old and new department names are required' });
+    }
+
+    const trimmedNewName = newName.trim();
+
+    await ChecklistDepartment.findOneAndUpdate(
+      { name: oldName },
+      { name: trimmedNewName },
+      { upsert: true, new: true }
+    );
+
+    // Update all checklists with the old department name
+    const result = await Checklist.updateMany(
+      { department: oldName },
+      { $set: { department: trimmedNewName } }
+    );
+
+    res.json({
+      success: true,
+      message: `Successfully updated ${result.modifiedCount} checklist(s)`
+    });
+  } catch (error) {
+    console.error('Error updating department:', error);
     res.status(500).json({ success: false, message: 'Server error', error: error.message });
   }
 });

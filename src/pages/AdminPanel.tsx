@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Settings, Users, Plus, Edit, Trash2, Save, X, ChevronDown, ChevronUp, User, Cog, FileText, Paperclip, MessageSquare, LockKeyhole } from 'lucide-react';
+import { Settings, Users, Plus, Edit, Trash2, Save, X, ChevronDown, ChevronUp, User, Cog, FileText, Paperclip, MessageSquare, LockKeyhole, Tag, Building } from 'lucide-react';
 import axios from 'axios';
 import { address } from '../../utils/ipAddress';
+import CategoryManagement from './CategoryManagement';
 
 interface User {
   _id: string;
@@ -42,7 +43,7 @@ const AdminPanel: React.FC = () => {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [expandedCards, setExpandedCards] = useState<Set<string>>(new Set());
-  const [activeTab, setActiveTab] = useState<'users' | 'settings'>('users');
+  const [activeTab, setActiveTab] = useState<'users' | 'settings' | 'fms-categories' | 'checklist-categories'>('users');
   const [taskSettings, setTaskSettings] = useState<TaskCompletionSettings>({
     pendingTasks: {
       allowAttachments: false,
@@ -62,26 +63,120 @@ const AdminPanel: React.FC = () => {
     password: '',
     role: 'employee',
     permissions: {
+      // Task Permissions
       canViewTasks: true,
       canViewAllTeamTasks: false,
       canAssignTasks: false,
       canDeleteTasks: false,
       canEditTasks: false,
-      canManageUsers: false,
+      canCompleteTasksOnBehalf: false,
+      canCompleteAnyTask: false,
       canEditRecurringTaskSchedules: false,
-      canCompleteAnyTask: false // Added for PC role
+      
+      // Checklist Permissions
+      canViewAllChecklists: false,
+      canCreateChecklists: false,
+      canEditChecklists: false,
+      canDeleteChecklists: false,
+      canManageChecklistCategories: false,
+      
+      // Complaint Permissions
+      canViewAllComplaints: false,
+      canRaiseComplaints: true,
+      canAssignComplaints: false,
+      canResolveComplaints: false,
+      
+      // User Management Permissions
+      canManageUsers: false,
+      canManageRoles: false,
+      
+      // Stationery Permissions
+      canManageStationery: false,
+      
+      // Objection Permissions
+      canViewObjectionMaster: false,
+      canApproveObjections: false
     }
   });
   const [message, setMessage] = useState({ type: '', text: '' });
   const [settingsMessage, setSettingsMessage] = useState({ type: '', text: '' });
 
   // Define allowed permissions for each role
-  const rolePermissions = {
-    employee: ['canViewTasks', 'canAssignTasks'],
-    manager: ['canViewTasks', 'canViewAllTeamTasks', 'canAssignTasks', 'canDeleteTasks', 'canEditTasks', 'canEditRecurringTaskSchedules'],
-    admin: ['canViewTasks', 'canViewAllTeamTasks', 'canAssignTasks', 'canDeleteTasks', 'canEditTasks', 'canManageUsers', 'canEditRecurringTaskSchedules'],
-    superadmin: ['canViewTasks', 'canViewAllTeamTasks', 'canAssignTasks', 'canDeleteTasks', 'canEditTasks', 'canManageUsers', 'canEditRecurringTaskSchedules'],
-    pc: ['canViewTasks', 'canViewAllTeamTasks', 'canCompleteTasksOnBehalf']
+  const rolePermissions: Record<string, string[]> = {
+    employee: [
+      'canViewTasks', 
+      'canAssignTasks', 
+      'canRaiseComplaints'
+    ],
+    manager: [
+      'canViewTasks', 
+      'canViewAllTeamTasks', 
+      'canAssignTasks', 
+      'canDeleteTasks', 
+      'canEditTasks', 
+      'canEditRecurringTaskSchedules',
+      'canViewAllChecklists',
+      'canCreateChecklists',
+      'canEditChecklists',
+      'canDeleteChecklists',
+      'canManageChecklistCategories',
+      'canViewAllComplaints',
+      'canRaiseComplaints',
+      'canAssignComplaints',
+      'canResolveComplaints'
+    ],
+    admin: [
+      'canViewTasks', 
+      'canViewAllTeamTasks', 
+      'canAssignTasks', 
+      'canDeleteTasks', 
+      'canEditTasks', 
+      'canManageUsers', 
+      'canEditRecurringTaskSchedules',
+      'canCompleteAnyTask',
+      'canViewAllChecklists',
+      'canCreateChecklists',
+      'canEditChecklists',
+      'canDeleteChecklists',
+      'canManageChecklistCategories',
+      'canViewAllComplaints',
+      'canRaiseComplaints',
+      'canAssignComplaints',
+      'canResolveComplaints',
+      'canManageRoles',
+      'canManageStationery',
+      'canViewObjectionMaster',
+      'canApproveObjections'
+    ],
+    superadmin: [
+      'canViewTasks', 
+      'canViewAllTeamTasks', 
+      'canAssignTasks', 
+      'canDeleteTasks', 
+      'canEditTasks', 
+      'canManageUsers', 
+      'canEditRecurringTaskSchedules',
+      'canCompleteAnyTask',
+      'canViewAllChecklists',
+      'canCreateChecklists',
+      'canEditChecklists',
+      'canDeleteChecklists',
+      'canManageChecklistCategories',
+      'canViewAllComplaints',
+      'canRaiseComplaints',
+      'canAssignComplaints',
+      'canResolveComplaints',
+      'canManageRoles',
+      'canManageStationery',
+      'canViewObjectionMaster',
+      'canApproveObjections'
+    ],
+    pc: [
+      'canViewTasks', 
+      'canViewAllTeamTasks', 
+      'canCompleteTasksOnBehalf',
+      'canCompleteAnyTask'
+    ]
   };
   const [passwordUser, setPasswordUser] = useState<User | null>(null);
   const [newPassword, setNewPassword] = useState("");
@@ -287,7 +382,41 @@ const AdminPanel: React.FC = () => {
       phoneNumber: user.phoneNumber || '',
       password: '',
       role: user.role,
-      permissions: user.permissions
+      permissions: {
+        // Task Permissions
+        canViewTasks: user.permissions.canViewTasks,
+        canViewAllTeamTasks: user.permissions.canViewAllTeamTasks,
+        canAssignTasks: user.permissions.canAssignTasks,
+        canDeleteTasks: user.permissions.canDeleteTasks,
+        canEditTasks: user.permissions.canEditTasks,
+        canCompleteTasksOnBehalf: (user.permissions as any).canCompleteTasksOnBehalf || false,
+        canCompleteAnyTask: user.permissions.canCompleteAnyTask || false,
+        canEditRecurringTaskSchedules: user.permissions.canEditRecurringTaskSchedules,
+        
+        // Checklist Permissions
+        canViewAllChecklists: (user.permissions as any).canViewAllChecklists || false,
+        canCreateChecklists: (user.permissions as any).canCreateChecklists || false,
+        canEditChecklists: (user.permissions as any).canEditChecklists || false,
+        canDeleteChecklists: (user.permissions as any).canDeleteChecklists || false,
+        canManageChecklistCategories: (user.permissions as any).canManageChecklistCategories || false,
+        
+        // Complaint Permissions
+        canViewAllComplaints: (user.permissions as any).canViewAllComplaints || false,
+        canRaiseComplaints: (user.permissions as any).canRaiseComplaints || true,
+        canAssignComplaints: (user.permissions as any).canAssignComplaints || false,
+        canResolveComplaints: (user.permissions as any).canResolveComplaints || false,
+        
+        // User Management Permissions
+        canManageUsers: user.permissions.canManageUsers,
+        canManageRoles: (user.permissions as any).canManageRoles || false,
+        
+        // Stationery Permissions
+        canManageStationery: (user.permissions as any).canManageStationery || false,
+        
+        // Objection Permissions
+        canViewObjectionMaster: (user.permissions as any).canViewObjectionMaster || false,
+        canApproveObjections: (user.permissions as any).canApproveObjections || false
+      }
     });
   };
 
@@ -299,14 +428,39 @@ const AdminPanel: React.FC = () => {
       password: '',
       role: 'employee',
       permissions: {
+        // Task Permissions
         canViewTasks: true,
         canViewAllTeamTasks: false,
         canAssignTasks: false,
         canDeleteTasks: false,
         canEditTasks: false,
-        canManageUsers: false,
+        canCompleteTasksOnBehalf: false,
+        canCompleteAnyTask: false,
         canEditRecurringTaskSchedules: false,
-        canCompleteAnyTask: false
+        
+        // Checklist Permissions
+        canViewAllChecklists: false,
+        canCreateChecklists: false,
+        canEditChecklists: false,
+        canDeleteChecklists: false,
+        canManageChecklistCategories: false,
+        
+        // Complaint Permissions
+        canViewAllComplaints: false,
+        canRaiseComplaints: true,
+        canAssignComplaints: false,
+        canResolveComplaints: false,
+        
+        // User Management Permissions
+        canManageUsers: false,
+        canManageRoles: false,
+        
+        // Stationery Permissions
+        canManageStationery: false,
+        
+        // Objection Permissions
+        canViewObjectionMaster: false,
+        canApproveObjections: false
       }
     });
   };
@@ -323,14 +477,39 @@ const AdminPanel: React.FC = () => {
 
   const getPermissionDisplayName = (key: string) => {
     const names: { [key: string]: string } = {
+      // Task Permissions
       canViewTasks: 'View Tasks',
       canViewAllTeamTasks: 'View All Team Tasks',
       canAssignTasks: 'Assign Tasks',
       canDeleteTasks: 'Delete Tasks',
       canEditTasks: 'Edit Tasks',
-      canManageUsers: 'Manage Users',
+      canCompleteTasksOnBehalf: 'Complete Tasks On Behalf',
+      canCompleteAnyTask: 'Complete Any Task',
       canEditRecurringTaskSchedules: 'Edit Recurring Task Schedules',
-      canCompleteAnyTask: 'Complete Any Task' // Display name for PC permission
+      
+      // Checklist Permissions
+      canViewAllChecklists: 'View All Checklists',
+      canCreateChecklists: 'Create Checklists',
+      canEditChecklists: 'Edit Checklists',
+      canDeleteChecklists: 'Delete Checklists',
+      canManageChecklistCategories: 'Manage Checklist Categories',
+      
+      // Complaint Permissions
+      canViewAllComplaints: 'View All Complaints',
+      canRaiseComplaints: 'Raise Complaints',
+      canAssignComplaints: 'Assign Complaints',
+      canResolveComplaints: 'Resolve Complaints',
+      
+      // User Management Permissions
+      canManageUsers: 'Manage Users',
+      canManageRoles: 'Manage Roles',
+      
+      // Stationery Permissions
+      canManageStationery: 'Manage Stationery',
+      
+      // Objection Permissions
+      canViewObjectionMaster: 'View Objection Master',
+      canApproveObjections: 'Approve Objections'
     };
     return names[key] || key.replace('can', '').replace(/([A-Z])/g, ' $1').trim();
   };
@@ -552,11 +731,11 @@ const AdminPanel: React.FC = () => {
       </div>
 
       {/* Tab Navigation */}
-      <div className="border-b border-[var(--color-border)]">
-        <nav className="flex space-x-8">
+      <div className="border-b border-[var(--color-border)] overflow-x-auto">
+        <nav className="flex space-x-4 min-w-max">
           <button
             onClick={() => setActiveTab('users')}
-            className={`py-2 px-1 border-b-2 font-medium text-sm transition-colors ${activeTab === 'users'
+            className={`py-2 px-1 border-b-2 font-medium text-sm transition-colors whitespace-nowrap ${activeTab === 'users'
               ? 'border-[var(--color-primary)] text-[var(--color-primary)]'
               : 'border-transparent text-[var(--color-textSecondary)] hover:text-[var(--color-text)] hover:border-[var(--color-border)]'
               }`}
@@ -566,13 +745,33 @@ const AdminPanel: React.FC = () => {
           </button>
           <button
             onClick={() => setActiveTab('settings')}
-            className={`py-2 px-1 border-b-2 font-medium text-sm transition-colors ${activeTab === 'settings'
+            className={`py-2 px-1 border-b-2 font-medium text-sm transition-colors whitespace-nowrap ${activeTab === 'settings'
               ? 'border-[var(--color-primary)] text-[var(--color-primary)]'
               : 'border-transparent text-[var(--color-textSecondary)] hover:text-[var(--color-text)] hover:border-[var(--color-border)]'
               }`}
           >
             <Cog size={16} className="inline mr-2" />
-            Task Completion Settings
+            Task Settings
+          </button>
+          <button
+            onClick={() => setActiveTab('fms-categories')}
+            className={`py-2 px-1 border-b-2 font-medium text-sm transition-colors whitespace-nowrap ${activeTab === 'fms-categories'
+              ? 'border-[var(--color-primary)] text-[var(--color-primary)]'
+              : 'border-transparent text-[var(--color-textSecondary)] hover:text-[var(--color-text)] hover:border-[var(--color-border)]'
+              }`}
+          >
+            <Tag size={16} className="inline mr-2" />
+            FMS Categories
+          </button>
+          <button
+            onClick={() => setActiveTab('checklist-categories')}
+            className={`py-2 px-1 border-b-2 font-medium text-sm transition-colors whitespace-nowrap ${activeTab === 'checklist-categories'
+              ? 'border-[var(--color-primary)] text-[var(--color-primary)]'
+              : 'border-transparent text-[var(--color-textSecondary)] hover:text-[var(--color-text)] hover:border-[var(--color-border)]'
+              }`}
+          >
+            <Building size={16} className="inline mr-2" />
+            Checklist Categories
           </button>
         </nav>
       </div>
@@ -590,6 +789,10 @@ const AdminPanel: React.FC = () => {
       {/* Tab Content */}
       {activeTab === 'settings' ? (
         renderTaskSettings()
+      ) : activeTab === 'fms-categories' ? (
+        <CategoryManagement type="fms" />
+      ) : activeTab === 'checklist-categories' ? (
+        <CategoryManagement type="checklist" />
       ) : (
         /* Users Management Section */
         <div className="rounded-lg border overflow-hidden" style={{ backgroundColor: 'var(--color-background)', borderColor: 'var(--color-border)' }}>

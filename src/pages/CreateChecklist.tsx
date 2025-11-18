@@ -22,7 +22,8 @@ const CreateChecklist: React.FC = () => {
     title: '',
     parentTaskId: '',
     assignedTo: '',
-    category: 'custom',
+    category: 'General',
+    department: 'General',
     recurrenceType: 'one-time',
     customUnit: 'days',
     customN: 1,
@@ -31,6 +32,8 @@ const CreateChecklist: React.FC = () => {
   });
 
   const [items, setItems] = useState<ChecklistItem[]>([{ title: '' }]);
+  const [categories, setCategories] = useState<string[]>([]);
+  const [departments, setDepartments] = useState<string[]>([]);
 
   const canCreateChecklist =
     user?.role === 'superadmin' ||
@@ -41,6 +44,8 @@ const CreateChecklist: React.FC = () => {
   useEffect(() => {
     fetchUsers();
     fetchTasks();
+    fetchCategories();
+    fetchDepartments();
   }, []);
 
   const fetchUsers = async () => {
@@ -65,6 +70,34 @@ const CreateChecklist: React.FC = () => {
       setTasks(response.data.tasks || []);
     } catch (error) {
       console.error('Error fetching tasks:', error);
+    }
+  };
+
+  const fetchCategories = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.get(`${address}/api/checklist-categories/categories/list`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const categoryNames = response.data.categories?.map((c: any) => c.name) || ['General'];
+      setCategories(categoryNames.length > 0 ? categoryNames : ['General']);
+    } catch (error) {
+      console.error('Error fetching categories:', error);
+      setCategories(['General']);
+    }
+  };
+
+  const fetchDepartments = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.get(`${address}/api/checklist-categories/departments/list`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const deptNames = response.data.departments?.map((d: any) => d.name) || ['General'];
+      setDepartments(deptNames.length > 0 ? deptNames : ['General']);
+    } catch (error) {
+      console.error('Error fetching departments:', error);
+      setDepartments(['General']);
     }
   };
 
@@ -112,6 +145,7 @@ const CreateChecklist: React.FC = () => {
         parentTaskId: formData.parentTaskId || undefined,
         assignedTo: formData.assignedTo,
         category: formData.category,
+        department: formData.department,
         recurrence: {
           type: formData.recurrenceType,
           customInterval: formData.recurrenceType === 'custom' ? {
@@ -211,16 +245,26 @@ const CreateChecklist: React.FC = () => {
                 required
                 className="w-full px-4 py-2 border border-[--color-border] rounded-lg bg-[--color-background] text-[--color-text]"
               >
-                <option value="daily">Daily</option>
-                <option value="weekly">Weekly</option>
-                <option value="monthly">Monthly</option>
-                <option value="quarterly">Quarterly</option>
-                <option value="yearly">Yearly</option>
-                <option value="maintenance">Maintenance</option>
-                <option value="compliance">Compliance</option>
-                <option value="training">Training</option>
-                <option value="audit">Audit</option>
-                <option value="custom">Custom</option>
+                {categories.map(cat => (
+                  <option key={cat} value={cat}>{cat}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* Department */}
+            <div>
+              <label className="block text-sm font-medium text-[--color-text] mb-2">
+                Department <span className="text-red-500">*</span>
+              </label>
+              <select
+                value={formData.department}
+                onChange={(e) => setFormData({ ...formData, department: e.target.value })}
+                required
+                className="w-full px-4 py-2 border border-[--color-border] rounded-lg bg-[--color-background] text-[--color-text]"
+              >
+                {departments.map(dept => (
+                  <option key={dept} value={dept}>{dept}</option>
+                ))}
               </select>
             </div>
 

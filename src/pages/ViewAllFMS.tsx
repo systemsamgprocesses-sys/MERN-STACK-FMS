@@ -363,6 +363,43 @@ const ViewAllFMS: React.FC = () => {
     }
   };
 
+  const fetchCategories = async (currentFmsList: FMSTemplate[] = []) => {
+    try {
+      const response = await axios.get(`${address}/api/fms-categories/categories`);
+      if (response.data.success && response.data.categories) {
+        // Get category counts from FMS list
+        const categoryCounts = currentFmsList.reduce((acc: { [key: string]: number }, fms: FMSTemplate) => {
+          const category = fms.category || 'Uncategorized';
+          acc[category] = (acc[category] || 0) + 1;
+          return acc;
+        }, {});
+        
+        // Merge API categories with counts from FMS list
+        const categoriesList = response.data.categories.map((cat: any) => ({
+          name: cat.name,
+          count: categoryCounts[cat.name] || 0
+        })).sort((a: any, b: any) => a.name.localeCompare(b.name));
+        
+        setCategories(categoriesList);
+      }
+    } catch (error) {
+      console.error('Error fetching categories:', error);
+      // Fallback: calculate from FMS list if API fails
+      const categoryMap = currentFmsList.reduce((acc: { [key: string]: number }, fms: FMSTemplate) => {
+        const category = fms.category || 'Uncategorized';
+        acc[category] = (acc[category] || 0) + 1;
+        return acc;
+      }, {});
+      
+      const categoriesList = Object.entries(categoryMap).map(([name, count]) => ({
+        name,
+        count: count as number
+      })).sort((a, b) => a.name.localeCompare(b.name));
+      
+      setCategories(categoriesList);
+    }
+  };
+
   const fetchFMSTemplates = async () => {
     try {
       const params = {
@@ -372,21 +409,10 @@ const ViewAllFMS: React.FC = () => {
       };
       const response = await axios.get(`${address}/api/fms`, { params });
       if (response.data.success) {
-        setFmsList(response.data.fmsList);
-        
-        // Calculate categories from FMS list
-        const categoryMap = response.data.fmsList.reduce((acc: { [key: string]: number }, fms: FMSTemplate) => {
-          const category = fms.category || 'Uncategorized';
-          acc[category] = (acc[category] || 0) + 1;
-          return acc;
-        }, {});
-        
-        const categoriesList = Object.entries(categoryMap).map(([name, count]) => ({
-          name,
-          count: count as number
-        })).sort((a, b) => a.name.localeCompare(b.name));
-        
-        setCategories(categoriesList);
+        const fetchedFmsList = response.data.fmsList || [];
+        setFmsList(fetchedFmsList);
+        // Fetch categories after FMS list is loaded, passing the list to avoid dependency
+        await fetchCategories(fetchedFmsList);
       }
     } catch (error) {
       console.error('Error fetching FMS templates:', error);
@@ -396,29 +422,43 @@ const ViewAllFMS: React.FC = () => {
   };
 
   const handleCategoryChange = async (fmsId: string, newCategory: string) => {
+    if (user?.role !== 'superadmin') {
+      alert('Only Super Admin can change FMS categories');
+      return;
+    }
+    
     try {
-      await axios.put(`${address}/api/fms/${fmsId}/category`, {
-        category: newCategory
+      await axios.put(`${address}/api/fms-categories/${fmsId}/category`, {
+        category: newCategory,
+        role: user?.role
       });
       setEditingFMS(null);
       await fetchFMSTemplates();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error updating FMS category:', error);
+      alert(error.response?.data?.message || 'Failed to update category');
     }
   };
 
   const handleAddCategory = async () => {
     if (!newCategory.trim()) return;
     
+    if (user?.role !== 'superadmin') {
+      alert('Only Super Admin can add categories');
+      return;
+    }
+    
     try {
-      await axios.post(`${address}/api/fms/categories`, {
-        name: newCategory.trim()
+      await axios.post(`${address}/api/fms-categories/categories`, {
+        name: newCategory.trim(),
+        role: user?.role
       });
       setNewCategory('');
       setShowCategoryEdit(false);
-      await fetchFMSTemplates();
-    } catch (error) {
+      await fetchFMSTemplates(); // This will refresh both FMS list and categories
+    } catch (error: any) {
       console.error('Error adding category:', error);
+      alert(error.response?.data?.message || 'Failed to add category');
     }
   };
 
@@ -629,13 +669,16 @@ const ViewAllFMS: React.FC = () => {
             <p className="text-[var(--color-textSecondary)]">View and manage workflow templates</p>
           </div>
 
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-4 flex-wrap">
             {/* Category Filter */}
             <div className="relative">
+              <label className="block text-xs mb-1" style={{ color: 'var(--color-textSecondary)' }}>
+                Filter by Category
+              </label>
               <select
                 value={selectedCategory}
                 onChange={(e) => setSelectedCategory(e.target.value)}
-                className="px-4 py-2 rounded-lg border text-sm"
+                className="px-4 py-2 rounded-lg border text-sm min-w-[180px]"
                 style={{
                   backgroundColor: 'var(--color-surface)',
                   borderColor: 'var(--color-border)',
@@ -643,16 +686,20 @@ const ViewAllFMS: React.FC = () => {
                 }}
               >
                 <option value="all">All Categories</option>
-                {categories.map(cat => (
-                  <option key={cat.name} value={cat.name}>
-                    {cat.name} ({cat.count})
-                  </option>
-                ))}
+                {categories.length === 0 ? (
+                  <option disabled>No categories available</option>
+                ) : (
+                  categories.map(cat => (
+                    <option key={cat.name} value={cat.name}>
+                      {cat.name} ({cat.count})
+                    </option>
+                  ))
+                )}
               </select>
             </div>
 
-            {/* Category Management for Admin/Superadmin */}
-            {(user?.role === 'admin' || user?.role === 'superadmin') && (
+            {/* Category Management for Superadmin Only */}
+            {user?.role === 'superadmin' && (
               <div className="relative">
                 <button
                   onClick={() => setShowCategoryEdit(true)}
@@ -667,13 +714,16 @@ const ViewAllFMS: React.FC = () => {
                 </button>
 
                 {showCategoryEdit && (
-                  <div className="absolute right-0 mt-2 w-64 rounded-lg shadow-lg z-50 p-4"
+                  <div className="absolute right-0 mt-2 w-64 rounded-lg shadow-lg z-50 p-4 border"
                     style={{
                       backgroundColor: 'var(--color-surface)',
                       borderColor: 'var(--color-border)'
                     }}
                   >
                     <div className="flex flex-col gap-3">
+                      <h4 className="text-sm font-semibold" style={{ color: 'var(--color-text)' }}>
+                        Add New Category
+                      </h4>
                       <input
                         type="text"
                         value={newCategory}
@@ -685,15 +735,19 @@ const ViewAllFMS: React.FC = () => {
                           borderColor: 'var(--color-border)',
                           color: 'var(--color-text)'
                         }}
+                        onKeyPress={(e) => e.key === 'Enter' && handleAddCategory()}
                       />
                       <button
                         onClick={handleAddCategory}
-                        className="px-3 py-2 rounded bg-blue-500 text-white text-sm hover:bg-blue-600"
+                        className="px-3 py-2 rounded bg-[var(--color-primary)] text-white text-sm hover:opacity-90"
                       >
                         Add Category
                       </button>
                       <button
-                        onClick={() => setShowCategoryEdit(false)}
+                        onClick={() => {
+                          setShowCategoryEdit(false);
+                          setNewCategory('');
+                        }}
                         className="px-3 py-2 rounded border text-sm"
                         style={{
                           borderColor: 'var(--color-border)',

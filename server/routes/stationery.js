@@ -8,6 +8,7 @@ import auth from '../middleware/auth.js'; // JWT auth middleware
 import Stationery from '../models/Stationery.js';
 import StationeryRequest from '../models/StationeryRequest.js';
 import User from '../models/User.js';
+import InventoryAdjustmentLog from '../models/InventoryAdjustmentLog.js';
 
 const router = express.Router();
 
@@ -34,11 +35,11 @@ const checkHR = (req, res, next) => {
 
 // --- Employee Routes ---
 
-// GET /api/stationery/items (Get item list for dropdowns)
+// GET /api/stationery/items (Get item list for dropdowns - Employee view without stock quantity)
 router.get('/items', auth, async (req, res) => {
   try {
     const items = await Stationery.find({ isActive: true, quantity: { $gt: 0 } })
-      .select('name quantity category')
+      .select('name category')
       .sort({ name: 1 });
     res.json(items);
   } catch (error) {
@@ -92,45 +93,61 @@ router.get('/my-requests', auth, async (req, res) => {
 
 // POST /api/stationery/receive/:id (User marks as received)
 router.post('/receive/:id', auth, async (req, res) => {
-  let session;
-  
   try {
-    session = await mongoose.startSession();
-    session.startTransaction();
-    
+    // Validate request ID format
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+      return res.status(400).json({ message: 'Invalid request ID format.' });
+    }
+
+    // Get user ID
+    const userId = req.user._id || req.user.id;
+    if (!userId) {
+      return res.status(401).json({ message: 'User authentication required.' });
+    }
+
+    // Find the request
     const request = await StationeryRequest.findOne({
       _id: req.params.id,
-      requestedBy: req.user.id,
-    }).populate('items.item').session(session);
+      requestedBy: userId,
+    });
 
     if (!request) {
-      await session.abortTransaction();
-      session.endSession();
-      return res.status(404).json({ message: 'Request not found.' });
+      return res.status(404).json({ 
+        message: 'Request not found or you do not have permission to receive this request.' 
+      });
     }
+    
     if (request.status !== 'Approved') {
-      await session.abortTransaction();
-      session.endSession();
-      return res.status(400).json({ message: 'Request is not in an "Approved" state.' });
+      return res.status(400).json({ 
+        message: `Request is not in an "Approved" state. Current status: ${request.status}` 
+      });
     }
+
+    // Populate items to get stationery details
+    await request.populate({
+      path: 'items.item',
+      select: 'name category quantity'
+    });
 
     // Validate all items have sufficient stock and filter out deleted items
     const validItems = [];
     for (const reqItem of request.items) {
-      if (!reqItem.item) {
+      // Handle both populated and unpopulated item references
+      const itemId = reqItem.item?._id || reqItem.item;
+      
+      if (!itemId) {
         console.warn(`Skipping deleted item in request ${request._id}`);
-        continue; // Skip deleted items instead of failing
+        continue;
       }
       
-      const itemDoc = await Stationery.findById(reqItem.item._id).session(session);
+      const itemDoc = await Stationery.findById(itemId);
+      
       if (!itemDoc) {
-        console.warn(`Item ${reqItem.item._id} not found, skipping`);
-        continue; // Skip if item no longer exists
+        console.warn(`Item ${itemId} not found, skipping`);
+        continue;
       }
       
       if (itemDoc.quantity < reqItem.quantity) {
-        await session.abortTransaction();
-        session.endSession();
         return res.status(400).json({
           message: `Insufficient stock for ${itemDoc.name}. Requested: ${reqItem.quantity}, Available: ${itemDoc.quantity}`
         });
@@ -140,9 +157,9 @@ router.post('/receive/:id', auth, async (req, res) => {
     }
 
     if (validItems.length === 0) {
-      await session.abortTransaction();
-      session.endSession();
-      return res.status(400).json({ message: 'No valid items in this request to process.' });
+      return res.status(400).json({ 
+        message: 'No valid items in this request to process.' 
+      });
     }
 
     // Deduct stock for all valid items
@@ -150,16 +167,18 @@ router.post('/receive/:id', auth, async (req, res) => {
       await Stationery.findByIdAndUpdate(
         itemDoc._id,
         { $inc: { quantity: -quantity } },
-        { session, new: true }
+        { new: true }
       );
     }
 
+    // Update request status
     request.status = 'Received';
     request.receivedAt = new Date();
-    await request.save({ session });
+    await request.save();
 
-    await session.commitTransaction();
-    session.endSession();
+    // Populate for response
+    await request.populate('requestedBy', 'username email');
+    await request.populate('items.item', 'name category quantity');
     
     res.json({ 
       message: `Items marked as received. ${validItems.length} item(s) processed. Stock has been updated.`, 
@@ -167,15 +186,15 @@ router.post('/receive/:id', auth, async (req, res) => {
     });
   } catch (error) {
     console.error('Error in receive endpoint:', error);
-    if (session) {
-      try {
-        await session.abortTransaction();
-        session.endSession();
-      } catch (sessionError) {
-        console.error('Error ending session:', sessionError);
-      }
-    }
-    res.status(500).json({ message: 'Error marking as received', error: error.message });
+    console.error('Error details:', {
+      message: error.message,
+      stack: error.stack,
+      name: error.name
+    });
+    res.status(500).json({ 
+      message: 'Error marking as received', 
+      error: error.message
+    });
   }
 });
 
@@ -428,6 +447,128 @@ NOTE001,Sticky Notes,Stationery,50`;
   res.setHeader('Content-Type', 'text/csv');
   res.setHeader('Content-Disposition', 'attachment; filename="stationery_inventory_sample.csv"');
   res.send(sampleData);
+});
+
+// POST /api/stationery/hr/stock-in/:id (HR: Add stock to existing item)
+router.post('/hr/stock-in/:id', auth, checkHR, async (req, res) => {
+  try {
+    const { quantity, remarks } = req.body;
+    
+    if (!quantity || quantity <= 0) {
+      return res.status(400).json({ message: 'Valid quantity is required.' });
+    }
+
+    const item = await Stationery.findById(req.params.id);
+    
+    if (!item) {
+      return res.status(404).json({ message: 'Item not found.' });
+    }
+
+    // Add quantity to existing stock
+    item.quantity = (item.quantity || 0) + parseInt(quantity);
+    await item.save();
+
+    res.json({
+      message: `Stock added successfully. New quantity: ${item.quantity}`,
+      item,
+      addedQuantity: parseInt(quantity),
+      remarks: remarks || ''
+    });
+  } catch (error) {
+    res.status(500).json({ message: 'Error adding stock', error: error.message });
+  }
+});
+
+// POST /api/stationery/hr/stock-adjust/:id (HR: Manual stock adjustment)
+router.post('/hr/stock-adjust/:id', auth, checkHR, async (req, res) => {
+  try {
+    const { newQuantity, reason } = req.body;
+    
+    if (newQuantity === undefined || newQuantity < 0) {
+      return res.status(400).json({ message: 'Valid new quantity is required.' });
+    }
+
+    if (!reason || reason.trim() === '') {
+      return res.status(400).json({ message: 'Reason for adjustment is required.' });
+    }
+
+    const item = await Stationery.findById(req.params.id);
+    
+    if (!item) {
+      return res.status(404).json({ message: 'Item not found.' });
+    }
+
+    const oldQuantity = item.quantity;
+    const difference = parseInt(newQuantity) - oldQuantity;
+
+    // Update quantity
+    item.quantity = parseInt(newQuantity);
+    await item.save();
+
+    // Create adjustment log
+    const adjustmentLog = new InventoryAdjustmentLog({
+      item: item._id,
+      itemName: item.name,
+      itemCategory: item.category,
+      oldQuantity,
+      newQuantity: parseInt(newQuantity),
+      difference,
+      unit: item.unit,
+      reason: reason.trim(),
+      adjustedBy: req.user._id,
+      adjustedByUsername: req.user.username
+    });
+    await adjustmentLog.save();
+
+    res.json({
+      message: 'Stock adjusted successfully',
+      item,
+      oldQuantity,
+      newQuantity: parseInt(newQuantity),
+      difference,
+      reason
+    });
+  } catch (error) {
+    res.status(500).json({ message: 'Error adjusting stock', error: error.message });
+  }
+});
+
+// GET /api/stationery/hr/adjustment-logs (HR: Get all adjustment logs)
+router.get('/hr/adjustment-logs', auth, checkHR, async (req, res) => {
+  try {
+    const { page = 1, limit = 50, search = '' } = req.query;
+    const skip = (parseInt(page) - 1) * parseInt(limit);
+
+    let query = {};
+
+    // Search by item name or reason
+    if (search && search.trim() !== '') {
+      query.$or = [
+        { itemName: { $regex: search, $options: 'i' } },
+        { reason: { $regex: search, $options: 'i' } },
+        { adjustedByUsername: { $regex: search, $options: 'i' } }
+      ];
+    }
+
+    const logs = await InventoryAdjustmentLog.find(query)
+      .populate('item', 'name category unit')
+      .populate('adjustedBy', 'username email')
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(parseInt(limit));
+
+    const total = await InventoryAdjustmentLog.countDocuments(query);
+
+    res.json({
+      logs,
+      total,
+      page: parseInt(page),
+      limit: parseInt(limit),
+      totalPages: Math.ceil(total / parseInt(limit))
+    });
+  } catch (error) {
+    res.status(500).json({ message: 'Error fetching adjustment logs', error: error.message });
+  }
 });
 
 export default router;

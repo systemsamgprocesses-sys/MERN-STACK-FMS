@@ -20,11 +20,17 @@ const helpTicketSchema = new mongoose.Schema({
   },
   status: { 
     type: String, 
-    enum: ['Open', 'In Progress', 'Closed'],
+    enum: ['Open', 'In Progress', 'Closed', 'Resolved - Pending Verification', 'Verified & Closed'],
     default: 'Open'
   },
   assignedTo: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
   adminRemarks: [adminRemarkSchema],
+  // OTP fields for ticket closure verification
+  otp: { type: String },
+  otpGeneratedAt: { type: Date },
+  otpExpiresAt: { type: Date },
+  otpVerified: { type: Boolean, default: false },
+  verifiedAt: { type: Date },
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now }
 });

@@ -30,15 +30,39 @@ const userSchema = new mongoose.Schema({
     default: 'employee'
   },
   permissions: {
+    // Task Permissions
     canViewTasks: { type: Boolean, default: true },
     canViewAllTeamTasks: { type: Boolean, default: false },
     canAssignTasks: { type: Boolean, default: false },
     canDeleteTasks: { type: Boolean, default: false },
     canEditTasks: { type: Boolean, default: false },
-    canManageUsers: { type: Boolean, default: false },
-    canEditRecurringTaskSchedules: { type: Boolean, default: false },
     canCompleteTasksOnBehalf: { type: Boolean, default: false },
-    canManageStationery: { type: Boolean, default: false }
+    canCompleteAnyTask: { type: Boolean, default: false },
+    canEditRecurringTaskSchedules: { type: Boolean, default: false },
+    
+    // Checklist Permissions
+    canViewAllChecklists: { type: Boolean, default: false },
+    canCreateChecklists: { type: Boolean, default: false },
+    canEditChecklists: { type: Boolean, default: false },
+    canDeleteChecklists: { type: Boolean, default: false },
+    canManageChecklistCategories: { type: Boolean, default: false },
+    
+    // Complaint Permissions
+    canViewAllComplaints: { type: Boolean, default: false },
+    canRaiseComplaints: { type: Boolean, default: true },
+    canAssignComplaints: { type: Boolean, default: false },
+    canResolveComplaints: { type: Boolean, default: false },
+    
+    // User Management Permissions
+    canManageUsers: { type: Boolean, default: false },
+    canManageRoles: { type: Boolean, default: false },
+    
+    // Stationery Permissions
+    canManageStationery: { type: Boolean, default: false },
+    
+    // Objection Permissions
+    canViewObjectionMaster: { type: Boolean, default: false },
+    canApproveObjections: { type: Boolean, default: false }
   },
   isActive: {
     type: Boolean,

@@ -42,6 +42,7 @@ router.post('/', upload.array('files', 10), async (req, res) => {
   try {
     const {
       fmsName,
+      category,
       steps,
       createdBy,
       frequency,
@@ -153,6 +154,7 @@ router.post('/', upload.array('files', 10), async (req, res) => {
     const fms = new FMS({
       fmsId,
       fmsName,
+      category: category || 'General',
       steps: parsedSteps,
       createdBy,
       status: 'Active',
@@ -176,7 +178,8 @@ router.get('/', async (req, res) => {
     
     let query = {};
     
-    // If not admin, only show FMS where user is part of at least one step
+    // If not admin/superadmin, only show FMS where user is part of at least one step
+    // Admin and superadmin can see all FMS templates
     if (!isAdmin || isAdmin === 'false') {
       if (userId) {
         query = {
@@ -186,10 +189,12 @@ router.get('/', async (req, res) => {
         return res.json({ success: true, fmsList: [] });
       }
     }
+    // For admin/superadmin, query remains empty {} to fetch all FMS
     
     const fmsList = await FMS.find(query)
       .populate('createdBy', 'username email')
-      .populate('steps.who', 'username email name');
+      .populate('steps.who', 'username email name')
+      .sort({ createdAt: -1 }); // Sort by newest first
     
     const formattedList = fmsList.map(fms => {
       let totalHours = 0;
@@ -211,11 +216,14 @@ router.get('/', async (req, res) => {
         _id: fms._id,
         fmsId: fms.fmsId,
         fmsName: fms.fmsName,
+        category: fms.category || 'General',
         stepCount: fms.steps.length,
-        createdBy: fms.createdBy.username,
+        createdBy: fms.createdBy?.username || 'Unknown',
         createdOn: fms.createdAt,
         totalTimeFormatted,
-        steps: fms.steps
+        steps: fms.steps,
+        frequency: fms.frequency || 'one-time',
+        frequencySettings: fms.frequencySettings
       };
     });
     

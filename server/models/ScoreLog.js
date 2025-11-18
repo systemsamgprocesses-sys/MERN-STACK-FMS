@@ -20,6 +20,11 @@ const scoreLogSchema = new mongoose.Schema({
     type: String,
     required: true
   },
+  taskCategory: {
+    type: String,
+    enum: ['regular', 'multi-level', 'date-range'],
+    default: 'regular'
+  },
   score: {
     type: Number,
     required: true,
@@ -32,6 +37,8 @@ const scoreLogSchema = new mongoose.Schema({
   },
   plannedDays: Number,
   actualDays: Number,
+  startDate: Date,  // For date-range tasks
+  endDate: Date,    // For date-range tasks
   completedAt: {
     type: Date,
     required: true

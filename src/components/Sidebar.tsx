@@ -25,7 +25,8 @@ import {
   HelpCircle,
   BarChart2,
   MessageSquare,
-  Calendar
+  Calendar,
+  Activity
 } from 'lucide-react';
 
 // Clean and Professional AMG Logo Component
@@ -114,32 +115,52 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
   });
 
   const menuItems = [
-    { section: 'Tasks', icon: CheckSquare, label: 'Pending Tasks', path: '/pending-tasks', countKey: 'pendingTasks' },
-    { section: 'Tasks', icon: RefreshCw, label: 'Pending Repetitive', path: '/pending-recurring', countKey: 'pendingRepetitive' },
-    { section: 'Tasks', icon: Archive, label: 'Master Tasks', path: '/master-tasks', countKey: 'masterTasks' },
-    { section: 'Tasks', icon: RotateCcw, label: 'Master Repetitive', path: '/master-recurring', countKey: 'masterRepetitive' },
-    { section: 'Tasks', icon: UserPlus, label: 'Assign Task', path: '/assign-task', permission: 'canAssignTasks' },
-    { section: 'Tasks', icon: UserCheck, label: 'Assigned By Me', path: '/assigned-by-me', permission: 'canAssignTasks', countKey: 'assignedByMe' },
-    { section: 'Tasks', icon: Calendar, label: 'Upcoming Tasks', path: '/upcoming-tasks' },
+    // FMS Section
+    { section: 'FMS', icon: Settings, label: 'FMS Templates', path: '/fms-templates', permission: 'canAssignTasks', highlight: true },
+    { section: 'FMS', icon: Settings, label: 'Start Project', path: '/start-project', permission: 'canAssignTasks', highlight: true },
+    { section: 'FMS', icon: Settings, label: 'FMS Progress', path: '/fms-progress', highlight: true },
+    { section: 'FMS', icon: Settings, label: 'Manage FMS Categories', path: '/fms-categories', requireAdmin: true, highlight: true },
+    
+    // Checklists Section
+    { section: 'Checklists', icon: CheckSquare, label: 'My Checklists', path: '/checklists', highlight: true },
+    { section: 'Checklists', icon: BarChart2, label: 'Checklist Dashboard', path: '/checklist-dashboard', permission: 'canViewAllChecklists', highlight: true },
+    { section: 'Checklists', icon: Settings, label: 'Manage Checklist Categories', path: '/checklist-categories', requireAdmin: true, highlight: true },
+    
+    // Tasks Section
+    { section: 'Tasks', icon: CheckSquare, label: 'Pending Tasks', path: '/pending-tasks', permission: 'canViewTasks', countKey: 'pendingTasks', highlight: true },
+    { section: 'Tasks', icon: RefreshCw, label: 'Pending Repetitive', path: '/pending-recurring', permission: 'canViewTasks', countKey: 'pendingRepetitive', highlight: true },
+    { section: 'Tasks', icon: Archive, label: 'Master Tasks', path: '/master-tasks', permission: 'canViewAllTeamTasks', countKey: 'masterTasks', highlight: true },
+    { section: 'Tasks', icon: RotateCcw, label: 'Master Repetitive', path: '/master-recurring', permission: 'canViewAllTeamTasks', countKey: 'masterRepetitive', highlight: true },
+    { section: 'Tasks', icon: Calendar, label: 'Upcoming Tasks', path: '/upcoming-tasks', permission: 'canViewTasks', highlight: true },
+    
+    // Assign Task Section
+    { section: 'Assign Task', icon: UserPlus, label: 'Assign Task', path: '/assign-task', permission: 'canAssignTasks', highlight: true },
+    { section: 'Assign Task', icon: UserCheck, label: 'Assigned By Me', path: '/assigned-by-me', permission: 'canAssignTasks', countKey: 'assignedByMe', highlight: true },
+    
+    // Management Section
     { section: 'Management', icon: LayoutDashboard, label: 'Dashboard', path: '/dashboard' },
     { section: 'Management', icon: Zap, label: 'Performance', path: '/performance' },
-    { section: 'Management', icon: Settings, label: 'FMS Templates', path: '/fms-templates', permission: 'canAssignTasks' },
-    { section: 'Management', icon: Settings, label: 'Start Project', path: '/start-project' },
-    { section: 'Management', icon: Settings, label: 'FMS Progress', path: '/fms-progress' },
-    { section: 'Management', icon: User, label: 'My Tasks', path: '/admin-tasks', requireAdmin: true, countKey: 'myTasks' },
-    { section: 'Management', icon: Settings, label: 'Admin Panel', path: '/admin', requireAdmin: true },
+    { section: 'Management', icon: User, label: 'My Tasks', path: '/admin-tasks', permission: 'canViewAllTeamTasks', countKey: 'myTasks' },
+    { section: 'Management', icon: Settings, label: 'Admin Panel', path: '/admin', permission: 'canManageUsers' },
+    { section: 'Management', icon: Activity, label: 'Admin HR Panel', path: '/admin-hr-panel', permission: 'canManageUsers' },
+    
+    // Workflow Section
     { section: 'Workflow', icon: AlertCircle, label: 'Objections Hub', path: '/objections', countKey: 'myObjections' },
-    { section: 'Workflow', icon: AlertCircle, label: 'Objection Approvals', path: '/objection-approvals', countKey: 'objections', requireObjectionApproval: true },
-    { section: 'Workflow', icon: MessageSquare, label: 'Complaints', path: '/complaints', countKey: 'complaintsInbox' },
+    { section: 'Workflow', icon: AlertCircle, label: 'Objection Approvals', path: '/objection-approvals', countKey: 'objections', permission: 'canApproveObjections' },
+    { section: 'Workflow', icon: MessageSquare, label: 'Complaints', path: '/complaints', permission: 'canRaiseComplaints', countKey: 'complaintsInbox' },
     { section: 'Workflow', icon: AlertCircle, label: 'Complaints Dashboard', path: '/complaints-dashboard', permission: 'canViewAllComplaints' },
-    { section: 'Workflow', icon: CheckSquare, label: 'Checklists', path: '/checklists' },
-    { section: 'Workflow', icon: BarChart2, label: 'Checklist Dashboard', path: '/checklist-dashboard', requireAdmin: true },
     { section: 'Workflow', icon: HelpCircle, label: 'Help Tickets', path: '/help-tickets', countKey: 'helpTickets' },
-    { section: 'Workflow', icon: HelpCircle, label: 'Manage Tickets', path: '/admin-help-tickets', requireAdmin: true },
+    { section: 'Workflow', icon: HelpCircle, label: 'Manage Tickets', path: '/admin-help-tickets', permission: 'canViewAllComplaints' },
     { section: 'Workflow', icon: Package, label: 'New Stationery Request', path: '/stationery-request' },
     { section: 'Workflow', icon: ClipboardList, label: 'My Stationery Requests', path: '/my-stationery-requests' },
+    { section: 'Workflow', icon: Package, label: 'HR Stationery Approval', path: '/hr-stationery-approval', permission: 'canManageStationery' },
+    { section: 'Workflow', icon: Package, label: 'Stationery Inventory', path: '/stationery-inventory', permission: 'canManageStationery' },
+    
+    // Analytics Section
     { section: 'Analytics', icon: BarChart2, label: 'Purchase Dashboard', path: '/purchase-dashboard', requireAdmin: true },
     { section: 'Analytics', icon: BarChart2, label: 'Sales Dashboard', path: '/sales-dashboard', requireAdmin: true },
+    
+    // Admin Section
     { section: 'Admin', icon: Shield, label: 'Audit Logs', path: '/audit-logs', requireSuperAdmin: true },
     { section: 'Admin', icon: Award, label: 'Score Logs', path: '/score-logs', requireSuperAdmin: true },
   ];
@@ -252,18 +273,22 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
   const filteredMenuItems = menuItems.filter(item => {
     // Super admin can see everything
     if (user?.role === 'superadmin') return true;
+    
     // Hide items that require super admin (for non-superadmins)
     if (item.requireSuperAdmin && user?.role !== 'superadmin') return false;
-    // Admin can see admin panel and below
+    
+    // Admin can see admin panel and below (legacy check)
     if (item.requireAdmin && !['admin', 'superadmin'].includes(user?.role || '')) return false;
-    // Check for specific permissions
-    if (item.permission && !user?.permissions[item.permission as keyof typeof user.permissions]) return false;
-    if (item.requireObjectionApproval) {
-      const canApprove =
-        ['manager', 'admin', 'superadmin'].includes(user?.role || '') ||
-        user?.permissions?.canAssignTasks;
-      if (!canApprove) return false;
+    
+    // Check for specific permissions - this is the primary access control
+    if (item.permission) {
+      const hasPermission = user?.permissions?.[item.permission as keyof typeof user.permissions];
+      // If no permission, but user is admin/superadmin, allow access (for backward compatibility)
+      if (!hasPermission && !['admin', 'superadmin'].includes(user?.role || '')) {
+        return false;
+      }
     }
+    
     // Regular users see the rest
     return true;
   });
@@ -331,13 +356,22 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
 
         {/* Navigation */}
         <nav className="flex-1 overflow-y-auto overflow-x-hidden" style={{ scrollbarWidth: 'thin' }}>
-          {Object.entries(groupedMenuItems).map(([section, items]) => (
-            <div key={section} className="px-2 py-3 border-t first:border-t-0" style={{ borderColor: 'var(--color-border)' }}>
-              {!isCollapsed && (
-                <h3 className="text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: 'var(--color-textSecondary)' }}>
-                  {section}
-                </h3>
-              )}
+          {Object.entries(groupedMenuItems).map(([section, items]) => {
+            const isHighlightedSection = ['FMS', 'Checklists', 'Tasks', 'Assign Task'].includes(section);
+            return (
+              <div 
+                key={section} 
+                className={`px-2 py-3 border-t first:border-t-0 ${isHighlightedSection ? 'bg-gradient-to-r from-[var(--color-primary)]/5 to-transparent' : ''}`}
+                style={{ borderColor: 'var(--color-border)' }}
+              >
+                {!isCollapsed && (
+                  <h3 
+                    className={`text-xs font-semibold uppercase tracking-wider mb-2 ${isHighlightedSection ? 'text-[var(--color-primary)]' : ''}`}
+                    style={{ color: isHighlightedSection ? 'var(--color-primary)' : 'var(--color-textSecondary)' }}
+                  >
+                    {isHighlightedSection && '⭐ '}{section}
+                  </h3>
+                )}
               <div className="space-y-1">
                 {items.map((item) => (
                   <Tooltip
@@ -389,7 +423,8 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
                 ))}
               </div>
             </div>
-          ))}
+            );
+          })}
         </nav>
       </div>
     </>

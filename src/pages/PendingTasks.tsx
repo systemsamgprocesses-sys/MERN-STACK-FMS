@@ -5,6 +5,7 @@ import axios from 'axios';
 import ViewToggle from '../components/ViewToggle';
 import PriorityBadge from '../components/PriorityBadge';
 import TaskCompletionModal from '../components/TaskCompletionModal';
+import MultiLevelTaskCompletionModal from '../components/MultiLevelTaskCompletionModal';
 import { useTaskSettings } from '../hooks/useTaskSettings';
 import { useTheme } from '../contexts/ThemeContext';
 import { address } from '../../utils/ipAddress';
@@ -24,6 +25,7 @@ interface Task {
   title: string;
   description: string;
   taskType: string;
+  taskCategory?: 'regular' | 'multi-level' | 'date-range';
   assignedBy: { username: string; email: string };
   assignedTo: {
     _id: string; username: string; email: string; phoneNumber?: string
@@ -35,6 +37,11 @@ interface Task {
   createdAt: string;
   attachments: Attachment[];
   isOnHold?: boolean; // Added for clarity in print
+  inProgressRemarks?: string; // Remarks when task is marked as in-progress
+  requiresChecklist?: boolean;
+  checklistItems?: any[];
+  mandatoryAttachments?: boolean;
+  forwardingHistory?: any[];
 }
 
 interface User {
@@ -105,6 +112,7 @@ const PendingTasks: React.FC = () => {
     dateTo: ''
   });
   const [showCompleteModal, setShowCompleteModal] = useState<string | null>(null);
+  const [showMLTCompleteModal, setShowMLTCompleteModal] = useState<Task | null>(null);
   const [showReviseModal, setShowReviseModal] = useState<string | null>(null);
   const [showObjectionModal, setShowObjectionModal] = useState<string | null>(null);
   const [objectionType, setObjectionType] = useState<'date_change' | 'terminate' | 'hold'>('date_change');
@@ -609,9 +617,21 @@ const PendingTasks: React.FC = () => {
           >
             <div className="p-6">
               <div className="flex items-start justify-between mb-4">
-                <h3 className="text-lg font-semibold line-clamp-2 text-[--color-text] transition-colors group-hover:text-[--color-primary]">
-                  {task.title}
-                </h3>
+                <div className="flex items-center gap-2 flex-1">
+                  <h3 className="text-lg font-semibold line-clamp-2 text-[--color-text] transition-colors group-hover:text-[--color-primary]">
+                    {task.title}
+                  </h3>
+                  {task.taskCategory === 'multi-level' && (
+                    <span className="px-2 py-0.5 bg-gradient-to-r from-purple-500 to-indigo-600 text-white text-xs font-bold rounded-full flex-shrink-0">
+                      MLT
+                    </span>
+                  )}
+                  {task.taskCategory === 'date-range' && (
+                    <span className="px-2 py-0.5 bg-gradient-to-r from-blue-500 to-cyan-600 text-white text-xs font-bold rounded-full flex-shrink-0">
+                      DATE-RANGE
+                    </span>
+                  )}
+                </div>
                 {(user?.role !== 'admin' || user?.role === 'pc') && (
                   <div className="flex space-x-2 ml-2 opacity-0 group-hover:opacity-100 transition-opacity">
                     <button
@@ -624,7 +644,13 @@ const PendingTasks: React.FC = () => {
                       <span className="hidden sm:inline">In Progress</span>
                     </button>
                     <button
-                      onClick={() => setShowCompleteModal(task._id)}
+                      onClick={() => {
+                        if (task.taskCategory === 'multi-level') {
+                          setShowMLTCompleteModal(task);
+                        } else {
+                          setShowCompleteModal(task._id);
+                        }
+                      }}
                       className="px-3 py-2 rounded-lg transition-all transform hover:scale-105 bg-green-50 hover:bg-green-500 text-green-600 hover:text-white border border-green-300 hover:border-green-600 font-medium text-xs flex items-center gap-1"
                       title="Complete task"
                     >
@@ -678,6 +704,12 @@ const PendingTasks: React.FC = () => {
                   </button>
                 )}
               </p>
+
+              {task.inProgressRemarks && (
+                <div className="mb-3 text-xs text-[--color-textSecondary] bg-blue-50 dark:bg-blue-900/20 px-3 py-2 rounded-lg border border-blue-200 dark:border-blue-800">
+                  <span className="font-semibold text-blue-700 dark:text-blue-300">In Progress: </span>{task.inProgressRemarks}
+                </div>
+              )}
 
               <div className="space-y-3 text-sm">
                 <div className={`flex items-center justify-between p-2 rounded-lg ${theme === 'light' ? 'bg-gray-50' : 'bg-[--color-background]'}`}>
@@ -828,6 +860,11 @@ const PendingTasks: React.FC = () => {
                           </span>
                         )}
                       </div>
+                      {task.inProgressRemarks && (
+                        <div className="mt-2 text-xs text-[--color-textSecondary] bg-blue-50 dark:bg-blue-900/20 px-2 py-1 rounded border border-blue-200 dark:border-blue-800">
+                          <span className="font-semibold">In Progress: </span>{task.inProgressRemarks}
+                        </div>
+                      )}
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
@@ -1081,7 +1118,7 @@ const PendingTasks: React.FC = () => {
                   options={users.map(member => ({ label: member.username, value: member._id }))}
                   placeholder="All Members"
                   value={filter.assignedTo}
-                  onChange={(selected) => setFilter({ ...filter, assignedTo: selected?.value || '' })}
+                  onChange={(value) => setFilter({ ...filter, assignedTo: value })}
                 />
               </div>
             )}
@@ -1275,6 +1312,17 @@ const PendingTasks: React.FC = () => {
           mandatoryRemarks={taskSettings.pendingTasks.mandatoryRemarks}
           onClose={() => setShowCompleteModal(null)}
           onComplete={handleTaskCompletion}
+        />
+      )}
+
+      {/* Multi-Level Task Completion Modal */}
+      {showMLTCompleteModal && (
+        <MultiLevelTaskCompletionModal
+          taskId={showMLTCompleteModal._id}
+          task={showMLTCompleteModal}
+          onClose={() => setShowMLTCompleteModal(null)}
+          onComplete={handleTaskCompletion}
+          isDark={theme === 'dark'}
         />
       )}
 

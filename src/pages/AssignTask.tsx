@@ -1,13 +1,14 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { UserPlus, Calendar, Paperclip, X, Users, CheckSquare, Hash, ChevronDown, Search, Volume2 } from 'lucide-react';
+import { 
+  Calendar, Paperclip, X, Users, CheckSquare, Plus, CheckCircle
+} from 'lucide-react';
 import axios from 'axios';
 import { useTheme } from '../contexts/ThemeContext';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import VoiceRecorder from '../components/VoiceRecorder';
 import { address } from '../../utils/ipAddress';
-import SearchableSelect from '../components/SearchableSelect'; // Import SearchableSelect
 
 // Add ref type for VoiceRecorder
 interface VoiceRecorderRef {
@@ -18,8 +19,8 @@ interface User {
   _id: string;
   username: string;
   email: string;
-  phoneNumber?: string; // Added phoneNumber to User interface
-  role?: string; // Added role to User interface for SearchableSelect display
+  phoneNumber?: string;
+  role?: string;
 }
 
 const AssignTask: React.FC = () => {
@@ -29,6 +30,7 @@ const AssignTask: React.FC = () => {
   const [formData, setFormData] = useState({
     title: '',
     description: '',
+    taskCategory: 'regular' as 'regular' | 'multi-level' | 'date-range',
     taskType: 'one-time',
     assignedTo: [] as string[],
     priority: 'normal',
@@ -40,19 +42,16 @@ const AssignTask: React.FC = () => {
     weeklyDays: [] as number[],
     monthlyDay: 1,
     yearlyDuration: 3,
-    requireAttachments: false,
-    mandatoryAttachments: false
+    mandatoryAttachments: false,
+    requiresChecklist: false,
+    checklistItems: [] as Array<{ id: string; text: string; completed: boolean }>
   });
   const [attachments, setAttachments] = useState<File[]>([]);
   const [loading, setLoading] = useState(false);
-  const [message, setMessage] = useState({ type: '', text: '' });
-
-  // New states for dropdown
+  const [newChecklistItem, setNewChecklistItem] = useState('');
   const [showUserDropdown, setShowUserDropdown] = useState(false);
   const [userSearchTerm, setUserSearchTerm] = useState('');
   const dropdownRef = useRef<HTMLDivElement>(null);
-
-  // Ref for date inputs to programmatically open calendar
   const dueDateInputRef = useRef<HTMLInputElement>(null);
   const startDateInputRef = useRef<HTMLInputElement>(null);
   const endDateInputRef = useRef<HTMLInputElement>(null);
@@ -74,43 +73,23 @@ const AssignTask: React.FC = () => {
     fetchUsers();
   }, []);
 
-  // Effect to close dropdown on outside click
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
         setShowUserDropdown(false);
       }
     };
-
     document.addEventListener('mousedown', handleClickOutside);
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, [dropdownRef]);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   const fetchUsers = async () => {
     try {
-      console.log(`📍 Fetching users from: ${address}/api/users`);
       const response = await axios.get(`${address}/api/users`);
-      console.log('✅ Users fetched:', response.data);
-
-      if (!response.data || response.data.length === 0) {
-        console.warn('⚠️  No users returned from API');
-        setUsers([]);
-        return;
-      }
-
-      // Allow everyone to assign tasks to themselves as well
-      const filteredUsers = response.data;
-      console.log(`✅ Filtered users (${filteredUsers.length}):`, filteredUsers);
-      setUsers(filteredUsers);
+      setUsers(response.data);
     } catch (error) {
-      console.error('❌ Error fetching users:', error);
-      if (axios.isAxiosError(error)) {
-        console.error('Response status:', error.response?.status);
-        console.error('Response data:', error.response?.data);
-      }
-      toast.error('Failed to fetch users. Check console for details.', { theme: isDark ? 'dark' : 'light' });
+      console.error('Error fetching users:', error);
+      toast.error('Failed to fetch users', { theme: isDark ? 'dark' : 'light' });
     }
   };
 
@@ -119,17 +98,7 @@ const AssignTask: React.FC = () => {
     setFormData(prev => ({
       ...prev,
       ...(type === 'checkbox'
-        ? name === 'requireAttachments'
-          ? {
-              requireAttachments: (e.target as HTMLInputElement).checked,
-              mandatoryAttachments: (e.target as HTMLInputElement).checked ? prev.mandatoryAttachments : false
-            }
-          : name === 'mandatoryAttachments'
-            ? {
-                mandatoryAttachments: (e.target as HTMLInputElement).checked,
-                requireAttachments: (e.target as HTMLInputElement).checked ? true : prev.requireAttachments
-              }
-            : { [name]: (e.target as HTMLInputElement).checked }
+        ? { [name]: (e.target as HTMLInputElement).checked }
         : name === 'monthlyDay'
           ? { monthlyDay: parseInt(value, 10) }
           : name === 'yearlyDuration'
@@ -139,11 +108,41 @@ const AssignTask: React.FC = () => {
   };
 
   const handleUserSelection = (userId: string) => {
+    setFormData(prev => {
+      if (prev.taskCategory === 'multi-level') {
+        return {
+          ...prev,
+          assignedTo: prev.assignedTo.includes(userId) ? [] : [userId]
+        };
+      }
+      return {
+        ...prev,
+        assignedTo: prev.assignedTo.includes(userId)
+          ? prev.assignedTo.filter(id => id !== userId)
+          : [...prev.assignedTo, userId]
+      };
+    });
+  };
+
+  const handleAddChecklistItem = () => {
+    if (newChecklistItem.trim()) {
+      const newItem = {
+        id: Date.now().toString(),
+        text: newChecklistItem.trim(),
+        completed: false
+      };
+      setFormData(prev => ({
+        ...prev,
+        checklistItems: [...prev.checklistItems, newItem]
+      }));
+      setNewChecklistItem('');
+    }
+  };
+
+  const handleRemoveChecklistItem = (id: string) => {
     setFormData(prev => ({
       ...prev,
-      assignedTo: prev.assignedTo.includes(userId)
-        ? prev.assignedTo.filter(id => id !== userId)
-        : [...prev.assignedTo, userId]
+      checklistItems: prev.checklistItems.filter(item => item.id !== id)
     }));
   };
 
@@ -157,196 +156,98 @@ const AssignTask: React.FC = () => {
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(e.target.files || []);
-    const validFiles = files.filter(file => file.size <= 10 * 1024 * 1024); // 10MB limit
-
-    if (validFiles.length !== files.length) {
-      toast.error('Some files were too large (max 10MB per file).', { theme: isDark ? 'dark' : 'light' });
+    if (e.target.files) {
+      const selectedFiles = Array.from(e.target.files);
+      const validFiles = selectedFiles.filter(file => file.size <= 10 * 1024 * 1024);
+      if (validFiles.length !== selectedFiles.length) {
+        toast.warning('Some files exceeded 10MB limit', { theme: isDark ? 'dark' : 'light' });
+      }
+      setAttachments(prev => [...prev, ...validFiles]);
     }
-
-    setAttachments(prev => [...prev, ...validFiles]);
-  };
-
-  const handleVoiceRecordingComplete = (audioFile: File) => {
-    setAttachments(prev => [...prev, audioFile]);
-    toast.success('Voice recording added to attachments!', { theme: isDark ? 'dark' : 'light' });
-  };
-
-  const handleVoiceRecordingDeleted = (fileName: string) => {
-    setAttachments(prev => prev.filter(file => file.name !== fileName));
   };
 
   const removeAttachment = (index: number) => {
     setAttachments(prev => prev.filter((_, i) => i !== index));
   };
 
-  const isAudioFile = (file: File) => {
-    return file.type.startsWith('audio/') || file.name.includes('voice-recording');
+  const handleVoiceRecordingComplete = (audioFile: File) => {
+    setAttachments(prev => [...prev, audioFile]);
   };
 
-  // Helper function to calculate expected number of yearly tasks
-  const calculateYearlyTasks = () => {
-    if (formData.taskType !== 'yearly' || !formData.startDate) return 0;
-
-    if (!formData.isForever) {
-      return 1; // Single yearly task
-    }
-
-    return formData.yearlyDuration; // Exact number of years selected
+  const handleVoiceRecordingDeleted = (fileName: string) => {
+    setAttachments(prev => prev.filter(file => file.name !== fileName));
   };
 
-  // Helper function to preview yearly task dates
-  const getYearlyTaskPreview = () => {
-    if (formData.taskType !== 'yearly' || !formData.startDate) return [];
-
-    const startDate = new Date(formData.startDate);
-    const tasks = [];
-
-    const count = formData.isForever ? formData.yearlyDuration : 1;
-
-    for (let i = 0; i < count; i++) {
-      const taskDate = new Date(startDate);
-      taskDate.setFullYear(startDate.getFullYear() + i);
-
-      // Handle Sunday exclusion
-      if (!formData.includeSunday && taskDate.getDay() === 0) {
-        taskDate.setDate(taskDate.getDate() - 1); // Move to Saturday
-      }
-
-      tasks.push(taskDate);
-    }
-
-    return tasks;
-  };
-
-  // Helper function to preview quarterly task dates
-  const getQuarterlyTaskPreview = () => {
-    if (formData.taskType !== 'quarterly' || !formData.startDate) return [];
-
-    const startDate = new Date(formData.startDate);
-    const tasks = [];
-
-    // Create 4 quarterly tasks
-    for (let i = 0; i < 4; i++) {
-      const taskDate = new Date(startDate);
-      taskDate.setMonth(startDate.getMonth() + (i * 3)); // Add 3 months for each quarter
-
-      // Handle Sunday exclusion
-      if (!formData.includeSunday && taskDate.getDay() === 0) {
-        taskDate.setDate(taskDate.getDate() - 1); // Move to Saturday
-      }
-
-      tasks.push(taskDate);
-    }
-
-    return tasks;
-  };
+  const isRecurring = formData.taskType !== 'one-time';
+  const isWeekly = formData.taskType === 'weekly';
+  const isMonthly = formData.taskType === 'monthly';
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
-
-    // Validation
+    
     if (formData.assignedTo.length === 0) {
-      toast.error('Please select at least one user to assign the task to.', { theme: isDark ? 'dark' : 'light' });
-      setLoading(false);
+      toast.error('Please select at least one user', { theme: isDark ? 'dark' : 'light' });
       return;
     }
 
-    if (formData.taskType === 'weekly' && formData.weeklyDays.length === 0) {
-      toast.error('Please select at least one day for weekly tasks.', { theme: isDark ? 'dark' : 'light' });
-      setLoading(false);
+    if (formData.taskCategory === 'date-range' && (!formData.startDate || !formData.endDate)) {
+      toast.error('Please select both start and end dates for date-range tasks', { theme: isDark ? 'dark' : 'light' });
       return;
     }
 
-    // Validate dates for recurring tasks
-    if (formData.taskType !== 'one-time') {
-      // For yearly and quarterly tasks, only validate start date
-      if (formData.taskType === 'yearly' || formData.taskType === 'quarterly') {
-        if (!formData.startDate) {
-          toast.error(`Please select start date for ${formData.taskType} tasks.`, { theme: isDark ? 'dark' : 'light' });
-          setLoading(false);
-          return;
-        }
-      }
-      // For other recurring tasks (daily, weekly, monthly), validate based on isForever
-      else if (!formData.isForever) {
-        if (!formData.startDate || !formData.endDate) {
-          toast.error('Please select both start and end dates for recurring tasks.', { theme: isDark ? 'dark' : 'light' });
-          setLoading(false);
-          return;
-        }
-
-        if (new Date(formData.startDate) >= new Date(formData.endDate)) {
-          toast.error('End date must be after start date.', { theme: isDark ? 'dark' : 'light' });
-          setLoading(false);
-          return;
-        }
-      }
-      // For forever tasks (non-yearly and non-quarterly), only validate start date
-      else if (formData.taskType !== 'yearly' && formData.taskType !== 'quarterly' && !formData.startDate) {
-        toast.error('Please select start date for recurring tasks.', { theme: isDark ? 'dark' : 'light' });
-        setLoading(false);
-        return;
-      }
+    if (isRecurring && (!formData.startDate || (!formData.endDate && !formData.isForever))) {
+      toast.error('Please select start and end dates for recurring tasks', { theme: isDark ? 'dark' : 'light' });
+      return;
     }
 
+    if (isWeekly && formData.weeklyDays.length === 0) {
+      toast.error('Please select at least one day for weekly tasks', { theme: isDark ? 'dark' : 'light' });
+      return;
+    }
+
+    setLoading(true);
     try {
-      // Upload attachments first
       let uploadedAttachments: any[] = [];
+
       if (attachments.length > 0) {
         const formDataFiles = new FormData();
         attachments.forEach(file => {
-          formDataFiles.append('files', file); // Use 'files' to match backend
+          formDataFiles.append('files', file);
         });
         const uploadResponse = await axios.post(`${address}/api/upload`, formDataFiles, {
           headers: { 'Content-Type': 'multipart/form-data' }
         });
-        // The backend returns { files: [...] }
         uploadedAttachments = uploadResponse.data.files || [];
       }
 
-      // Create tasks for each selected user
       const taskPromises = formData.assignedTo.map(async (assignedUserId) => {
         const taskData = {
           ...formData,
-          assignedTo: assignedUserId, // Single user per task
+          assignedTo: assignedUserId,
           assignedBy: user?.id,
           attachments: uploadedAttachments,
-          requireAttachments: formData.requireAttachments,
-          mandatoryAttachments: formData.requireAttachments ? formData.mandatoryAttachments : false,
-          // For yearly and quarterly tasks, ensure proper date handling
+          requireAttachments: formData.mandatoryAttachments,
+          mandatoryAttachments: formData.mandatoryAttachments,
           ...((formData.taskType === 'yearly' || formData.taskType === 'quarterly') && !formData.isForever && {
             endDate: formData.startDate
           })
         };
-
-        console.log('Sending task data:', taskData); // Debug log
         return axios.post(`${address}/api/tasks/create-scheduled`, taskData);
       });
 
       const results = await Promise.all(taskPromises);
-
-      // Calculate total tasks created
       const totalTasksCreated = results.reduce((sum, result) => sum + result.data.tasksCreated, 0);
-      const userCount = formData.assignedTo.length;
-      const uploadedAttachmentCount = uploadedAttachments.length;
-      const voiceRecordingCount = attachments.filter(isAudioFile).length;
-
-      let successMessage = `Successfully created ${totalTasksCreated} task${totalTasksCreated > 1 ? 's' : ''} for ${userCount} user${userCount > 1 ? 's' : ''}.`;
-      if (uploadedAttachmentCount > 0) {
-        successMessage += ` (${uploadedAttachmentCount} attachment${uploadedAttachmentCount > 1 ? 's' : ''} uploaded`;
-        if (voiceRecordingCount > 0) {
-          successMessage += `, including ${voiceRecordingCount} voice recording${voiceRecordingCount > 1 ? 's' : ''}`;
-        }
-        successMessage += ')';
-      }
-      toast.success(successMessage, { theme: isDark ? 'dark' : 'light' });
+      
+      toast.success(
+        `✨ Successfully created ${totalTasksCreated} task${totalTasksCreated > 1 ? 's' : ''} for ${formData.assignedTo.length} user${formData.assignedTo.length > 1 ? 's' : ''}!`,
+        { theme: isDark ? 'dark' : 'light', autoClose: 5000 }
+      );
 
       // Reset form
       setFormData({
         title: '',
         description: '',
+        taskCategory: 'regular',
         taskType: 'one-time',
         assignedTo: [],
         priority: 'normal',
@@ -358,18 +259,18 @@ const AssignTask: React.FC = () => {
         weeklyDays: [],
         monthlyDay: 1,
         yearlyDuration: 3,
-        requireAttachments: false,
-        mandatoryAttachments: false
+        mandatoryAttachments: false,
+        requiresChecklist: false,
+        checklistItems: []
       });
       setAttachments([]);
+      setNewChecklistItem('');
       setUserSearchTerm('');
       setShowUserDropdown(false);
 
-      // Reset voice recorder
       if (voiceRecorderRef.current) {
         voiceRecorderRef.current.resetFromParent();
       }
-
     } catch (error) {
       console.error('Error creating task:', error);
       toast.error('Failed to assign task. Please try again.', { theme: isDark ? 'dark' : 'light' });
@@ -378,471 +279,381 @@ const AssignTask: React.FC = () => {
     }
   };
 
-  const isRecurring = formData.taskType !== 'one-time';
-  const isWeekly = formData.taskType === 'weekly';
-  const isMonthly = formData.taskType === 'monthly';
-  const isYearly = formData.taskType === 'yearly';
-  const isQuarterly = formData.taskType === 'quarterly';
-
-  const getSelectedUsers = () => {
-    return users.filter(u => formData.assignedTo.includes(u._id));
-  };
-
-  // Filtered users for the dropdown
-  const filteredUsers = users.filter(userItem =>
-    userItem.username.toLowerCase().includes(userSearchTerm.toLowerCase()) ||
-    userItem.email.toLowerCase().includes(userSearchTerm.toLowerCase()) ||
-    userItem.phoneNumber?.toLowerCase().includes(userSearchTerm.toLowerCase()) // Added phone number search
+  const filteredUsers = users.filter(u =>
+    u.username.toLowerCase().includes(userSearchTerm.toLowerCase()) ||
+    u.email.toLowerCase().includes(userSearchTerm.toLowerCase()) ||
+    u.phoneNumber?.includes(userSearchTerm)
   );
 
-  const resetForm = () => {
-    setFormData({
-      title: '',
-      description: '',
-      taskType: 'one-time',
-      assignedTo: [],
-      priority: 'normal',
-      dueDate: '',
-      startDate: '',
-      endDate: '',
-      isForever: false,
-      includeSunday: false,
-      weeklyDays: [],
-      monthlyDay: 1,
-      yearlyDuration: 3,
-      requireAttachments: false,
-      mandatoryAttachments: false
-    });
-    setAttachments([]);
-    setMessage({ type: '', text: '' });
-    setUserSearchTerm('');
-    setShowUserDropdown(false);
-
-    // Reset voice recorder
-    if (voiceRecorderRef.current) {
-      voiceRecorderRef.current.resetFromParent();
-    }
-  };
-
-  // Function to open the date picker
-  const openDatePicker = (ref: React.RefObject<HTMLInputElement>) => {
-    if (ref.current && typeof ref.current.showPicker === 'function') {
-      ref.current.showPicker();
-    }
-  };
+  const selectedUsers = users.filter(u => formData.assignedTo.includes(u._id));
 
   return (
-    <div className={`min-h-screen ${isDark ? 'bg-gray-900' : 'bg-gradient-to-br from-blue-50 via-white to-purple-50'} pb-8`}>
-      <div className="max-w-6xl mx-auto px-4 py-6 space-y-6">
+    <div className="min-h-screen p-8" style={{ backgroundColor: isDark ? '#0f1117' : '#f9fafb' }}>
+      <ToastContainer />
+      
+      {/* Header */}
+      <div className="max-w-3xl mx-auto mb-8">
+        <h1 className="text-4xl font-bold mb-2" style={{ color: isDark ? '#ffffff' : '#111827' }}>
+          Assign New Task
+        </h1>
+        <p style={{ color: isDark ? '#9ca3af' : '#6b7280' }}>
+          Create and delegate tasks with precision
+        </p>
+      </div>
 
-        {/* Compact Header */}
-        <div className="relative overflow-hidden rounded-2xl shadow-md" style={{ background: 'linear-gradient(135deg, var(--color-primary) 0%, var(--color-secondary) 100%)' }}>
-          <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-16 -mt-16"></div>
-          <div className="absolute bottom-0 left-0 w-24 h-24 bg-white/10 rounded-full -ml-12 -mb-12"></div>
-
-          <div className="relative p-5 md:p-6">
-            <div className="flex items-center gap-3">
-              <div className="p-3 bg-white/20 backdrop-blur-sm rounded-xl">
-                <UserPlus size={24} className="text-white" />
+      {/* Main Form */}
+      <form onSubmit={handleSubmit} className="max-w-3xl mx-auto">
+        <div className="rounded-xl shadow-sm overflow-hidden" style={{
+          backgroundColor: isDark ? '#1a1d29' : '#ffffff',
+          border: `1px solid ${isDark ? 'rgba(255, 255, 255, 0.1)' : '#e5e7eb'}`
+        }}>
+          
+          {/* Section 1: Task Basics */}
+          <div className="p-8" style={{
+            borderBottom: `1px solid ${isDark ? 'rgba(255, 255, 255, 0.1)' : '#e5e7eb'}`
+          }}>
+            <div className="flex items-center gap-3 mb-6">
+              <div className="w-8 h-8 bg-blue-600 text-white rounded-full flex items-center justify-center font-semibold">
+                1
               </div>
               <div>
-                <h1 className="text-2xl md:text-3xl font-bold text-white">Assign Task</h1>
-                <p className="text-white/85 text-xs md:text-sm mt-0.5">Create and distribute tasks to your team</p>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Toast Messages */}
-        {message.text && (
-          <div
-            className={`p-4 rounded-xl border-l-4 flex items-start gap-3 backdrop-blur-sm ${
-              message.type === 'success'
-                ? 'bg-gradient-to-r from-green-50 to-green-50/50 text-green-800 border-green-500 dark:from-green-500/10 dark:to-green-500/5 dark:text-green-300'
-                : 'bg-gradient-to-r from-red-50 to-red-50/50 text-red-800 border-red-500 dark:from-red-500/10 dark:to-red-500/5 dark:text-red-300'
-            }`}
-          >
-            <div className="mt-0.5">
-              {message.type === 'success' ? (
-                <CheckSquare size={18} className="text-green-600 dark:text-green-300" />
-              ) : (
-                <X size={18} className="text-red-600 dark:text-red-300" />
-              )}
-            </div>
-            <div>
-              <p className="font-semibold text-sm">{message.type === 'success' ? 'Success!' : 'Error'}</p>
-              <p className="text-xs mt-1">{message.text}</p>
-            </div>
-          </div>
-        )}
-
-        <form onSubmit={handleSubmit} className="space-y-5">
-
-          {/* Task Basics Card */}
-          <div className={`rounded-2xl border overflow-hidden transition-all shadow-sm hover:shadow-md ${
-            isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-100'
-          }`}>
-            <div className="p-5 md:p-6">
-              <div className="flex items-center gap-3 mb-5">
-                <div className="p-2 rounded-lg" style={{ backgroundColor: 'var(--color-primary)12' }}>
-                  <CheckSquare size={20} style={{ color: 'var(--color-primary)' }} />
-                </div>
-                <h2 className={`text-lg font-semibold ${isDark ? 'text-gray-100' : 'text-gray-900'}`}>
+                <h2 className="text-lg font-semibold" style={{ color: isDark ? '#ffffff' : '#111827' }}>
                   Task Basics
                 </h2>
+                <p className="text-sm" style={{ color: isDark ? '#9ca3af' : '#6b7280' }}>
+                  Define the core details of your task
+                </p>
+              </div>
+            </div>
+
+            <div className="space-y-5">
+              <div>
+                <label className="block text-sm font-medium mb-1.5" style={{ color: isDark ? '#e5e7eb' : '#374151' }}>
+                  Task Title *
+                </label>
+                <input
+                  type="text"
+                  name="title"
+                  value={formData.title}
+                  onChange={handleInputChange}
+                  required
+                  placeholder="Enter a clear and concise task title..."
+                  className="w-full px-4 py-2.5 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                  style={{
+                    backgroundColor: isDark ? '#0f1117' : '#ffffff',
+                    border: `1px solid ${isDark ? 'rgba(255, 255, 255, 0.1)' : '#d1d5db'}`,
+                    color: isDark ? '#ffffff' : '#111827'
+                  }}
+                />
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                {/* Task Title */}
-                <div className="md:col-span-2">
-                  <label className={`block text-sm font-semibold mb-2 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
-                    Task Title <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    name="title"
-                    value={formData.title}
-                    onChange={handleInputChange}
-                    required
-                    className={`w-full px-4 py-3 border-2 rounded-xl focus:ring-2 focus:ring-[var(--color-primary)]/30 focus:border-[var(--color-primary)] transition-all font-medium ${
-                      isDark
-                        ? 'bg-gray-700 border-gray-600 text-gray-100 placeholder-gray-400'
-                        : 'bg-gray-50 border-gray-200 text-gray-900 placeholder-gray-500 focus:bg-white'
-                    }`}
-                    placeholder="Enter a clear task title"
-                  />
-                </div>
+              <div>
+                <label className="block text-sm font-medium mb-1.5" style={{ color: isDark ? '#e5e7eb' : '#374151' }}>
+                  Description
+                </label>
+                <textarea
+                  name="description"
+                  value={formData.description}
+                  onChange={handleInputChange}
+                  rows={3}
+                  placeholder="Provide detailed instructions and context for this task..."
+                  className="w-full px-4 py-2.5 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all resize-none"
+                  style={{
+                    backgroundColor: isDark ? '#0f1117' : '#ffffff',
+                    border: `1px solid ${isDark ? 'rgba(255, 255, 255, 0.1)' : '#d1d5db'}`,
+                    color: isDark ? '#ffffff' : '#111827'
+                  }}
+                />
+              </div>
 
-                {/* Task Type */}
+              <div className="grid grid-cols-3 gap-4">
                 <div>
-                  <label className={`block text-sm font-semibold mb-2 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
-                    Task Type <span className="text-red-500">*</span>
+                  <label className="block text-sm font-medium mb-1.5" style={{ color: isDark ? '#e5e7eb' : '#374151' }}>
+                    Category *
                   </label>
-                  <div className="relative">
-                    <select
-                      name="taskType"
-                      value={formData.taskType}
-                      onChange={handleInputChange}
-                      required
-                      className={`w-full px-4 py-3 border-2 rounded-xl focus:ring-2 focus:ring-[var(--color-primary)]/30 focus:border-[var(--color-primary)] transition-all font-medium appearance-none ${
-                        isDark
-                          ? 'bg-gray-700 border-gray-600 text-gray-100'
-                          : 'bg-gray-50 border-gray-200 text-gray-900 focus:bg-white'
-                      }`}
-                    >
-                      <option value="one-time">One Time</option>
-                      <option value="daily">Daily</option>
-                      <option value="weekly">Weekly</option>
-                      <option value="monthly">Monthly</option>
-                      <option value="quarterly">Quarterly</option>
-                      <option value="yearly">Yearly</option>
-                    </select>
-                    <ChevronDown size={18} className={`absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none ${isDark ? 'text-gray-400' : 'text-gray-600'}`} />
-                  </div>
+                  <select
+                    name="taskCategory"
+                    value={formData.taskCategory}
+                    onChange={(e) => {
+                      const category = e.target.value as 'regular' | 'multi-level' | 'date-range';
+                      setFormData(prev => ({
+                        ...prev,
+                        taskCategory: category,
+                        assignedTo: category === 'multi-level' && prev.assignedTo.length > 1 ? [prev.assignedTo[0]] : prev.assignedTo,
+                        taskType: category === 'date-range' ? 'one-time' : prev.taskType
+                      }));
+                    }}
+                    className="w-full px-4 py-2.5 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                    style={{
+                      backgroundColor: isDark ? '#0f1117' : '#ffffff',
+                      border: `1px solid ${isDark ? 'rgba(255, 255, 255, 0.1)' : '#d1d5db'}`,
+                      color: isDark ? '#ffffff' : '#111827'
+                    }}
+                  >
+                    <option value="regular">Regular</option>
+                    <option value="multi-level">Multi-Level</option>
+                    <option value="date-range">Date Range</option>
+                  </select>
                 </div>
-
-                {/* Priority */}
                 <div>
-                  <label className={`block text-sm font-semibold mb-2 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
-                    Priority Level
+                  <label className="block text-sm font-medium mb-1.5" style={{ color: isDark ? '#e5e7eb' : '#374151' }}>
+                    Priority *
                   </label>
-                  <div className="relative">
-                    <select
-                      name="priority"
-                      value={formData.priority}
-                      onChange={handleInputChange}
-                      className={`w-full px-4 py-3 border-2 rounded-xl focus:ring-2 focus:ring-[var(--color-primary)]/30 focus:border-[var(--color-primary)] transition-all font-medium appearance-none ${
-                        isDark
-                          ? 'bg-gray-700 border-gray-600 text-gray-100'
-                          : 'bg-gray-50 border-gray-200 text-gray-900 focus:bg-white'
-                      }`}
-                    >
-                      <option value="normal">Normal</option>
-                      <option value="high">High</option>
-                    </select>
-                    <ChevronDown size={18} className={`absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none ${isDark ? 'text-gray-400' : 'text-gray-600'}`} />
-                  </div>
-                </div>
-
-                {/* Description */}
-                <div className="md:col-span-2">
-                  <label className={`block text-sm font-semibold mb-2 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
-                    Description
-                  </label>
-                  <textarea
-                    name="description"
-                    value={formData.description}
+                  <select
+                    name="priority"
+                    value={formData.priority}
                     onChange={handleInputChange}
-                    rows={3}
-                    className={`w-full px-4 py-3 border-2 rounded-xl focus:ring-2 focus:ring-[var(--color-primary)]/30 focus:border-[var(--color-primary)] transition-all resize-none font-medium ${
-                      isDark
-                        ? 'bg-gray-700 border-gray-600 text-gray-100 placeholder-gray-400'
-                        : 'bg-gray-50 border-gray-200 text-gray-900 placeholder-gray-500 focus:bg-white'
-                    }`}
-                    placeholder="Provide task instructions"
-                  />
+                    className="w-full px-4 py-2.5 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                    style={{
+                      backgroundColor: isDark ? '#0f1117' : '#ffffff',
+                      border: `1px solid ${isDark ? 'rgba(255, 255, 255, 0.1)' : '#d1d5db'}`,
+                      color: isDark ? '#ffffff' : '#111827'
+                    }}
+                  >
+                    <option value="normal">Normal</option>
+                    <option value="high">High</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1.5" style={{ color: isDark ? '#e5e7eb' : '#374151' }}>
+                    Type *
+                  </label>
+                  <select
+                    name="taskType"
+                    value={formData.taskType}
+                    onChange={handleInputChange}
+                    disabled={formData.taskCategory === 'date-range'}
+                    className="w-full px-4 py-2.5 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all disabled:opacity-50"
+                    style={{
+                      backgroundColor: isDark ? '#0f1117' : '#ffffff',
+                      border: `1px solid ${isDark ? 'rgba(255, 255, 255, 0.1)' : '#d1d5db'}`,
+                      color: isDark ? '#ffffff' : '#111827'
+                    }}
+                  >
+                    <option value="one-time">One Time</option>
+                    <option value="daily">Daily</option>
+                    <option value="weekly">Weekly</option>
+                    <option value="monthly">Monthly</option>
+                    <option value="quarterly">Quarterly</option>
+                    <option value="yearly">Yearly</option>
+                  </select>
                 </div>
               </div>
             </div>
           </div>
 
-          {/* Assignment & Scheduling Card */}
-          <div className={`rounded-2xl border transition-all shadow-sm hover:shadow-md ${
-            isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-100'
-          }`}>
-            <div className="p-5 md:p-6">
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-
-                {/* User Assignment */}
-                <div className="lg:col-span-2">
-                  <div className="flex items-center gap-3 mb-4">
-                    <div className="p-2 rounded-lg" style={{ backgroundColor: 'var(--color-primary)12' }}>
-                      <Users size={20} style={{ color: 'var(--color-primary)' }} />
-                    </div>
-                    <h2 className={`text-lg font-semibold ${isDark ? 'text-gray-100' : 'text-gray-900'}`}>
-                      Assign To Users <span className="text-red-500">*</span>
-                    </h2>
-                  </div>
-
-                  {/* Custom Multi-Select with Search */}
-                  <div className="relative" ref={dropdownRef}>
-                    <label className={`block text-sm font-semibold mb-2 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
-                      Select Users <span className="text-red-500">*</span>
-                    </label>
-                    
-                    {/* Search Input */}
-                    <div className="relative">
-                      <Search size={18} className={`absolute left-3 top-1/2 -translate-y-1/2 ${isDark ? 'text-gray-400' : 'text-gray-600'}`} />
-                      <input
-                        type="text"
-                        placeholder="Search users by name, email, or phone..."
-                        value={userSearchTerm}
-                        onChange={(e) => setUserSearchTerm(e.target.value)}
-                        onFocus={() => setShowUserDropdown(true)}
-                        className={`w-full pl-10 pr-4 py-3 border-2 rounded-xl focus:ring-2 focus:ring-[var(--color-primary)]/30 focus:border-[var(--color-primary)] transition-all font-medium ${
-                          isDark
-                            ? 'bg-gray-700 border-gray-600 text-gray-100 placeholder-gray-400'
-                            : 'bg-gray-50 border-gray-200 text-gray-900 placeholder-gray-500 focus:bg-white'
-                        }`}
-                      />
-                      <ChevronDown size={18} className={`absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none transition-transform ${showUserDropdown ? 'rotate-180' : ''} ${isDark ? 'text-gray-400' : 'text-gray-600'}`} />
-                    </div>
-
-                    {/* Dropdown */}
-                    {showUserDropdown && (
-                      <div className={`absolute z-50 mt-2 w-full max-h-64 overflow-y-auto rounded-xl border-2 shadow-lg ${
-                        isDark ? 'bg-gray-700 border-gray-600' : 'bg-white border-gray-200'
-                      }`}>
-                        {filteredUsers.length > 0 ? (
-                          filteredUsers.map(userItem => (
-                            <div
-                              key={userItem._id}
-                              onClick={() => handleUserSelection(userItem._id)}
-                              className={`px-4 py-3 cursor-pointer transition-all border-b last:border-b-0 ${
-                                formData.assignedTo.includes(userItem._id)
-                                  ? 'bg-[var(--color-primary)] text-white'
-                                  : (isDark ? 'hover:bg-gray-600 border-gray-600' : 'hover:bg-gray-50 border-gray-100')
-                              }`}
-                            >
-                              <div className="flex items-center justify-between">
-                                <div>
-                                  <div className="font-medium">{userItem.username}</div>
-                                  <div className={`text-sm ${formData.assignedTo.includes(userItem._id) ? 'text-white/80' : (isDark ? 'text-gray-400' : 'text-gray-600')}`}>
-                                    {userItem.email}
-                                  </div>
-                                  {userItem.phoneNumber && (
-                                    <div className={`text-xs ${formData.assignedTo.includes(userItem._id) ? 'text-white/70' : (isDark ? 'text-gray-500' : 'text-gray-500')}`}>
-                                      {userItem.phoneNumber}
-                                    </div>
-                                  )}
-                                </div>
-                                {formData.assignedTo.includes(userItem._id) && (
-                                  <CheckSquare size={18} className="flex-shrink-0 ml-2" />
-                                )}
-                              </div>
-                            </div>
-                          ))
-                        ) : (
-                          <div className={`px-4 py-3 text-center ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
-                            No users found
-                          </div>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                {/* Selected Users Summary */}
-                <div className={`rounded-xl border-2 p-4 ${isDark ? 'bg-gray-700 border-gray-600' : 'bg-gradient-to-br from-blue-50 to-blue-50/50 border-blue-200'}`}>
-                  <div className="flex items-center gap-2 mb-3">
-                    <Users size={16} style={{ color: 'var(--color-primary)' }} />
-                    <p className="font-semibold text-sm" style={{ color: 'var(--color-primary)' }}>
-                      {formData.assignedTo.length} Selected
-                    </p>
-                  </div>
-                  <div className="space-y-2 max-h-32 overflow-y-auto">
-                    {formData.assignedTo.length === 0 ? (
-                      <p className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-                        Select users
-                      </p>
-                    ) : (
-                      getSelectedUsers().map(selectedUser => (
-                        <div key={selectedUser._id} className={`flex items-center justify-between p-2 rounded-lg text-sm ${isDark ? 'bg-gray-600' : 'bg-white'}`}>
-                          <div className="font-medium truncate">{selectedUser.username}</div>
-                          <button
-                            type="button"
-                            onClick={() => handleUserSelection(selectedUser._id)}
-                            className="p-1 hover:bg-red-100 dark:hover:bg-red-500/20 rounded transition-all flex-shrink-0 ml-2"
-                          >
-                            <X size={14} className="text-red-500" />
-                          </button>
-                        </div>
-                      ))
-                    )}
-                  </div>
-                </div>
+          {/* Section 2: Assign Users */}
+          <div className="p-8" style={{
+            backgroundColor: isDark ? 'rgba(15, 17, 23, 0.5)' : '#f9fafb',
+            borderBottom: `1px solid ${isDark ? 'rgba(255, 255, 255, 0.1)' : '#e5e7eb'}`
+          }}>
+            <div className="flex items-center gap-3 mb-6">
+              <div className="w-8 h-8 bg-blue-600 text-white rounded-full flex items-center justify-center font-semibold">
+                2
+              </div>
+              <div>
+                <h2 className="text-lg font-semibold" style={{ color: isDark ? '#ffffff' : '#111827' }}>
+                  Assign Users
+                </h2>
+                <p className="text-sm" style={{ color: isDark ? '#9ca3af' : '#6b7280' }}>
+                  {formData.taskCategory === 'multi-level' ? 'Select one user (can be forwarded later)' : 'Select one or more users for this task'}
+                </p>
               </div>
             </div>
-          </div>
 
-          {/* Weekly Days Section */}
-          {isWeekly && (
-            <div className={`rounded-2xl border overflow-hidden transition-all shadow-sm hover:shadow-md ${
-              isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-100'
-            }`}>
-              <div className="p-5 md:p-6">
-                <div className="flex items-center gap-3 mb-5">
-                  <div className="p-2 rounded-lg" style={{ backgroundColor: 'var(--color-primary)12' }}>
-                    <Calendar size={20} style={{ color: 'var(--color-primary)' }} />
-                  </div>
-                  <h2 className={`text-lg font-semibold ${isDark ? 'text-gray-100' : 'text-gray-900'}`}>
-                    Select Weekly Days <span className="text-red-500">*</span>
-                  </h2>
-                </div>
+            <div className="relative mb-4" ref={dropdownRef}>
+              <Users 
+                className="absolute left-3 top-3 pointer-events-none" 
+                size={18} 
+                style={{ color: isDark ? '#6b7280' : '#9ca3af' }} 
+              />
+              <input
+                type="text"
+                placeholder="Search users by name, email, or phone..."
+                value={userSearchTerm}
+                onChange={(e) => setUserSearchTerm(e.target.value)}
+                onFocus={() => setShowUserDropdown(true)}
+                className="w-full pl-10 pr-4 py-2.5 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                style={{
+                  backgroundColor: isDark ? '#1a1d29' : '#ffffff',
+                  border: `1px solid ${isDark ? 'rgba(255, 255, 255, 0.1)' : '#d1d5db'}`,
+                  color: isDark ? '#ffffff' : '#111827'
+                }}
+              />
 
-                <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-2">
-                  {weekDays.map(day => (
-                    <button
-                      key={day.value}
-                      type="button"
-                      onClick={() => handleWeekDaySelection(day.value)}
-                      className={`p-3 rounded-xl border-2 cursor-pointer transition-all font-semibold text-center text-sm ${
-                        formData.weeklyDays.includes(day.value)
-                          ? 'text-white shadow-md scale-105'
-                          : (isDark ? 'border-gray-600 bg-gray-700 text-gray-100 hover:border-gray-500 hover:shadow-sm' : 'border-gray-200 bg-gray-50 text-gray-900 hover:border-gray-300 hover:shadow-sm hover:bg-white')
-                      }`}
+              {/* Dropdown */}
+              {showUserDropdown && filteredUsers.length > 0 && (
+                <div 
+                  className="absolute z-50 mt-2 w-full max-h-64 overflow-y-auto rounded-lg shadow-lg"
+                  style={{
+                    backgroundColor: isDark ? '#1a1d29' : '#ffffff',
+                    border: `1px solid ${isDark ? 'rgba(255, 255, 255, 0.1)' : '#e5e7eb'}`
+                  }}
+                >
+                  {filteredUsers.map(userItem => (
+                    <div
+                      key={userItem._id}
+                      onClick={() => handleUserSelection(userItem._id)}
+                      className="p-3 cursor-pointer transition-all text-sm"
                       style={{
-                        borderColor: formData.weeklyDays.includes(day.value) ? 'var(--color-primary)' : undefined,
-                        backgroundColor: formData.weeklyDays.includes(day.value) ? 'var(--color-primary)' : undefined,
+                        backgroundColor: formData.assignedTo.includes(userItem._id)
+                          ? (isDark ? 'rgba(59, 130, 246, 0.1)' : 'rgba(59, 130, 246, 0.05)')
+                          : 'transparent',
+                        borderBottom: `1px solid ${isDark ? 'rgba(255, 255, 255, 0.05)' : '#f3f4f6'}`
                       }}
                     >
-                      <div className="font-bold">{day.short}</div>
-                      <div className="text-xs opacity-75">{day.label}</div>
-                    </button>
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <div 
+                            className="w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold text-white"
+                            style={{ 
+                              background: formData.assignedTo.includes(userItem._id) 
+                                ? 'linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%)'
+                                : '#6b7280'
+                            }}
+                          >
+                            {userItem.username.charAt(0).toUpperCase()}
+                          </div>
+                          <div>
+                            <div className="font-medium" style={{ color: isDark ? '#ffffff' : '#111827' }}>
+                              {userItem.username}
+                            </div>
+                            <div className="text-xs" style={{ color: isDark ? '#9ca3af' : '#6b7280' }}>
+                              {userItem.email}
+                            </div>
+                          </div>
+                        </div>
+                        {formData.assignedTo.includes(userItem._id) && (
+                          <CheckCircle size={18} className="text-blue-600" />
+                        )}
+                      </div>
+                    </div>
                   ))}
                 </div>
+              )}
+            </div>
 
-                {formData.weeklyDays.length > 0 && (
+            {/* Selected Users */}
+            {selectedUsers.length > 0 && (
+              <div className="flex flex-wrap gap-2 mt-3">
+                {selectedUsers.map(u => (
                   <div
-                    className="mt-4 p-3 rounded-lg border-l-4 text-sm"
+                    key={u._id}
+                    className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm"
                     style={{
-                      backgroundColor: 'var(--color-primary)10',
-                      borderColor: 'var(--color-primary)'
+                      backgroundColor: isDark ? 'rgba(59, 130, 246, 0.1)' : 'rgba(59, 130, 246, 0.1)',
+                      border: `1px solid ${isDark ? 'rgba(59, 130, 246, 0.3)' : 'rgba(59, 130, 246, 0.3)'}`,
+                      color: isDark ? '#60a5fa' : '#2563eb'
                     }}
                   >
-                    <p className="font-semibold" style={{ color: 'var(--color-primary)' }}>
-                      ✓ Selected: {formData.weeklyDays.map(dayValue =>
-                        weekDays.find(d => d.value === dayValue)?.label
-                      ).join(', ')}
-                    </p>
+                    <span className="font-medium">{u.username}</span>
+                    <button
+                      type="button"
+                      onClick={() => handleUserSelection(u._id)}
+                      className="hover:opacity-70"
+                    >
+                      <X size={14} />
+                    </button>
                   </div>
-                )}
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Section 3: Schedule & Timing */}
+          <div className="p-8" style={{
+            borderBottom: `1px solid ${isDark ? 'rgba(255, 255, 255, 0.1)' : '#e5e7eb'}`
+          }}>
+            <div className="flex items-center gap-3 mb-6">
+              <div className="w-8 h-8 bg-blue-600 text-white rounded-full flex items-center justify-center font-semibold">
+                3
+              </div>
+              <div>
+                <h2 className="text-lg font-semibold" style={{ color: isDark ? '#ffffff' : '#111827' }}>
+                  Schedule & Timing
+                </h2>
+                <p className="text-sm" style={{ color: isDark ? '#9ca3af' : '#6b7280' }}>
+                  Set deadlines and schedules
+                </p>
               </div>
             </div>
-          )}
 
-          {/* Monthly Day Section */}
-          {isMonthly && (
-            <div className={`rounded-2xl border overflow-hidden transition-all shadow-sm hover:shadow-md ${
-              isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-100'
-            }`}>
-              <div className="p-5 md:p-6">
-                <div className="flex items-center gap-3 mb-5">
-                  <div className="p-2 rounded-lg" style={{ backgroundColor: 'var(--color-primary)12' }}>
-                    <Hash size={20} style={{ color: 'var(--color-primary)' }} />
-                  </div>
-                  <h2 className={`text-lg font-semibold ${isDark ? 'text-gray-100' : 'text-gray-900'}`}>
-                    Monthly Configuration <span className="text-red-500">*</span>
-                  </h2>
-                </div>
-
-                <div className="space-y-3">
+            <div className="space-y-5">
+              {/* Date Range Tasks */}
+              {formData.taskCategory === 'date-range' ? (
+                <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className={`block text-sm font-semibold mb-2 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
-                      Day of Month (1-31)
+                    <label className="block text-sm font-medium mb-1.5" style={{ color: isDark ? '#e5e7eb' : '#374151' }}>
+                      Start Date *
                     </label>
                     <div className="relative">
-                      <select
-                        name="monthlyDay"
-                        value={formData.monthlyDay}
+                      <Calendar 
+                        className="absolute left-3 top-3 pointer-events-none" 
+                        size={18} 
+                        style={{ color: isDark ? '#6b7280' : '#9ca3af' }} 
+                      />
+                      <input
+                        type="date"
+                        name="startDate"
+                        value={formData.startDate}
                         onChange={handleInputChange}
                         required
-                        className={`w-full px-4 py-3 border-2 rounded-xl focus:ring-2 focus:ring-[var(--color-primary)]/30 focus:border-[var(--color-primary)] transition-all font-medium appearance-none ${
-                          isDark
-                            ? 'bg-gray-700 border-gray-600 text-gray-100'
-                            : 'bg-gray-50 border-gray-200 text-gray-900 focus:bg-white'
-                        }`}
-                      >
-                        {monthlyDayOptions.map(day => (
-                          <option key={day} value={day}>
-                            {day}{day === 1 ? 'st' : day === 2 ? 'nd' : day === 3 ? 'rd' : 'th'} of each month
-                          </option>
-                        ))}
-                      </select>
-                      <ChevronDown size={18} className={`absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none ${isDark ? 'text-gray-400' : 'text-gray-600'}`} />
+                        ref={startDateInputRef}
+                        className="w-full pl-10 pr-4 py-2.5 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                        style={{
+                          backgroundColor: isDark ? '#0f1117' : '#ffffff',
+                          border: `1px solid ${isDark ? 'rgba(255, 255, 255, 0.1)' : '#d1d5db'}`,
+                          color: isDark ? '#ffffff' : '#111827'
+                        }}
+                      />
                     </div>
                   </div>
-
-                  <div
-                    className="p-3 rounded-lg border-l-4 text-sm"
-                    style={{
-                      backgroundColor: 'var(--color-primary)10',
-                      borderColor: 'var(--color-primary)'
-                    }}
-                  >
-                    <p className="font-semibold" style={{ color: 'var(--color-primary)' }}>
-                      ✓ {formData.monthlyDay}{formData.monthlyDay === 1 ? 'st' : formData.monthlyDay === 2 ? 'nd' : formData.monthlyDay === 3 ? 'rd' : 'th'} day of each month
-                    </p>
-                    <p className="text-xs mt-1" style={{ color: 'var(--color-primary-dark)' }}>
-                      Tasks created on the {formData.monthlyDay}{formData.monthlyDay === 1 ? 'st' : formData.monthlyDay === 2 ? 'nd' : formData.monthlyDay === 3 ? 'rd' : 'th'} day.
-                      {formData.monthlyDay > 28 && ' For months with fewer days, created on the last day.'}
-                    </p>
+                  <div>
+                    <label className="block text-sm font-medium mb-1.5" style={{ color: isDark ? '#e5e7eb' : '#374151' }}>
+                      End Date *
+                    </label>
+                    <div className="relative">
+                      <Calendar 
+                        className="absolute left-3 top-3 pointer-events-none" 
+                        size={18} 
+                        style={{ color: isDark ? '#6b7280' : '#9ca3af' }} 
+                      />
+                      <input
+                        type="date"
+                        name="endDate"
+                        value={formData.endDate}
+                        onChange={handleInputChange}
+                        required
+                        min={formData.startDate || undefined}
+                        ref={endDateInputRef}
+                        className="w-full pl-10 pr-4 py-2.5 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                        style={{
+                          backgroundColor: isDark ? '#0f1117' : '#ffffff',
+                          border: `1px solid ${isDark ? 'rgba(255, 255, 255, 0.1)' : '#d1d5db'}`,
+                          color: isDark ? '#ffffff' : '#111827'
+                        }}
+                      />
+                    </div>
                   </div>
+                  {formData.startDate && formData.endDate && (
+                    <div className="col-span-2 p-3 rounded-lg bg-blue-50 border border-blue-200">
+                      <p className="text-sm text-blue-700">
+                        📅 Duration: {Math.ceil((new Date(formData.endDate).getTime() - new Date(formData.startDate).getTime()) / (1000 * 60 * 60 * 24))} days • Scoring based on end date
+                      </p>
+                    </div>
+                  )}
                 </div>
-              </div>
-            </div>
-          )}
-
-          {/* Date Configuration */}
-          <div className={`rounded-2xl border overflow-hidden transition-all shadow-sm hover:shadow-md ${
-            isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-100'
-          }`}>
-            <div className="p-5 md:p-6">
-              <div className="flex items-center gap-3 mb-5">
-                <div className="p-2 rounded-lg" style={{ backgroundColor: 'var(--color-primary)12' }}>
-                  <Calendar size={20} style={{ color: 'var(--color-primary)' }} />
-                </div>
-                <h2 className={`text-lg font-semibold ${isDark ? 'text-gray-100' : 'text-gray-900'}`}>
-                  Date Configuration
-                </h2>
-              </div>
-
-              {!isRecurring ? (
-                <div>
-                  <label className={`block text-sm font-semibold mb-2 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
-                    Due Date <span className="text-red-500">*</span>
+              ) : !isRecurring ? (
+                <div className="max-w-xs">
+                  <label className="block text-sm font-medium mb-1.5" style={{ color: isDark ? '#e5e7eb' : '#374151' }}>
+                    Due Date *
                   </label>
-                  <div onClick={() => openDatePicker(dueDateInputRef)} className="cursor-pointer">
+                  <div className="relative">
+                    <Calendar 
+                      className="absolute left-3 top-3 pointer-events-none" 
+                      size={18} 
+                      style={{ color: isDark ? '#6b7280' : '#9ca3af' }} 
+                    />
                     <input
                       type="date"
                       name="dueDate"
@@ -850,435 +661,311 @@ const AssignTask: React.FC = () => {
                       onChange={handleInputChange}
                       required
                       ref={dueDateInputRef}
-                      className={`w-full px-4 py-3 border-2 rounded-xl focus:ring-2 focus:ring-[var(--color-primary)]/30 focus:border-[var(--color-primary)] transition-all font-medium text-lg ${
-                        isDark
-                          ? 'bg-gray-700 border-gray-600 text-gray-100 placeholder-gray-400'
-                          : 'bg-gray-50 border-gray-200 text-gray-900 placeholder-gray-500 focus:bg-white'
-                      }`}
-                      placeholder="Select a due date"
+                      className="w-full pl-10 pr-4 py-2.5 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                      style={{
+                        backgroundColor: isDark ? '#0f1117' : '#ffffff',
+                        border: `1px solid ${isDark ? 'rgba(255, 255, 255, 0.1)' : '#d1d5db'}`,
+                        color: isDark ? '#ffffff' : '#111827'
+                      }}
                     />
                   </div>
                 </div>
               ) : (
-                <div className="space-y-3">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <label className={`block text-sm font-semibold mb-2 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
-                        {isYearly || isQuarterly ? 'Task Date <span className="text-red-500">*</span>' : 'Start Date <span className="text-red-500">*</span>'}
+                      <label className="block text-sm font-medium mb-1.5" style={{ color: isDark ? '#e5e7eb' : '#374151' }}>
+                        Start Date *
                       </label>
-                      <div onClick={() => openDatePicker(startDateInputRef)} className="cursor-pointer">
-                        <input
-                          type="date"
-                          name="startDate"
-                          value={formData.startDate}
-                          onChange={handleInputChange}
-                          required
-                          ref={startDateInputRef}
-                          className={`w-full px-4 py-3 border-2 rounded-xl focus:ring-2 focus:ring-[var(--color-primary)]/30 focus:border-[var(--color-primary)] transition-all font-medium text-lg ${
-                            isDark
-                              ? 'bg-gray-700 border-gray-600 text-gray-100 placeholder-gray-400'
-                              : 'bg-gray-50 border-gray-200 text-gray-900 placeholder-gray-500 focus:bg-white'
-                          }`}
-                          placeholder="Select a start date"
-                        />
-                      </div>
-                    </div>
-
-                    {!isYearly && !isQuarterly && (
-                      <div>
-                        <label className={`block text-sm font-semibold mb-2 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
-                          End Date {!formData.isForever && '<span className="text-red-500">*</span>'}
-                        </label>
-                        <div onClick={() => !formData.isForever && openDatePicker(endDateInputRef)} className={`cursor-pointer ${formData.isForever ? 'opacity-50 cursor-not-allowed' : ''}`}>
-                          <input
-                            type="date"
-                            name="endDate"
-                            value={formData.endDate}
-                            onChange={handleInputChange}
-                            required={!formData.isForever}
-                            disabled={formData.isForever}
-                            ref={endDateInputRef}
-                            className={`w-full px-4 py-3 border-2 rounded-xl focus:ring-2 focus:ring-[var(--color-primary)]/30 focus:border-[var(--color-primary)] transition-all font-medium text-lg ${
-                              isDark
-                                ? 'bg-gray-700 border-gray-600 text-gray-100 placeholder-gray-400'
-                                : 'bg-gray-50 border-gray-200 text-gray-900 placeholder-gray-500 focus:bg-white'
-                            }`}
-                            placeholder="Select an end date"
-                          />
-                        </div>
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="flex flex-wrap items-center gap-4">
-                    {/* Forever checkbox - only for non-yearly and non-quarterly tasks */}
-                    {!isYearly && !isQuarterly && (
-                      <label className="flex items-center">
-                        <input
-                          type="checkbox"
-                          name="isForever"
-                          checked={formData.isForever}
-                          onChange={handleInputChange}
-                          className="w-4 h-4 rounded cursor-pointer accent-blue-500"
-                        />
-                        <span className={`text-sm ml-2 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
-                          Forever (1 year)
-                        </span>
-                      </label>
-                    )}
-
-                    {/* Multi-year checkbox - only for yearly tasks */}
-                    {isYearly && (
-                      <label className="flex items-center">
-                        <input
-                          type="checkbox"
-                          name="isForever"
-                          checked={formData.isForever}
-                          onChange={handleInputChange}
-                          className="w-4 h-4 rounded cursor-pointer accent-blue-500"
-                        />
-                        <span className={`text-sm ml-2 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
-                          Create for multiple years
-                        </span>
-                      </label>
-                    )}
-
-                    {/* Include Sunday checkbox - for daily, monthly, quarterly, and yearly tasks */}
-                    {(formData.taskType === 'daily' || isMonthly || isQuarterly || isYearly) && (
-                      <label className="flex items-center">
-                        <input
-                          type="checkbox"
-                          name="includeSunday"
-                          checked={formData.includeSunday}
-                          onChange={handleInputChange}
-                          className="w-4 h-4 rounded cursor-pointer accent-blue-500"
-                        />
-                        <span className={`text-sm ml-2 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>Include Sunday</span>
-                      </label>
-                    )}
-                  </div>
-
-                  {/* Yearly Duration Selection */}
-                  {isYearly && formData.isForever && (
-                    <div
-                      className="p-3 rounded-lg border"
-                      style={{
-                        backgroundColor: 'var(--color-primary)10',
-                        borderColor: 'var(--color-primary-border)'
-                      }}
-                    >
-                      <label className={`block text-sm font-semibold mb-2 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
-                        How many years should this task repeat? <span className="text-red-500">*</span>
-                      </label>
-                      <select
-                        name="yearlyDuration"
-                        value={formData.yearlyDuration}
+                      <input
+                        type="date"
+                        name="startDate"
+                        value={formData.startDate}
                         onChange={handleInputChange}
-                        className={`w-full px-4 py-3 border-2 rounded-xl focus:ring-2 focus:ring-[var(--color-primary)]/30 focus:border-[var(--color-primary)] transition-all font-medium text-lg ${
-                          isDark
-                            ? 'bg-gray-700 border-gray-600 text-gray-100 placeholder-gray-400'
-                            : 'bg-gray-50 border-gray-200 text-gray-900 placeholder-gray-500 focus:bg-white'
-                        }`}
+                        required
+                        ref={startDateInputRef}
+                        className="w-full px-4 py-2.5 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                        style={{
+                          backgroundColor: isDark ? '#0f1117' : '#ffffff',
+                          border: `1px solid ${isDark ? 'rgba(255, 255, 255, 0.1)' : '#d1d5db'}`,
+                          color: isDark ? '#ffffff' : '#111827'
+                        }}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium mb-1.5" style={{ color: isDark ? '#e5e7eb' : '#374151' }}>
+                        End Date {!formData.isForever && '*'}
+                      </label>
+                      <input
+                        type="date"
+                        name="endDate"
+                        value={formData.endDate}
+                        onChange={handleInputChange}
+                        required={!formData.isForever}
+                        disabled={formData.isForever}
+                        min={formData.startDate || undefined}
+                        ref={endDateInputRef}
+                        className="w-full px-4 py-2.5 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all disabled:opacity-50"
+                        style={{
+                          backgroundColor: isDark ? '#0f1117' : '#ffffff',
+                          border: `1px solid ${isDark ? 'rgba(255, 255, 255, 0.1)' : '#d1d5db'}`,
+                          color: isDark ? '#ffffff' : '#111827'
+                        }}
+                      />
+                    </div>
+                  </div>
+                  <label className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      name="isForever"
+                      checked={formData.isForever}
+                      onChange={handleInputChange}
+                      className="w-4 h-4 text-blue-600"
+                    />
+                    <span className="text-sm" style={{ color: isDark ? '#e5e7eb' : '#374151' }}>
+                      Repeat Forever (for 1 year)
+                    </span>
+                  </label>
+                </div>
+              )}
+
+              {/* Weekly Days */}
+              {isWeekly && (
+                <div>
+                  <label className="block text-sm font-medium mb-2" style={{ color: isDark ? '#e5e7eb' : '#374151' }}>
+                    Select Days *
+                  </label>
+                  <div className="flex gap-2">
+                    {weekDays.map(day => (
+                      <button
+                        key={day.value}
+                        type="button"
+                        onClick={() => handleWeekDaySelection(day.value)}
+                        className="flex-1 px-3 py-2 text-sm font-medium rounded-lg transition-all"
+                        style={{
+                          backgroundColor: formData.weeklyDays.includes(day.value)
+                            ? '#3b82f6'
+                            : (isDark ? '#0f1117' : '#ffffff'),
+                          color: formData.weeklyDays.includes(day.value)
+                            ? '#ffffff'
+                            : (isDark ? '#9ca3af' : '#6b7280'),
+                          border: `1px solid ${formData.weeklyDays.includes(day.value) ? '#3b82f6' : (isDark ? 'rgba(255, 255, 255, 0.1)' : '#d1d5db')}`
+                        }}
                       >
-                        <option value={3}>3 years</option>
-                        <option value={5}>5 years</option>
-                        <option value={10}>10 years</option>
-                      </select>
-                    </div>
-                  )}
+                        {day.short}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
 
-                  {/* Yearly Task Preview */}
-                  {isYearly && formData.startDate && (
-                    <div
-                      className="p-3 rounded-lg border"
-                      style={{
-                        backgroundColor: 'var(--color-info-light)',
-                        borderColor: 'var(--color-info-border)'
-                      }}
-                    >
-                      <p className={`text-sm font-semibold mb-2 flex items-center gap-1 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
-                        <Calendar className="inline mr-1" size={14} />
-                        Task Preview ({calculateYearlyTasks()} task{calculateYearlyTasks() > 1 ? 's' : ''}):
-                      </p>
-                      <div className="space-y-1">
-                        {getYearlyTaskPreview().map((date, index) => (
-                          <div key={index} className={`text-xs ${isDark ? 'text-gray-200' : 'text-gray-800'}`}>
-                            • {date.toLocaleDateString('en-US', {
-                              year: 'numeric',
-                              month: 'long',
-                              day: 'numeric',
-                              weekday: 'long'
-                            })}
-                            {!formData.includeSunday && new Date(formData.startDate).getDay() === 0 && index === 0 && (
-                              <span className="text-orange-600 ml-1">(moved from Sunday)</span>
-                            )}
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Quarterly Task Preview */}
-                  {isQuarterly && formData.startDate && (
-                    <div
-                      className="p-3 rounded-lg border"
-                      style={{
-                        backgroundColor: 'var(--color-info-light)',
-                        borderColor: 'var(--color-info-border)'
-                      }}
-                    >
-                      <p className={`text-sm font-semibold mb-2 flex items-center gap-1 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
-                        <Calendar className="inline mr-1" size={14} />
-                        Quarterly Task Preview (4 tasks for one year):
-                      </p>
-                      <div className="space-y-1">
-                        {getQuarterlyTaskPreview().map((date, index) => (
-                          <div key={index} className={`text-xs ${isDark ? 'text-gray-200' : 'text-gray-800'}`}>
-                            • Quarter {index + 1}: {date.toLocaleDateString('en-US', {
-                              year: 'numeric',
-                              month: 'long',
-                              day: 'numeric',
-                              weekday: 'long'
-                            })}
-                            {!formData.includeSunday && date.getDay() === 0 && (
-                              <span className="text-orange-600 ml-1">(moved from Sunday)</span>
-                            )}
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Sunday warning for monthly, quarterly and yearly tasks */}
-                  {(isMonthly || isQuarterly || isYearly) && !formData.includeSunday && (
-                    <div
-                      className="p-3 rounded-lg border"
-                      style={{
-                        backgroundColor: 'var(--color-warning-light)',
-                        borderColor: 'var(--color-warning-border)'
-                      }}
-                    >
-                      <p className={`text-sm ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
-                        <strong>Note:</strong> If any {isMonthly ? 'monthly' : isQuarterly ? 'quarterly' : 'yearly'} task falls on a Sunday, it will be moved to the previous day (Saturday).
-                      </p>
-                    </div>
-                  )}
-
-                  {isRecurring && (
-                    <div
-                      className="p-3 rounded-lg border"
-                      style={{
-                        backgroundColor: 'var(--color-surface)',
-                        borderColor: 'var(--color-border)'
-                      }}
-                    >
-                      <p className={`text-sm ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
-                        <strong>Task Generation:</strong>
-                        {formData.taskType === 'daily' && ' Individual tasks will be created for each day in the selected date range.'}
-                        {formData.taskType === 'weekly' && ' Tasks will be created for each occurrence of the selected days within the date range.'}
-                        {formData.taskType === 'monthly' && ` Tasks will be created for the ${formData.monthlyDay}${formData.monthlyDay === 1 ? 'st' : formData.monthlyDay === 2 ? 'nd' : formData.monthlyDay === 3 ? 'rd' : 'th'} day of each month within the date range.`}
-                        {formData.taskType === 'quarterly' && ' Tasks will be created for 4 quarters (every 3 months) starting from the selected date for one year.'}
-                        {formData.taskType === 'yearly' && !formData.isForever && ' A single task will be created for the selected date.'}
-                        {formData.taskType === 'yearly' && formData.isForever && ` Exactly ${formData.yearlyDuration} tasks will be created, one for each year starting from the selected date.`}
-                      </p>
-                    </div>
-                  )}
+              {/* Monthly Day */}
+              {isMonthly && (
+                <div className="max-w-xs">
+                  <label className="block text-sm font-medium mb-1.5" style={{ color: isDark ? '#e5e7eb' : '#374151' }}>
+                    Day of Month *
+                  </label>
+                  <select
+                    name="monthlyDay"
+                    value={formData.monthlyDay}
+                    onChange={handleInputChange}
+                    className="w-full px-4 py-2.5 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                    style={{
+                      backgroundColor: isDark ? '#0f1117' : '#ffffff',
+                      border: `1px solid ${isDark ? 'rgba(255, 255, 255, 0.1)' : '#d1d5db'}`,
+                      color: isDark ? '#ffffff' : '#111827'
+                    }}
+                  >
+                    {monthlyDayOptions.map(day => (
+                      <option key={day} value={day}>
+                        {day}{day === 1 ? 'st' : day === 2 ? 'nd' : day === 3 ? 'rd' : 'th'} of each month
+                      </option>
+                    ))}
+                  </select>
                 </div>
               )}
             </div>
           </div>
 
-          {/* Voice Recording Section */}
-          <VoiceRecorder
-            ref={voiceRecorderRef}
-            onRecordingComplete={handleVoiceRecordingComplete}
-            onRecordingDeleted={handleVoiceRecordingDeleted}
-            isDark={isDark}
-          />
-
-          {/* Attachments */}
-          <div className={`rounded-2xl border overflow-hidden transition-all shadow-sm hover:shadow-md ${
-            isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-100'
-          }`}>
-            <div className="p-5 md:p-6">
-              <div className="flex items-center gap-3 mb-5">
-                <div className="p-2 rounded-lg" style={{ backgroundColor: 'var(--color-primary)12' }}>
-                  <Paperclip size={20} style={{ color: 'var(--color-primary)' }} />
-                </div>
-                <h2 className={`text-lg font-semibold ${isDark ? 'text-gray-100' : 'text-gray-900'}`}>
-                  Attachments (Max 10MB per file)
-                </h2>
+          {/* Section 4: Additional Options */}
+          <div className="p-8" style={{
+            backgroundColor: isDark ? 'rgba(15, 17, 23, 0.5)' : '#f9fafb'
+          }}>
+            <div className="flex items-center gap-3 mb-6">
+              <div className="w-8 h-8 bg-blue-600 text-white rounded-full flex items-center justify-center font-semibold">
+                4
               </div>
-
-            <div className="flex flex-col gap-3 mb-5">
-              <label className="flex items-center gap-2 text-sm font-medium" style={{ color: 'var(--color-text)' }}>
-                <input
-                  type="checkbox"
-                  name="requireAttachments"
-                  checked={formData.requireAttachments}
-                  onChange={handleInputChange}
-                  className="w-4 h-4 rounded accent-blue-500"
-                />
-                Require attachments when the task is completed
-              </label>
-              {formData.requireAttachments && (
-                <label className="flex items-center gap-2 text-sm font-medium pl-6" style={{ color: 'var(--color-text)' }}>
-                  <input
-                    type="checkbox"
-                    name="mandatoryAttachments"
-                    checked={formData.mandatoryAttachments}
-                    onChange={handleInputChange}
-                    className="w-4 h-4 rounded accent-blue-500"
-                  />
-                  Make attachments mandatory before completion
-                </label>
-              )}
+              <div>
+                <h2 className="text-lg font-semibold" style={{ color: isDark ? '#ffffff' : '#111827' }}>
+                  Additional Options
+                </h2>
+                <p className="text-sm" style={{ color: isDark ? '#9ca3af' : '#6b7280' }}>
+                  Checklists, attachments, and more
+                </p>
+              </div>
             </div>
 
-              {/* Centered File Upload Area */}
-              <div className="flex flex-col items-center justify-center">
-                <div className={`w-full max-w-md p-6 rounded-xl border-2 border-dashed text-center transition-all ${
-                  isDark
-                    ? 'border-gray-600 bg-gray-700/50 hover:border-gray-500 hover:bg-gray-700'
-                    : 'border-gray-300 bg-gray-50 hover:border-[var(--color-primary)] hover:bg-[var(--color-primary)]/5'
-                }`}>
-                  <div className="mb-4">
-                    <div className="inline-flex items-center justify-center w-10 h-10 rounded-xl" style={{ backgroundColor: 'var(--color-primary)10' }}>
-                      <Paperclip size={20} style={{ color: 'var(--color-primary)' }} />
-                    </div>
-                  </div>
-
+            <div className="space-y-5">
+              {/* Checklist */}
+              <div>
+                <label className="block text-sm font-medium mb-1.5" style={{ color: isDark ? '#e5e7eb' : '#374151' }}>
+                  Checklist Items
+                </label>
+                <div className="flex gap-2 mb-3">
                   <input
-                    type="file"
-                    multiple
-                    onChange={handleFileChange}
-                    className={`hidden`}
-                    id="file-input"
+                    type="text"
+                    value={newChecklistItem}
+                    onChange={(e) => setNewChecklistItem(e.target.value)}
+                    onKeyPress={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        handleAddChecklistItem();
+                      }
+                    }}
+                    placeholder="Add checklist item..."
+                    className="flex-1 px-4 py-2.5 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                    style={{
+                      backgroundColor: isDark ? '#1a1d29' : '#ffffff',
+                      border: `1px solid ${isDark ? 'rgba(255, 255, 255, 0.1)' : '#d1d5db'}`,
+                      color: isDark ? '#ffffff' : '#111827'
+                    }}
                   />
-
-                  <label htmlFor="file-input" className="cursor-pointer">
-                    <p className={`text-sm font-semibold mb-1 ${isDark ? 'text-gray-100' : 'text-gray-900'}`}>
-                      Click to upload files
-                    </p>
-                    <p className={`text-xs mb-3 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
-                      or drag and drop
-                    </p>
-                  </label>
-
-                  <p className={`text-xs leading-relaxed ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-                    Supported formats: PDF, images (JPG, PNG), documents (DOCX, XLSX), voice recordings. Max 10MB per file.
-                  </p>
+                  <button
+                    type="button"
+                    onClick={handleAddChecklistItem}
+                    className="px-4 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm transition-all"
+                  >
+                    <Plus size={18} />
+                  </button>
                 </div>
+                {formData.checklistItems.length > 0 && (
+                  <div className="space-y-2">
+                    {formData.checklistItems.map((item) => (
+                      <div
+                        key={item.id}
+                        className="flex items-center gap-2 p-3 rounded-lg text-sm"
+                        style={{
+                          backgroundColor: isDark ? '#1a1d29' : '#f3f4f6',
+                          border: `1px solid ${isDark ? 'rgba(255, 255, 255, 0.05)' : '#e5e7eb'}`
+                        }}
+                      >
+                        <CheckSquare size={16} className="text-blue-600 flex-shrink-0" />
+                        <span className="flex-1" style={{ color: isDark ? '#e5e7eb' : '#374151' }}>{item.text}</span>
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveChecklistItem(item.id)}
+                          className="text-red-500 hover:text-red-700 transition-colors"
+                        >
+                          <X size={16} />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
 
-              {/* Selected Files List */}
-              {attachments.length > 0 && (
-                <div className="mt-5">
-                  <div className="flex items-center gap-2 mb-3">
-                    <CheckSquare size={14} style={{ color: 'var(--color-primary)' }} />
-                    <p className={`text-sm font-semibold ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
-                      Selected files ({attachments.length}):
-                    </p>
-                  </div>
-                  <div className="space-y-2">
+              {/* Voice Recorder */}
+              <div>
+                <label className="block text-sm font-medium mb-1.5" style={{ color: isDark ? '#e5e7eb' : '#374151' }}>
+                  Voice Recording
+                </label>
+                <VoiceRecorder
+                  ref={voiceRecorderRef}
+                  onRecordingComplete={handleVoiceRecordingComplete}
+                  onRecordingDeleted={handleVoiceRecordingDeleted}
+                  isDark={isDark}
+                />
+              </div>
+
+              {/* File Upload */}
+              <div>
+                <label className="block text-sm font-medium mb-1.5" style={{ color: isDark ? '#e5e7eb' : '#374151' }}>
+                  Attachments
+                </label>
+                <input
+                  type="file"
+                  multiple
+                  onChange={handleFileChange}
+                  className="hidden"
+                  id="file-upload"
+                  accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.xlsx,.xls"
+                />
+                <label
+                  htmlFor="file-upload"
+                  className="block px-4 py-6 rounded-lg text-center cursor-pointer transition-all text-sm"
+                  style={{
+                    border: `2px dashed ${isDark ? 'rgba(255, 255, 255, 0.1)' : '#d1d5db'}`,
+                    backgroundColor: isDark ? '#1a1d29' : '#ffffff'
+                  }}
+                >
+                  <Paperclip className="mx-auto mb-2" size={24} style={{ color: isDark ? '#6b7280' : '#9ca3af' }} />
+                  <p className="font-medium" style={{ color: isDark ? '#e5e7eb' : '#374151' }}>
+                    Upload Files
+                  </p>
+                  <p className="text-xs mt-1" style={{ color: isDark ? '#6b7280' : '#9ca3af' }}>
+                    PDF, DOC, Images, Excel (Max 10MB each)
+                  </p>
+                </label>
+
+                {attachments.length > 0 && (
+                  <div className="mt-3 space-y-2">
                     {attachments.map((file, index) => (
                       <div
                         key={index}
-                        className={`flex items-center justify-between p-3 rounded-xl border transition-all ${
-                          isAudioFile(file)
-                            ? (isDark ? 'bg-blue-900/20 border-blue-700/50' : 'bg-blue-50/80 border-blue-200')
-                            : (isDark ? 'bg-gray-700/50 border-gray-600' : 'bg-gray-50/80 border-gray-200')
-                        }`}
+                        className="flex items-center gap-2 p-2.5 rounded-lg text-sm"
+                        style={{
+                          backgroundColor: isDark ? '#1a1d29' : '#f3f4f6',
+                          border: `1px solid ${isDark ? 'rgba(255, 255, 255, 0.05)' : '#e5e7eb'}`
+                        }}
                       >
-                        <span className={`text-sm font-medium flex items-center gap-1 ${isDark ? 'text-gray-200' : 'text-gray-800'}`}>
-                          {isAudioFile(file) && (
-                            <span className="flex items-center gap-1">
-                              <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
-                              <Volume2 size={14} className="text-blue-500" />
-                              <span className="text-xs font-semibold text-blue-600">Voice</span>
-                            </span>
-                          )}
-                          <span className={isAudioFile(file) ? '' : ''}>
-                            {file.name}
-                          </span>
-                          <span className={`text-xs font-medium ml-auto ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
-                            {(file.size / 1024 / 1024).toFixed(2)} MB
-                          </span>
+                        <Paperclip size={14} style={{ color: isDark ? '#6b7280' : '#9ca3af' }} />
+                        <span className="flex-1 truncate" style={{ color: isDark ? '#e5e7eb' : '#374151' }}>
+                          {file.name}
+                        </span>
+                        <span className="text-xs" style={{ color: isDark ? '#6b7280' : '#9ca3af' }}>
+                          {(file.size / 1024).toFixed(1)} KB
                         </span>
                         <button
                           type="button"
                           onClick={() => removeAttachment(index)}
-                          className="p-1 rounded-lg transition-all hover:scale-110"
-                          style={{ color: 'var(--color-error)', backgroundColor: 'var(--color-error)/10' }}
+                          className="text-red-500 hover:text-red-700 transition-colors"
                         >
                           <X size={14} />
                         </button>
                       </div>
                     ))}
                   </div>
-                </div>
-              )}
+                )}
+              </div>
 
-              {/* No files message */}
-              {attachments.length === 0 && (
-                <div className="mt-3 p-3 rounded-xl border border-dashed" style={{ borderColor: 'var(--color-primary)30', backgroundColor: 'var(--color-primary)05' }}>
-                  <p className={`text-sm text-center font-medium ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-                    No file chosen
-                  </p>
-                </div>
-              )}
+              {/* Attachment Options */}
+              <label className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  name="mandatoryAttachments"
+                  checked={formData.mandatoryAttachments}
+                  onChange={handleInputChange}
+                  className="w-4 h-4 text-blue-600"
+                />
+                <span className="text-sm" style={{ color: isDark ? '#e5e7eb' : '#374151' }}>
+                  Make attachments mandatory
+                </span>
+              </label>
             </div>
           </div>
+        </div>
 
-          {/* Submit Buttons */}
-          <div className="flex justify-end space-x-4">
-            <button
-              type="button"
-              onClick={resetForm}
-              className={`px-6 py-3 border rounded-xl font-semibold transition-colors ${
-                isDark
-                  ? 'border-gray-600 text-gray-100 hover:bg-gray-700'
-                  : 'border-gray-300 text-gray-700 hover:bg-gray-50'
-              }`}
-              style={{ borderColor: 'var(--color-border)', color: 'var(--color-text)', backgroundColor: 'var(--color-surface)' }}
-            >
-              Reset
-            </button>
-            <button
-              type="submit"
-              disabled={loading}
-              className="px-6 py-3 text-white rounded-xl font-semibold disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center"
-              style={{ backgroundColor: 'var(--color-primary)', color: 'var(--color-background)' }}
-            >
-              {loading ? (
-                <>
-                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-3"></div>
-                  Creating Tasks...
-                </>
-              ) : (
-                <>
-                  <UserPlus size={18} className="mr-3" />
-                  Create Tasks
-                </>
-              )}
-            </button>
-          </div>
-        </form>
-
-        {/* ToastContainer for React-Toastify alerts */}
-        <ToastContainer
-          position="top-right"
-          autoClose={1500}
-          hideProgressBar={false}
-          newestOnTop={false}
-          closeOnClick
-          rtl={false}
-          pauseOnFocusLoss
-          draggable
-          pauseOnHover
-          theme={isDark ? "dark" : "light"}
-        />
-      </div>
+        {/* Submit Button */}
+        <div className="mt-6 flex justify-end">
+          <button
+            type="submit"
+            disabled={loading}
+            className="px-8 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {loading ? 'Creating...' : 'Assign Task'}
+          </button>
+        </div>
+      </form>
     </div>
   );
 };

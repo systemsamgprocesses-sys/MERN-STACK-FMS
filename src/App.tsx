@@ -11,6 +11,7 @@ import MasterTasks from './pages/MasterTasks';
 import MasterRecurringTasks from './pages/MasterRecurringTasks';
 import AssignTask from './pages/AssignTask';
 import AdminPanel from './pages/AdminPanel';
+import AdminHRPanel from './pages/AdminHRPanel';
 import ProtectedRoute from './components/ProtectedRoute';
 import Performance from './pages/Performance';
 import CreateFMS from './pages/CreateFMS';
@@ -37,6 +38,7 @@ import PurchaseDashboard from './pages/PurchaseDashboard';
 import SalesDashboard from './pages/SalesDashboard';
 import StationeryRequestForm from './pages/StationeryRequestForm';
 import MyStationeryRequests from './pages/MyStationeryRequests';
+import CategoryManagement from './pages/CategoryManagement';
 
 function App() {
   return (
@@ -85,6 +87,9 @@ function App() {
                   <Route path="objections" element={<ProtectedRoute><ObjectionsHub /></ProtectedRoute>} />
                   <Route path="admin-tasks" element={<ProtectedRoute requireAdmin><AdminTasks /></ProtectedRoute>} />
                   <Route path="admin" element={<ProtectedRoute requireAdmin><AdminPanel /></ProtectedRoute>} />
+                  <Route path="admin-hr-panel" element={<ProtectedRoute requireAdmin><AdminHRPanel /></ProtectedRoute>} />
+                  <Route path="fms-categories" element={<ProtectedRoute requireAdmin><CategoryManagement type="fms" /></ProtectedRoute>} />
+                  <Route path="checklist-categories" element={<ProtectedRoute requireAdmin><CategoryManagement type="checklist" /></ProtectedRoute>} />
                 </Route>
               </Routes>
             </div>

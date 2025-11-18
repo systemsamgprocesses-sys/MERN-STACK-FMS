@@ -7,13 +7,39 @@ interface User {
   email: string;
   role: string;
   permissions: {
+    // Task Permissions
     canViewTasks: boolean;
     canViewAllTeamTasks: boolean;
     canAssignTasks: boolean;
     canDeleteTasks: boolean;
     canEditTasks: boolean;
-    canManageUsers: boolean;
+    canCompleteTasksOnBehalf: boolean;
+    canCompleteAnyTask: boolean;
     canEditRecurringTaskSchedules: boolean;
+    
+    // Checklist Permissions
+    canViewAllChecklists: boolean;
+    canCreateChecklists: boolean;
+    canEditChecklists: boolean;
+    canDeleteChecklists: boolean;
+    canManageChecklistCategories: boolean;
+    
+    // Complaint Permissions
+    canViewAllComplaints: boolean;
+    canRaiseComplaints: boolean;
+    canAssignComplaints: boolean;
+    canResolveComplaints: boolean;
+    
+    // User Management Permissions
+    canManageUsers: boolean;
+    canManageRoles: boolean;
+    
+    // Stationery Permissions
+    canManageStationery: boolean;
+    
+    // Objection Permissions
+    canViewObjectionMaster: boolean;
+    canApproveObjections: boolean;
   };
 }
 

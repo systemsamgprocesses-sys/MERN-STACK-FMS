@@ -25,7 +25,8 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, requireAdmin 
     return <Navigate to="/login" replace />;
   }
 
-  if (requireAdmin && user.role !== 'admin') {
+  // Check if admin role is required and user doesn't have admin or superadmin role
+  if (requireAdmin && !['admin', 'superadmin'].includes(user.role)) {
     return <Navigate to="/dashboard" replace />;
   }
 

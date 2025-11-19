@@ -52,6 +52,11 @@ const UpcomingTasks: React.FC = () => {
     applyFilters();
   }, [tasks, filters, sortBy, activeTab]);
 
+  const canViewAllUpcomingTasks =
+    user?.role === 'admin' ||
+    user?.role === 'superadmin' ||
+    user?.permissions?.canViewAllTeamTasks;
+
   const fetchUpcomingTasks = async () => {
     try {
       setLoading(true);
@@ -61,7 +66,20 @@ const UpcomingTasks: React.FC = () => {
           Authorization: `Bearer ${localStorage.getItem('token')}`
         }
       });
-      setTasks(response.data.upcomingTasks || []);
+      const upcomingTasks: Task[] = response.data.upcomingTasks || [];
+
+      if (canViewAllUpcomingTasks) {
+        setTasks(upcomingTasks);
+      } else {
+        const userSpecificTasks = upcomingTasks.filter((task) => {
+          const assignedUserId =
+            typeof task.assignedTo === 'string'
+              ? task.assignedTo
+              : task.assignedTo?._id;
+          return assignedUserId === user?.id;
+        });
+        setTasks(userSpecificTasks);
+      }
     } catch (err: any) {
       console.error('Error fetching upcoming tasks:', err);
       setError(err.response?.data?.message || 'Failed to load upcoming tasks');

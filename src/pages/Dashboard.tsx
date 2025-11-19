@@ -157,7 +157,6 @@ interface TaskCounts {
   fmsPendingTasks: number;
   fmsCompletedTasks: number;
   fmsInProgressTasks: number;
-  pendingRepetitive: number;
   assignedByMe?: {
     total: number;
     pending: number;

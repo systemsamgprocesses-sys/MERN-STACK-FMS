@@ -3,6 +3,7 @@ import express from 'express';
 import mongoose from 'mongoose';
 import Task from '../models/Task.js';
 import Project from '../models/Project.js';
+import { authenticateToken } from '../middleware/auth.js';
 
 const router = express.Router();
 
@@ -365,6 +366,82 @@ router.get('/my/:userId', async (req, res) => {
     });
   } catch (error) {
     console.error('Error fetching my objections:', error);
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
+// Get all objections for PC role (read-only view)
+router.get('/all', authenticateToken, async (req, res) => {
+  try {
+    // Check if user has PC role or is admin/superadmin
+    if (!req.user || !['pc', 'admin', 'superadmin'].includes(req.user.role)) {
+      return res.status(403).json({ message: 'Access denied. PC role or admin access required.' });
+    }
+    // Get all regular tasks with objections
+    const regularTasks = await Task.find({
+      'objections.0': { $exists: true }, // Has at least one objection
+      isActive: true
+    })
+      .populate('assignedTo', 'username email phoneNumber')
+      .populate('assignedBy', 'username email phoneNumber')
+      .populate('objections.requestedBy', 'username email phoneNumber')
+      .populate('objections.approvedBy', 'username email phoneNumber');
+
+    // Filter and transform regular tasks
+    const filteredRegularTasks = regularTasks
+      .map(task => {
+        if (!task.objections || task.objections.length === 0) {
+          return null;
+        }
+        return {
+          ...task.toObject(),
+          objections: task.objections // Include all objections (pending, approved, rejected)
+        };
+      })
+      .filter(task => task !== null);
+
+    // Get all FMS projects with objections
+    const fmsProjects = await Project.find({
+      'tasks.objections.0': { $exists: true } // Has at least one task with objections
+    })
+      .populate('tasks.who', 'username email phoneNumber')
+      .populate('tasks.objections.requestedBy', 'username email phoneNumber')
+      .populate('tasks.objections.approvedBy', 'username email phoneNumber');
+
+    // Filter and transform FMS projects
+    const filteredFMSProjects = fmsProjects
+      .map(project => {
+        const tasksWithObjections = project.tasks
+          .map((task, taskIndex) => {
+            if (!task.objections || task.objections.length === 0) {
+              return null;
+            }
+            return {
+              ...task.toObject(),
+              taskIndex,
+              objections: task.objections // Include all objections
+            };
+          })
+          .filter(task => task !== null);
+
+        if (tasksWithObjections.length === 0) {
+          return null;
+        }
+
+        return {
+          ...project.toObject(),
+          tasks: tasksWithObjections
+        };
+      })
+      .filter(project => project !== null);
+
+    res.json({
+      success: true,
+      regularTasks: filteredRegularTasks,
+      fmsTasks: filteredFMSProjects
+    });
+  } catch (error) {
+    console.error('Error fetching all objections:', error);
     res.status(500).json({ message: 'Server error', error: error.message });
   }
 });

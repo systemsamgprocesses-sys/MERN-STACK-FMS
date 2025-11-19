@@ -4,6 +4,7 @@ import { CheckSquare, Clock, RefreshCcw, Search, Users, Calendar, ArrowUpDown, A
 import axios from 'axios';
 import ViewToggle from '../components/ViewToggle';
 import PriorityBadge from '../components/PriorityBadge';
+import TaskTypeBadge from '../components/TaskTypeBadge';
 import TaskCompletionModal from '../components/TaskCompletionModal';
 import MultiLevelTaskCompletionModal from '../components/MultiLevelTaskCompletionModal';
 import { useTaskSettings } from '../hooks/useTaskSettings';
@@ -105,6 +106,7 @@ const PendingTasks: React.FC = () => {
   const [view, setView] = useState<'table' | 'card'>(getInitialViewPreference);
   const [sortOrder, setSortOrder] = useState<SortOrder>('none');
   const [filter, setFilter] = useState({
+    taskType: '',
     priority: '',
     assignedTo: '',
     search: '',
@@ -164,9 +166,7 @@ const PendingTasks: React.FC = () => {
   const fetchTasks = async () => {
     try {
       setLoading(true);
-      const params = new URLSearchParams({
-        taskType: 'one-time'
-      });
+      const params = new URLSearchParams();
 
       if (!user?.permissions.canViewAllTeamTasks && user?.id) {
         params.append('userId', user.id);
@@ -198,6 +198,10 @@ const PendingTasks: React.FC = () => {
 
   const applyFiltersAndSort = () => {
     let filteredTasks = [...allTasks];
+
+    if (filter.taskType) {
+      filteredTasks = filteredTasks.filter(task => task.taskType === filter.taskType);
+    }
 
     if (filter.assignedTo) {
       filteredTasks = filteredTasks.filter(task => task.assignedTo && task.assignedTo._id === filter.assignedTo);
@@ -401,7 +405,7 @@ const PendingTasks: React.FC = () => {
   };
 
   const resetFilters = () => {
-    setFilter({ priority: '', assignedTo: '', search: '', dateFrom: '', dateTo: '' });
+    setFilter({ taskType: '', priority: '', assignedTo: '', search: '', dateFrom: '', dateTo: '' });
     setSortOrder('none');
   };
 
@@ -551,9 +555,10 @@ const PendingTasks: React.FC = () => {
           <br><strong>Total Tasks:</strong> ${tasksToprint.length}
         </div>
 
-        ${filter.search || filter.priority || filter.dateFrom || filter.dateTo ? `
+        ${filter.search || filter.taskType || filter.priority || filter.dateFrom || filter.dateTo ? `
           <div class="filter-info">
             <strong>⚠️ Filters Applied:</strong> Showing results matching: 
+            ${filter.taskType ? `Type: ${filter.taskType} ` : ''}
             ${filter.search ? `Search: "${filter.search}" ` : ''}
             ${filter.priority ? `Priority: ${filter.priority} ` : ''}
             ${filter.dateFrom ? `From: ${filter.dateFrom} ` : ''}
@@ -566,6 +571,7 @@ const PendingTasks: React.FC = () => {
             <tr>
               <th>#</th>
               <th>Task Title</th>
+              <th>Type</th>
               <th>Description</th>
               <th>Assigned To</th>
               <th>Priority</th>
@@ -578,6 +584,7 @@ const PendingTasks: React.FC = () => {
               <tr>
                 <td>${idx + 1}</td>
                 <td>${task.title}</td>
+                <td>${task.taskType ? task.taskType.toUpperCase() : 'N/A'}</td>
                 <td>${task.description.substring(0, 40)}...</td>
                 <td>${task.assignedTo?.username || 'Unknown User'}</td>
                 <td><span class="badge badge-${task.priority}">${task.priority.toUpperCase()}</span></td>
@@ -670,6 +677,7 @@ const PendingTasks: React.FC = () => {
               </div>
 
               <div className="flex flex-wrap gap-2 mb-4">
+                <TaskTypeBadge taskType={task.taskType} />
                 <PriorityBadge priority={task.priority} />
                 {task.revisionCount > 0 && (
                   <span className="px-2 py-1 text-xs font-medium rounded-full bg-[--color-warning] text-[--color-background]">
@@ -787,6 +795,9 @@ const PendingTasks: React.FC = () => {
                   Task
                 </th>
                 <th className="px-6 py-4 text-left text-xs font-medium text-[--color-textSecondary] uppercase tracking-wider">
+                  Type
+                </th>
+                <th className="px-6 py-4 text-left text-xs font-medium text-[--color-textSecondary] uppercase tracking-wider">
                   Priority
                 </th>
                 <th className="px-6 py-4 text-left text-xs font-medium text-[--color-textSecondary] uppercase tracking-wider">
@@ -866,6 +877,9 @@ const PendingTasks: React.FC = () => {
                         </div>
                       )}
                     </div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <TaskTypeBadge taskType={task.taskType} />
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <PriorityBadge priority={task.priority} />
@@ -1061,6 +1075,26 @@ const PendingTasks: React.FC = () => {
           className="rounded-xl shadow-sm border border-[--color-border] p-3 mt-2 bg-[--color-surface]"
         >
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+            {/* Task Type */}
+            <div>
+              <label className="block text-sm font-medium mb-1 text-[--color-textSecondary]">
+                Task Type
+              </label>
+              <select
+                value={filter.taskType}
+                onChange={(e) => setFilter({ ...filter, taskType: e.target.value })}
+                className="w-full text-sm px-1 py-1 border border-[--color-border] rounded-lg focus:ring-2 focus:ring-[--color-primary] focus:border-[--color-primary] transition-colors bg-[--color-background] text-[--color-text] cursor-pointer"
+              >
+                <option value="">All Types</option>
+                <option value="one-time">One-Time</option>
+                <option value="daily">Daily</option>
+                <option value="weekly">Weekly</option>
+                <option value="monthly">Monthly</option>
+                <option value="quarterly">Quarterly</option>
+                <option value="yearly">Yearly</option>
+              </select>
+            </div>
+
             {/* Date From */}
             <div>
               <label className="block text-sm font-medium mb-1 text-[--color-textSecondary]">
@@ -1301,19 +1335,22 @@ const PendingTasks: React.FC = () => {
       )}
 
       {/* Task Completion Modal */}
-      {showCompleteModal && completingTask && (
-        <TaskCompletionModal
-          taskId={showCompleteModal}
-          taskTitle={completingTask.title}
-          taskType={completingTask.taskType}
-          isRecurring={false}
-          allowAttachments={taskSettings.pendingTasks.allowAttachments}
-          mandatoryAttachments={taskSettings.pendingTasks.mandatoryAttachments}
-          mandatoryRemarks={taskSettings.pendingTasks.mandatoryRemarks}
-          onClose={() => setShowCompleteModal(null)}
-          onComplete={handleTaskCompletion}
-        />
-      )}
+      {showCompleteModal && completingTask && (() => {
+        const isRecurringTask = ['daily', 'weekly', 'monthly', 'quarterly', 'yearly'].includes(completingTask.taskType);
+        return (
+          <TaskCompletionModal
+            taskId={showCompleteModal}
+            taskTitle={completingTask.title}
+            taskType={completingTask.taskType}
+            isRecurring={isRecurringTask}
+            allowAttachments={isRecurringTask ? taskSettings.pendingRecurringTasks.allowAttachments : taskSettings.pendingTasks.allowAttachments}
+            mandatoryAttachments={isRecurringTask ? taskSettings.pendingRecurringTasks.mandatoryAttachments : taskSettings.pendingTasks.mandatoryAttachments}
+            mandatoryRemarks={isRecurringTask ? taskSettings.pendingRecurringTasks.mandatoryRemarks : taskSettings.pendingTasks.mandatoryRemarks}
+            onClose={() => setShowCompleteModal(null)}
+            onComplete={handleTaskCompletion}
+          />
+        );
+      })()}
 
       {/* Multi-Level Task Completion Modal */}
       {showMLTCompleteModal && (

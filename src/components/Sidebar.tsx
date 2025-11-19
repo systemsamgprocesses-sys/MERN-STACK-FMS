@@ -104,7 +104,6 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
   const [isCollapsed, setIsCollapsed] = useState(false); // Default expanded state
   const [counts, setCounts] = useState({
     pendingTasks: 0,
-    pendingRepetitive: 0,
     masterTasks: 0,
     masterRepetitive: 0,
     myTasks: 0,
@@ -131,7 +130,6 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
     
     // Tasks Section
     { section: 'Tasks', icon: CheckSquare, label: 'Pending Tasks', path: '/pending-tasks', permission: 'canViewTasks', countKey: 'pendingTasks', highlight: true },
-    { section: 'Tasks', icon: RefreshCw, label: 'Pending Repetitive', path: '/pending-recurring', permission: 'canViewTasks', countKey: 'pendingRepetitive', highlight: true },
     { section: 'Tasks', icon: Archive, label: 'Master Tasks', path: '/master-tasks', permission: 'canViewAllTeamTasks', countKey: 'masterTasks', highlight: true },
     { section: 'Tasks', icon: RotateCcw, label: 'Master Repetitive', path: '/master-recurring', permission: 'canViewAllTeamTasks', countKey: 'masterRepetitive', highlight: true },
     { section: 'Tasks', icon: Calendar, label: 'Upcoming Tasks', path: '/upcoming-tasks', permission: 'canViewTasks', highlight: true },
@@ -150,6 +148,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
     // Workflow Section
     { section: 'Workflow', icon: AlertCircle, label: 'Objections Hub', path: '/objections', countKey: 'myObjections' },
     { section: 'Workflow', icon: AlertCircle, label: 'Objection Approvals', path: '/objection-approvals', countKey: 'objections', permission: 'canApproveObjections' },
+    { section: 'Workflow', icon: AlertCircle, label: 'All Objections', path: '/all-objections', requireRole: 'pc' },
     { section: 'Workflow', icon: MessageSquare, label: 'Complaints', path: '/complaints', permission: 'canRaiseComplaints', countKey: 'complaintsInbox' },
     { section: 'Workflow', icon: AlertCircle, label: 'Complaints Dashboard', path: '/complaints-dashboard', permission: 'canViewAllComplaints' },
     { section: 'Workflow', icon: HelpCircle, label: 'Help Tickets', path: '/help-tickets', countKey: 'helpTickets' },
@@ -258,7 +257,6 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
 
       setCounts({
         pendingTasks: countsData.pendingTasks || 0,
-        pendingRepetitive: countsData.pendingRepetitive || countsData.recurringPending || 0,
         masterTasks: countsData.totalTasks || 0, // Use totalTasks as master tasks
         masterRepetitive: countsData.recurringTasks || 0,
         myTasks: countsData.totalTasks || 0, // For admin, show total tasks
@@ -282,6 +280,9 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
     
     // Admin can see admin panel and below (legacy check)
     if (item.requireAdmin && !['admin', 'superadmin'].includes(user?.role || '')) return false;
+    
+    // Check for specific role requirement
+    if (item.requireRole && user?.role !== item.requireRole) return false;
     
     // Check for specific permissions - this is the primary access control
     if (item.permission) {

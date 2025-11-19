@@ -6,7 +6,6 @@ import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import PendingTasks from './pages/PendingTasks';
 import UpcomingTasks from './pages/UpcomingTasks';
-import PendingRecurringTasks from './pages/PendingRecurringTasks';
 import MasterTasks from './pages/MasterTasks';
 import MasterRecurringTasks from './pages/MasterRecurringTasks';
 import AssignTask from './pages/AssignTask';
@@ -24,6 +23,7 @@ import ScoreLogs from './pages/ScoreLogs';
 import AdminTasks from './pages/AdminTasks';
 import ObjectionApprovals from './pages/ObjectionApprovals';
 import ObjectionsHub from './pages/ObjectionsHub';
+import AllObjections from './pages/AllObjections';
 import ErrorBoundary from './components/ErrorBoundary';
 import Checklists from './pages/Checklists';
 import CreateChecklist from './pages/CreateChecklist';
@@ -64,7 +64,6 @@ function App() {
                   <Route path="performance" element={<ProtectedRoute><Performance /></ProtectedRoute>} />
                   <Route path="pending-tasks" element={<PendingTasks />} />
                   <Route path="upcoming-tasks" element={<UpcomingTasks />} />
-                  <Route path="pending-recurring" element={<PendingRecurringTasks />} />
                   <Route path="master-tasks" element={<MasterTasks />} />
                   <Route path="master-recurring" element={<MasterRecurringTasks />} />
                   <Route path="assign-task" element={<AssignTask />} />
@@ -93,6 +92,7 @@ function App() {
                   <Route path="score-logs" element={<ProtectedRoute><ScoreLogs /></ProtectedRoute>} />
                   <Route path="objection-approvals" element={<ProtectedRoute><ObjectionApprovals /></ProtectedRoute>} />
                   <Route path="objections" element={<ProtectedRoute><ObjectionsHub /></ProtectedRoute>} />
+                  <Route path="all-objections" element={<ProtectedRoute><AllObjections /></ProtectedRoute>} />
                   <Route path="admin-tasks" element={<ProtectedRoute requireAdmin><AdminTasks /></ProtectedRoute>} />
                   <Route path="admin" element={<ProtectedRoute requireAdmin><AdminPanel /></ProtectedRoute>} />
                   <Route path="admin-hr-panel" element={<ProtectedRoute requireAdmin><AdminHRPanel /></ProtectedRoute>} />

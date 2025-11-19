@@ -14,6 +14,8 @@ const TaskTypeBadge: React.FC<TaskTypeBadgeProps> = ({ taskType, size = 'sm' }) 
         return 'bg-indigo-100 text-indigo-800 border-indigo-200';
       case 'monthly':
         return 'bg-teal-100 text-teal-800 border-teal-200';
+      case 'quarterly':
+        return 'bg-cyan-100 text-cyan-800 border-cyan-200';
       case 'yearly':
         return 'bg-pink-100 text-pink-800 border-pink-200';
       case 'one-time':

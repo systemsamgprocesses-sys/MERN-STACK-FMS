@@ -5,20 +5,42 @@ import { config } from '../config.js';
 
 const router = express.Router();
 
+const sanitizeInput = (value) => value?.toString().trim() || '';
+const escapeRegex = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
 // Login
 router.post('/login', async (req, res) => {
   try {
     const { username, password } = req.body;
 
-    // Find user
-    const user = await User.findOne({ username, isActive: true });
+    // Validate request body
+    if (!username || !password) {
+      console.log('Login attempt with missing credentials:', { username: !!username, password: !!password });
+      return res.status(400).json({ message: 'Username and password are required' });
+    }
+
+    const identifier = sanitizeInput(username);
+    const escapedIdentifier = escapeRegex(identifier);
+
+    // Find user (case-insensitive username/email/phone search)
+    const user = await User.findOne({
+      isActive: true,
+      $or: [
+        { username: { $regex: new RegExp(`^${escapedIdentifier}$`, 'i') } },
+        { email: { $regex: new RegExp(`^${escapedIdentifier}$`, 'i') } },
+        { phoneNumber: identifier }
+      ]
+    });
+    
     if (!user) {
+      console.log('Login attempt failed - User not found:', identifier);
       return res.status(401).json({ message: 'Invalid credentials' });
     }
 
     // Check password
     const isMatch = await user.comparePassword(password);
     if (!isMatch) {
+      console.log('Login attempt failed - Password mismatch for user:', identifier);
       return res.status(401).json({ message: 'Invalid credentials' });
     }
 
@@ -38,12 +60,15 @@ router.post('/login', async (req, res) => {
       permissions: user.permissions
     };
 
+    console.log('Login successful for user:', user.username, 'Role:', user.role);
+
     res.json({
       message: 'Login successful',
       user: userData,
       token: token
     });
   } catch (error) {
+    console.error('Login error:', error);
     res.status(500).json({ message: 'Server error', error: error.message });
   }
 });

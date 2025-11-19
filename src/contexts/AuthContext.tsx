@@ -1,6 +1,9 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import axios from 'axios';
 import { address } from '../../utils/ipAddress'; // Fixed import path
+
+// Set axios default baseURL to ensure all requests use the correct backend URL
+axios.defaults.baseURL = address;
 interface User {
   id: string;
   username: string;
@@ -125,7 +128,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setError(null);
       setIsLoading(true);
       
-      const response = await axios.post(`${address}/api/auth/login`, {
+      // Use relative URL since baseURL is set in axios defaults
+      const response = await axios.post('/api/auth/login', {
         username,
         password
       });

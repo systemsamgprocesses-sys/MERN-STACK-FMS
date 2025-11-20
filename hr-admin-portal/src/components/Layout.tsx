@@ -17,7 +17,7 @@ const Layout: React.FC = () => {
       <div className="w-64 bg-gray-800 text-white flex flex-col shadow-lg">
         <div className="flex items-center justify-center h-20 shadow-md bg-gray-900 px-4">
           <img
-            src="http://localhost:3000/assets/AMG LOGO.webp"
+            src="/assets/AMG LOGO.webp"
             alt="AMG Logo"
             className="h-12 w-12 object-contain rounded-lg mr-3"
           />

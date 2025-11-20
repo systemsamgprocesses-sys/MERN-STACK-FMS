@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { Lock, User } from 'lucide-react';
@@ -25,7 +25,7 @@ const Login: React.FC = () => {
       <div className="w-full max-w-md p-8 space-y-6 bg-white rounded-xl shadow-2xl">
         <div className="flex flex-col items-center">
           <img
-            src="http://localhost:3000/assets/AMG LOGO.webp"
+            src="/assets/AMG LOGO.webp"
             alt="AMG Realty"
             className="h-16 w-16 mb-4 object-contain rounded-lg"
           />
@@ -45,6 +45,7 @@ const Login: React.FC = () => {
                 className="w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 placeholder="Enter your username"
                 required
+                autoComplete="username"
               />
             </div>
           </div>
@@ -60,6 +61,7 @@ const Login: React.FC = () => {
                 className="w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 placeholder="Enter your password"
                 required
+                autoComplete="current-password"
               />
             </div>
           </div>

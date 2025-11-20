@@ -43,32 +43,41 @@ const PORT = config.port;
 
 // Middleware
 const replitDomain = process.env.REPLIT_DEV_DOMAIN;
+const normalizeOrigin = (origin) => origin?.replace(/\/$/, '');
 const allowedOrigins = [
- 'http://localhost:5173', // Employee App (Dev)
+  'http://localhost:5173', // Employee App (Dev)
   'http://localhost:5174', // HR Portal (Dev)
-  'http://localhost:5000', // (You had this, so I'll keep it)
-  'http://', // The backend itself
+  'http://localhost:5000', // Legacy local server
   'https://hub.amgrealty.in', // Main App (Production)
-  'https://task.amgrealty.in', // (Legacy or alternate, good to keep)
-  'https://tasks.amgrealty.in', // (Legacy or alternate, good to keep)
-  'https://human-resource.amgrealty.in', // HR Portal (Production)
+  'https://task.amgrealty.in', // Legacy/alternate
+  'https://tasks.amgrealty.in', // Legacy/alternate
+  'http://human-resource.amgrealty.in', // HR Portal (Production HTTP)
+  'https://human-resource.amgrealty.in', // HR Portal (Production HTTPS)
+  process.env.HR_PORTAL_URL,
+  process.env.EMPLOYEE_PORTAL_URL,
   replitDomain ? `https://${replitDomain}` : null,
   config.corsOrigin
-].filter(Boolean);
+]
+  .filter(Boolean)
+  .map(normalizeOrigin);
 
 app.use(cors({
   origin: function (origin, callback) {
-    // Allow requests with no origin (like mobile apps or curl requests)
     if (!origin) return callback(null, true);
 
-    if (allowedOrigins.includes(origin)) {
+    const normalizedOrigin = normalizeOrigin(origin);
+    if (allowedOrigins.includes(normalizedOrigin)) {
       return callback(null, true);
-    } else {
-      console.log('Blocked by CORS:', origin);
-      return callback(new Error('Not allowed by CORS'));
     }
+
+    console.log('Blocked by CORS:', origin);
+    return callback(new Error('Not allowed by CORS'));
   },
-  credentials: true
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+  optionsSuccessStatus: 204,
+  preflightContinue: false
 }));
 
 // ============================================

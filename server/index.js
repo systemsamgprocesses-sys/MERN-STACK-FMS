@@ -15,6 +15,7 @@ import authRoutes from './routes/auth.js';
 import taskRoutes from './routes/tasks.js';
 import userRoutes from './routes/users.js';
 import dashboardRoutes from './routes/dashboard.js';
+import dashboardOptimizedRoutes from './routes/dashboardOptimized.js';
 import settingsRoutes from './routes/settings.js';
 import fmsRoutes from './routes/fms.js';
 import fmsCategoryRoutes from './routes/fmsCategories.js';
@@ -181,6 +182,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/tasks', taskRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/dashboard', dashboardRoutes);
+app.use('/api/dashboard', dashboardOptimizedRoutes); // Optimized dashboard endpoints
 app.use('/api/settings', settingsRoutes);
 app.use('/api/fms', fmsRoutes);
 app.use('/api/fms-categories', fmsCategoryRoutes);

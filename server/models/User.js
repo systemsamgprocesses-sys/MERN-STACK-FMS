@@ -72,6 +72,17 @@ const userSchema = new mongoose.Schema({
   timestamps: true
 });
 
+// ============================================
+// PERFORMANCE INDEXES for User Model
+// ============================================
+// Index for login queries (username, email, phone)
+userSchema.index({ username: 1 });
+userSchema.index({ email: 1 });
+userSchema.index({ phoneNumber: 1 });
+
+// Compound index for finding active users
+userSchema.index({ isActive: 1, role: 1 });
+
 // Hash password before saving
 userSchema.pre('save', async function(next) {
   if (!this.isModified('password')) return next();

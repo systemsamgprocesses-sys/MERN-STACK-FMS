@@ -9,9 +9,55 @@ import ScoreLog from '../models/ScoreLog.js';
 
 const router = express.Router();
 
+// ============================================
+// IN-MEMORY CACHE for Dashboard Analytics
+// Reduces CPU by caching heavy aggregations for 60 seconds
+// ============================================
+const dashboardCache = new Map();
+const CACHE_TTL = 60000; // 60 seconds
+
+function getCacheKey(req) {
+  const { userId, isAdmin, startDate, endDate } = req.query;
+  return `analytics-${userId || 'all'}-${isAdmin || 'false'}-${startDate || 'none'}-${endDate || 'none'}`;
+}
+
+function getCountsCacheKey(req) {
+  const { userId, isAdmin, assignedById } = req.query;
+  return `counts-${userId || 'all'}-${isAdmin || 'false'}-${assignedById || 'none'}`;
+}
+
+function getCachedData(key) {
+  const cached = dashboardCache.get(key);
+  if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
+    console.log(`✅ Cache HIT for ${key}`);
+    return cached.data;
+  }
+  console.log(`❌ Cache MISS for ${key}`);
+  return null;
+}
+
+function setCachedData(key, data) {
+  dashboardCache.set(key, {
+    data,
+    timestamp: Date.now()
+  });
+  
+  // Clean old cache entries (prevent memory leak)
+  if (dashboardCache.size > 100) {
+    const oldestKeys = Array.from(dashboardCache.keys()).slice(0, 20);
+    oldestKeys.forEach(k => dashboardCache.delete(k));
+  }
+}
+
 // Get dashboard analytics
 router.get('/analytics', async (req, res) => {
   try {
+    // Check cache first
+    const cacheKey = getCacheKey(req);
+    const cachedData = getCachedData(cacheKey);
+    if (cachedData) {
+      return res.json(cachedData);
+    }
     const { userId, isAdmin, startDate, endDate, includeTeam, includeAllTimeMetrics } = req.query;
 
     // Convert userId to ObjectId for proper MongoDB queries
@@ -995,6 +1041,13 @@ router.get('/member-trend', async (req, res) => {
 // Get task counts with trends
 router.get('/counts', async (req, res) => {
   try {
+    // Check cache first
+    const cacheKey = getCountsCacheKey(req);
+    const cachedData = getCachedData(cacheKey);
+    if (cachedData) {
+      return res.json(cachedData);
+    }
+
     const { userId, isAdmin, startDate, endDate, assignedById } = req.query;
 
     // Convert userId to ObjectId for proper MongoDB queries
@@ -1309,7 +1362,7 @@ router.get('/counts', async (req, res) => {
         };
       }
 
-      return res.json({
+      const responseData = {
         totalTasks,
         pendingTasks,
         upcomingTasks,
@@ -1350,7 +1403,12 @@ router.get('/counts', async (req, res) => {
           completedTasks: calculateTrend(thisYearCompletedTasks, prevYearCompletedTasks),
           overdueTasks: calculateTrend(thisYearOverdueTasks, prevYearOverdueTasks)
         }
-      });
+      };
+
+      // Cache the response for 60 seconds
+      setCachedData(getCountsCacheKey(req), responseData);
+
+      return res.json(responseData);
     }
 
     const now = new Date();

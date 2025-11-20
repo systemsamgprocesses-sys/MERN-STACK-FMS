@@ -205,7 +205,8 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
         countsParams.append('assignedById', user.id);
       }
 
-      const countsResponse = await axios.get(`${address}/api/dashboard/counts?${countsParams}`);
+      // Use optimized counts endpoint (single aggregation query instead of 50+ queries)
+      const countsResponse = await axios.get(`${address}/api/dashboard/counts-optimized?${countsParams}`);
       const countsData = countsResponse.data;
 
       // Fetch objection approvals count

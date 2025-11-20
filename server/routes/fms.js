@@ -247,17 +247,38 @@ router.get('/', async (req, res) => {
 });
 
 // Get single FMS template
-router.get('/:fmsId', async (req, res) => {
+router.get('/:fmsId', authenticateToken, async (req, res) => {
   try {
-    const fms = await FMS.findOne({ fmsId: req.params.fmsId })
-      .populate('createdBy', 'username email')
-      .populate('steps.who', 'username email name');
+    const idParam = req.params.fmsId;
+    let fms;
+    
+    console.log('Fetching FMS with ID:', idParam);
+    
+    // Try to find by MongoDB _id first (for edit mode), then by fmsId
+    if (idParam.match(/^[0-9a-fA-F]{24}$/)) {
+      // Valid MongoDB ObjectId format
+      console.log('Searching by MongoDB _id');
+      fms = await FMS.findById(idParam)
+        .populate('createdBy', 'username email')
+        .populate('steps.who', 'username email name');
+      console.log('FMS found by _id:', !!fms);
+    }
+    
+    // If not found by _id, try by fmsId
+    if (!fms) {
+      console.log('Searching by fmsId field');
+      fms = await FMS.findOne({ fmsId: idParam })
+        .populate('createdBy', 'username email')
+        .populate('steps.who', 'username email name');
+      console.log('FMS found by fmsId:', !!fms);
+    }
     
     if (!fms) {
+      console.log('FMS not found with ID:', idParam);
       return res.status(404).json({ success: false, message: 'FMS template not found' });
     }
     
-    res.json({ success: true, fms });
+    res.json(fms);
   } catch (error) {
     console.error('Get FMS error:', error);
     res.status(500).json({ success: false, message: 'Server error', error: error.message });

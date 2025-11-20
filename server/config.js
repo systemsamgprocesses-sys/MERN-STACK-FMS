@@ -21,8 +21,12 @@ export const config = {
   uploadsDir: './uploads'
 };
 
-// MongoDB connection options
+// MongoDB connection options - Optimized for performance
 export const mongoOptions = {
+  maxPoolSize: 50, // Maximum number of connections in the pool (increased from default 100)
+  minPoolSize: 10, // Maintain at least 10 connections at all times
   serverSelectionTimeoutMS: 5000,
   socketTimeoutMS: 45000,
+  maxIdleTimeMS: 30000, // Close idle connections after 30 seconds
+  connectTimeoutMS: 10000, // Timeout for initial connection
 };

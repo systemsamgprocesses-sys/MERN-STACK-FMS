@@ -298,7 +298,7 @@ const MasterRecurringTasks: React.FC = () => {
       const params = new URLSearchParams({
         taskType: 'daily,weekly,monthly,quarterly,yearly',
         page: '1',
-        limit: '1000000' // Fetch all tasks to handle filtering on frontend
+        limit: '10000' // Optimized: Reduced from 1000000 to prevent CPU spikes
       });
 
       // For non-admin users, filter by their assigned tasks

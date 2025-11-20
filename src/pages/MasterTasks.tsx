@@ -195,7 +195,7 @@ const MasterTasks: React.FC = () => {
       const params = new URLSearchParams({
         taskType: 'one-time',
         page: '1',
-        limit: '1000000' // Fetch all tasks to handle filtering on frontend
+        limit: '10000' // Optimized: Reduced from 1000000 to prevent CPU spikes
       });
 
       // Add status filter for in-progress tasks

@@ -956,22 +956,93 @@ const ViewAllFMS: React.FC = () => {
                           </div>
 
                           {showMermaid === fms.fmsId && (
-                            <div className="px-6 pb-4 border-t border-[var(--color-border)]">
-                              <div className="flex items-center justify-between mb-3 mt-4">
-                                <h4 className="text-lg font-bold text-[var(--color-text)]">
-                                  Workflow Preview
-                                </h4>
-                                <button
-                                  onClick={() => void printFMS(fms)}
-                                  className="px-4 py-2 bg-[var(--color-primary)] text-white rounded-lg hover:opacity-90 flex items-center gap-2 print:hidden"
-                                >
-                                  <Printer size={16} />
-                                  Print This FMS
-                                </button>
-                              </div>
-                              <div className="bg-white p-6 rounded-lg overflow-auto border border-[var(--color-border)] shadow-sm">
-                                <div className="min-h-[300px] flex items-center justify-center">
-                                  <MermaidDiagram chart={generateMermaidDiagram(fms.steps, usersCache)} />
+                            <div 
+                              className="fixed inset-0 bg-gradient-to-br from-gray-900/95 via-gray-900/90 to-black/95 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fadeIn" 
+                              onClick={() => setShowMermaid(null)}
+                            >
+                              <div 
+                                className="bg-white dark:bg-gray-800 rounded-3xl max-w-[95vw] w-full max-h-[95vh] overflow-hidden shadow-2xl transform transition-all animate-slideUp border-2 border-gray-200 dark:border-gray-700" 
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                {/* Premium Header */}
+                                <div className="sticky top-0 bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 px-8 py-6 flex items-center justify-between z-10 shadow-lg">
+                                  <div className="flex items-center gap-4">
+                                    <div className="p-3 bg-white/20 backdrop-blur-sm rounded-xl">
+                                      <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                                      </svg>
+                                    </div>
+                                    <div>
+                                      <h4 className="text-2xl font-bold text-white drop-shadow-lg">
+                                        {fms.fmsName}
+                                      </h4>
+                                      <p className="text-sm text-white/90 mt-1">Process Workflow Visualization</p>
+                                    </div>
+                                  </div>
+                                  <div className="flex items-center gap-3">
+                                    <button
+                                      onClick={() => void printFMS(fms)}
+                                      className="px-5 py-2.5 bg-white/20 backdrop-blur-sm hover:bg-white/30 text-white rounded-xl font-semibold transition-all transform hover:scale-105 flex items-center gap-2 border border-white/30"
+                                    >
+                                      <Printer size={18} />
+                                      <span>Print</span>
+                                    </button>
+                                    <button
+                                      onClick={() => setShowMermaid(null)}
+                                      className="px-5 py-2.5 bg-white hover:bg-gray-100 text-gray-800 rounded-xl font-semibold transition-all transform hover:scale-105 flex items-center gap-2 shadow-lg"
+                                    >
+                                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                      </svg>
+                                      <span>Close</span>
+                                    </button>
+                                  </div>
+                                </div>
+
+                                {/* Workflow Info Bar */}
+                                <div className="bg-gradient-to-r from-gray-50 to-blue-50 dark:from-gray-700 dark:to-gray-600 px-8 py-4 border-b border-gray-200 dark:border-gray-600">
+                                  <div className="flex items-center justify-between text-sm">
+                                    <div className="flex items-center gap-6">
+                                      <div className="flex items-center gap-2">
+                                        <span className="text-gray-600 dark:text-gray-300 font-medium">📋 FMS ID:</span>
+                                        <span className="px-3 py-1 bg-white dark:bg-gray-800 rounded-lg font-mono text-gray-900 dark:text-white border border-gray-300 dark:border-gray-500">{fms.fmsId}</span>
+                                      </div>
+                                      <div className="flex items-center gap-2">
+                                        <span className="text-gray-600 dark:text-gray-300 font-medium">📊 Steps:</span>
+                                        <span className="px-3 py-1 bg-blue-100 dark:bg-blue-900 rounded-lg font-bold text-blue-700 dark:text-blue-200">{fms.steps.length}</span>
+                                      </div>
+                                      <div className="flex items-center gap-2">
+                                        <span className="text-gray-600 dark:text-gray-300 font-medium">⏱️ Duration:</span>
+                                        <span className="px-3 py-1 bg-purple-100 dark:bg-purple-900 rounded-lg font-semibold text-purple-700 dark:text-purple-200">{fms.totalTimeFormatted}</span>
+                                      </div>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                      <span className="text-gray-600 dark:text-gray-300 font-medium">👤 Created by:</span>
+                                      <span className="px-3 py-1 bg-green-100 dark:bg-green-900 rounded-lg font-semibold text-green-700 dark:text-green-200">{fms.createdBy}</span>
+                                    </div>
+                                  </div>
+                                </div>
+
+                                {/* Diagram Container */}
+                                <div className="p-8 overflow-auto" style={{ maxHeight: 'calc(95vh - 220px)' }}>
+                                  <div className="bg-gradient-to-br from-white via-blue-50 to-purple-50 dark:from-gray-800 dark:via-gray-750 dark:to-gray-700 p-8 rounded-2xl border-2 border-gray-200 dark:border-gray-600 shadow-inner">
+                                    <div className="min-h-[500px] flex items-center justify-center">
+                                      <MermaidDiagram chart={generateMermaidDiagram(fms.steps, usersCache)} />
+                                    </div>
+                                  </div>
+                                </div>
+
+                                {/* Footer */}
+                                <div className="sticky bottom-0 bg-gradient-to-r from-gray-50 to-blue-50 dark:from-gray-700 dark:to-gray-600 px-8 py-4 border-t border-gray-200 dark:border-gray-600">
+                                  <div className="flex items-center justify-between text-xs text-gray-600 dark:text-gray-300">
+                                    <span className="flex items-center gap-2">
+                                      <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                                        <path fillRule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clipRule="evenodd" />
+                                      </svg>
+                                      Created: {new Date(fms.createdOn).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}
+                                    </span>
+                                    <span className="font-medium">© {new Date().getFullYear()} FMS Workflow System</span>
+                                  </div>
                                 </div>
                               </div>
                             </div>

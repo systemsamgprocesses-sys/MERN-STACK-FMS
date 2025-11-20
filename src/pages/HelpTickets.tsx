@@ -77,6 +77,10 @@ const HelpTickets: React.FC = () => {
     }
   };
 
+  const [showCodeModal, setShowCodeModal] = useState(false);
+  const [displayedCode, setDisplayedCode] = useState<string>('');
+  const [codeMessage, setCodeMessage] = useState<string>('');
+
   const getClosureCode = async (ticketId: string) => {
     try {
       const token = localStorage.getItem('token');
@@ -84,7 +88,9 @@ const HelpTickets: React.FC = () => {
         `${address}/api/help-tickets/${ticketId}/get-closure-code`,
         { headers: { Authorization: `Bearer ${token}` } }
       );
-      alert(`Your Help Ticket Closing Code: ${response.data.otp}\n\n${response.data.message}`);
+      setDisplayedCode(response.data.otp);
+      setCodeMessage(response.data.message || 'Please provide this code to the admin when they verify your ticket closure.');
+      setShowCodeModal(true);
     } catch (error: any) {
       alert(error.response?.data?.error || 'Failed to get closure code');
     }
@@ -236,6 +242,32 @@ const HelpTickets: React.FC = () => {
                 className="w-full px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-semibold"
               >
                 I've Saved the Code
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Code Display Modal */}
+        {showCodeModal && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-xl p-8 max-w-md w-full shadow-2xl">
+              <h2 className="text-2xl font-bold text-gray-900 mb-4">🔑 Your Closing Code</h2>
+              <div className="bg-blue-50 border-2 border-blue-400 rounded-lg p-4 mb-4">
+                <p className="text-sm text-blue-900 mb-3">{codeMessage}</p>
+                <div className="bg-white p-4 rounded-lg border-2 border-blue-400">
+                  <p className="text-xs text-gray-600 mb-1">Help Ticket Closing Code:</p>
+                  <p className="text-4xl font-bold text-center text-gray-900 tracking-widest">{displayedCode}</p>
+                </div>
+              </div>
+              <button
+                onClick={() => {
+                  setShowCodeModal(false);
+                  setDisplayedCode('');
+                  setCodeMessage('');
+                }}
+                className="w-full px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-semibold"
+              >
+                Close
               </button>
             </div>
           </div>

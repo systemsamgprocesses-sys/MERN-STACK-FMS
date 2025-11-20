@@ -1102,6 +1102,105 @@ const Dashboard: React.FC = () => {
             </div>
           </div>
 
+          {/* PC Role: Tasks by Status Section */}
+          {user?.role === 'pc' && (
+            <div className="mt-8">
+              <div className="mb-6">
+                <h2 className="text-2xl font-bold text-[var(--color-text)]">📋 Tasks by Status</h2>
+                <p className="text-sm text-[var(--color-textSecondary)] mt-1">Overview of all tasks grouped by their current status</p>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div className="bg-gradient-to-br from-yellow-50 to-yellow-100 dark:from-yellow-900/20 dark:to-yellow-800/20 border-2 border-yellow-300 dark:border-yellow-700 rounded-xl p-4 shadow-sm">
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="p-2 rounded-lg bg-yellow-200 dark:bg-yellow-800/50">
+                      <Clock size={20} className="text-yellow-700 dark:text-yellow-300" />
+                    </div>
+                    <span className="text-2xl font-bold text-yellow-700 dark:text-yellow-300">{displayData?.pendingTasks || 0}</span>
+                  </div>
+                  <h3 className="text-sm font-semibold text-yellow-800 dark:text-yellow-200 mb-1">Pending (≤ Today)</h3>
+                  <p className="text-xs text-yellow-600 dark:text-yellow-400">Tasks awaiting action</p>
+                </div>
+
+                <div className="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20 border-2 border-blue-300 dark:border-blue-700 rounded-xl p-4 shadow-sm">
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="p-2 rounded-lg bg-blue-200 dark:bg-blue-800/50">
+                      <RotateCcw size={20} className="text-blue-700 dark:text-blue-300" />
+                    </div>
+                    <span className="text-2xl font-bold text-blue-700 dark:text-blue-300">{displayData?.inProgressTasks || 0}</span>
+                  </div>
+                  <h3 className="text-sm font-semibold text-blue-800 dark:text-blue-200 mb-1">In Progress</h3>
+                  <p className="text-xs text-blue-600 dark:text-blue-400">Currently being worked on</p>
+                </div>
+
+                <div className="bg-gradient-to-br from-green-50 to-green-100 dark:from-green-900/20 dark:to-green-800/20 border-2 border-green-300 dark:border-green-700 rounded-xl p-4 shadow-sm">
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="p-2 rounded-lg bg-green-200 dark:bg-green-800/50">
+                      <CheckCircle size={20} className="text-green-700 dark:text-green-300" />
+                    </div>
+                    <span className="text-2xl font-bold text-green-700 dark:text-green-300">{displayData?.completedTasks || 0}</span>
+                  </div>
+                  <h3 className="text-sm font-semibold text-green-800 dark:text-green-200 mb-1">Completed</h3>
+                  <p className="text-xs text-green-600 dark:text-green-400">Successfully finished</p>
+                </div>
+
+                <div className="bg-gradient-to-br from-red-50 to-red-100 dark:from-red-900/20 dark:to-red-800/20 border-2 border-red-300 dark:border-red-700 rounded-xl p-4 shadow-sm">
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="p-2 rounded-lg bg-red-200 dark:bg-red-800/50">
+                      <AlertTriangle size={20} className="text-red-700 dark:text-red-300" />
+                    </div>
+                    <span className="text-2xl font-bold text-red-700 dark:text-red-300">{displayData?.overdueTasks || 0}</span>
+                  </div>
+                  <h3 className="text-sm font-semibold text-red-800 dark:text-red-200 mb-1">Overdue (&lt; Today)</h3>
+                  <p className="text-xs text-red-600 dark:text-red-400">{displayData?.overduePercentage?.toFixed(1)}% of total</p>
+                </div>
+
+                <div className="bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-900/20 dark:to-purple-800/20 border-2 border-purple-300 dark:border-purple-700 rounded-xl p-4 shadow-sm">
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="p-2 rounded-lg bg-purple-200 dark:bg-purple-800/50">
+                      <Timer size={20} className="text-purple-700 dark:text-purple-300" />
+                    </div>
+                    <span className="text-2xl font-bold text-purple-700 dark:text-purple-300">{displayData?.upcomingTasks || 0}</span>
+                  </div>
+                  <h3 className="text-sm font-semibold text-purple-800 dark:text-purple-200 mb-1">Upcoming (&gt; Today)</h3>
+                  <p className="text-xs text-purple-600 dark:text-purple-400">Scheduled for later</p>
+                </div>
+
+                <div className="bg-gradient-to-br from-indigo-50 to-indigo-100 dark:from-indigo-900/20 dark:to-indigo-800/20 border-2 border-indigo-300 dark:border-indigo-700 rounded-xl p-4 shadow-sm">
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="p-2 rounded-lg bg-indigo-200 dark:bg-indigo-800/50">
+                      <Target size={20} className="text-indigo-700 dark:text-indigo-300" />
+                    </div>
+                    <span className="text-2xl font-bold text-indigo-700 dark:text-indigo-300">{displayData?.fmsTasks || 0}</span>
+                  </div>
+                  <h3 className="text-sm font-semibold text-indigo-800 dark:text-indigo-200 mb-1">FMS Tasks</h3>
+                  <p className="text-xs text-indigo-600 dark:text-indigo-400">Project workflow tasks</p>
+                </div>
+
+                <div className="bg-gradient-to-br from-teal-50 to-teal-100 dark:from-teal-900/20 dark:to-teal-800/20 border-2 border-teal-300 dark:border-teal-700 rounded-xl p-4 shadow-sm">
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="p-2 rounded-lg bg-teal-200 dark:bg-teal-800/50">
+                      <Activity size={20} className="text-teal-700 dark:text-teal-300" />
+                    </div>
+                    <span className="text-2xl font-bold text-teal-700 dark:text-teal-300">{displayData?.fmsInProgressTasks || 0}</span>
+                  </div>
+                  <h3 className="text-sm font-semibold text-teal-800 dark:text-teal-200 mb-1">FMS In Progress</h3>
+                  <p className="text-xs text-teal-600 dark:text-teal-400">Active FMS tasks</p>
+                </div>
+
+                <div className="bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900/20 dark:to-gray-800/20 border-2 border-gray-300 dark:border-gray-700 rounded-xl p-4 shadow-sm">
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="p-2 rounded-lg bg-gray-200 dark:bg-gray-800/50">
+                      <CheckSquare size={20} className="text-gray-700 dark:text-gray-300" />
+                    </div>
+                    <span className="text-2xl font-bold text-gray-700 dark:text-gray-300">{displayData?.totalTasks || 0}</span>
+                  </div>
+                  <h3 className="text-sm font-semibold text-gray-800 dark:text-gray-200 mb-1">Total Tasks</h3>
+                  <p className="text-xs text-gray-600 dark:text-gray-400">All tasks combined</p>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Task Type Distribution - Now includes quarterly and updated to 6 columns */}
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 xl:grid-cols-6 gap-4 sm:gap-5 lg:gap-6 p-4 sm:p-6 lg:p-8">
             {taskTypeData.map((type) => (

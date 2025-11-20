@@ -1,6 +1,8 @@
 import express from 'express';
 import mongoose from 'mongoose';
 import cors from 'cors';
+import compression from 'compression';
+import rateLimit from 'express-rate-limit';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import multer from 'multer';
@@ -67,6 +69,47 @@ app.use(cors({
   },
   credentials: true
 }));
+
+// ============================================
+// PERFORMANCE OPTIMIZATIONS
+// ============================================
+
+// Enable gzip compression for all responses (reduces bandwidth by 70-90%)
+app.use(compression({
+  filter: (req, res) => {
+    if (req.headers['x-no-compression']) {
+      return false;
+    }
+    return compression.filter(req, res);
+  },
+  level: 6 // Compression level (0-9, 6 is good balance)
+}));
+
+// Rate limiting to prevent API abuse and CPU spikes
+const apiLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 1000, // Limit each IP to 1000 requests per windowMs
+  message: 'Too many requests from this IP, please try again later.',
+  standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
+  legacyHeaders: false, // Disable the `X-RateLimit-*` headers
+  // Skip rate limiting for certain routes if needed
+  skip: (req) => {
+    // Don't rate limit health checks or static files
+    return req.path === '/health' || req.path.startsWith('/uploads/');
+  }
+});
+
+// Apply rate limiting to all API routes
+app.use('/api/', apiLimiter);
+
+// Stricter rate limiting for authentication endpoints
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 20, // Only 20 login attempts per 15 minutes
+  message: 'Too many login attempts, please try again later.'
+});
+app.use('/api/auth/login', authLimiter);
+
 app.use(express.json());
 
 // Create uploads directory if it doesn't exist

@@ -105,6 +105,7 @@ const PendingTasks: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [view, setView] = useState<'table' | 'card'>(getInitialViewPreference);
   const [sortOrder, setSortOrder] = useState<SortOrder>('none');
+  const [activeTab, setActiveTab] = useState<'todays-due' | 'pending' | 'completed' | 'total' | 'pending-repetitive'>('todays-due');
   const [filter, setFilter] = useState({
     taskType: '',
     priority: '',
@@ -639,7 +640,7 @@ const PendingTasks: React.FC = () => {
                     </span>
                   )}
                 </div>
-                {(user?.role !== 'admin' || user?.role === 'pc') && (
+                {(user?.role === 'employee' || user?.role === 'pc' || user?.role === 'admin' || user?.role === 'superadmin') && (
                   <div className="flex space-x-2 ml-2 opacity-0 group-hover:opacity-100 transition-opacity">
                     <button
                       onClick={() => updateTaskProgress(task._id, 'In Progress')}
@@ -1027,6 +1028,71 @@ const PendingTasks: React.FC = () => {
     }
   };
 
+  // Filter tasks based on active tab
+  const getTabFilteredData = () => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    let filteredPending = [...pendingTasks];
+    let filteredUpcoming = [...upcomingTasks];
+    let filteredFMS = [...fmsTasks];
+    
+    switch (activeTab) {
+      case 'todays-due':
+        // Only show tasks due today (exclude repetitive tasks without due dates)
+        filteredPending = pendingTasks.filter(task => {
+          if (!task.dueDate) return false; // Exclude tasks without due date from today's due
+          const dueDate = new Date(task.dueDate);
+          dueDate.setHours(0, 0, 0, 0);
+          return dueDate.getTime() === today.getTime();
+        });
+        filteredUpcoming = []; // No upcoming in today's due
+        filteredFMS = fmsTasks.filter(task => {
+          if (!task.task.plannedDueDate) return false;
+          const dueDate = new Date(task.task.plannedDueDate);
+          dueDate.setHours(0, 0, 0, 0);
+          return dueDate.getTime() === today.getTime();
+        });
+        break;
+      case 'pending':
+        // Show all pending tasks (including repetitive)
+        // Keep existing filtering
+        break;
+      case 'completed':
+        // Show only completed tasks
+        filteredPending = pendingTasks.filter(task => task.status === 'Completed');
+        filteredUpcoming = upcomingTasks.filter(task => task.status === 'Completed');
+        filteredFMS = fmsTasks.filter(task => task.task.status === 'Completed');
+        break;
+      case 'total':
+        // Show all tasks
+        // Keep existing
+        break;
+      case 'pending-repetitive':
+        // Show only repetitive/recurring tasks that are pending
+        filteredPending = pendingTasks.filter(task => 
+          !task.dueDate || task.taskType === 'recurring' || task.taskType === 'daily' || task.taskType === 'weekly' || task.taskType === 'monthly'
+        );
+        filteredUpcoming = []; // Upcoming doesn't apply to repetitive
+        filteredFMS = []; // FMS tasks handled separately
+        break;
+      default:
+        // Keep existing
+        break;
+    }
+    
+    return {
+      filteredPending,
+      filteredUpcoming,
+      filteredFMS
+    };
+  };
+
+  const { filteredPending, filteredUpcoming, filteredFMS } = getTabFilteredData();
+  
+  // Calculate total for tab display
+  const tabTotalCount = filteredPending.length + filteredUpcoming.length + filteredFMS.length;
+
   return (
     <div className="min-h-screen bg-[var(--color-background)] p-4 space-y-3">
       {/* Header */}
@@ -1066,6 +1132,62 @@ const PendingTasks: React.FC = () => {
           </button>
         </div>
         {!isMobile && <ViewToggle view={view} onViewChange={setView} />}
+      </div>
+
+      {/* Tabs Section */}
+      <div className="bg-[--color-surface] rounded-xl shadow-sm border border-[--color-border] p-2">
+        <div className="flex flex-wrap gap-2">
+          <button
+            onClick={() => setActiveTab('todays-due')}
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+              activeTab === 'todays-due'
+                ? 'bg-[--color-primary] text-white shadow-md'
+                : 'bg-[--color-background] text-[--color-textSecondary] hover:bg-[--color-border]'
+            }`}
+          >
+            Today's Due ({activeTab === 'todays-due' ? tabTotalCount : 0})
+          </button>
+          <button
+            onClick={() => setActiveTab('pending')}
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+              activeTab === 'pending'
+                ? 'bg-[--color-primary] text-white shadow-md'
+                : 'bg-[--color-background] text-[--color-textSecondary] hover:bg-[--color-border]'
+            }`}
+          >
+            Pending ({pendingTasks.length + fmsTasks.filter(t => t.task.status !== 'Completed').length})
+          </button>
+          <button
+            onClick={() => setActiveTab('completed')}
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+              activeTab === 'completed'
+                ? 'bg-[--color-primary] text-white shadow-md'
+                : 'bg-[--color-background] text-[--color-textSecondary] hover:bg-[--color-border]'
+            }`}
+          >
+            Completed ({activeTab === 'completed' ? tabTotalCount : 0})
+          </button>
+          <button
+            onClick={() => setActiveTab('total')}
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+              activeTab === 'total'
+                ? 'bg-[--color-primary] text-white shadow-md'
+                : 'bg-[--color-background] text-[--color-textSecondary] hover:bg-[--color-border]'
+            }`}
+          >
+            Total ({pendingTasks.length + upcomingTasks.length + fmsTasks.length})
+          </button>
+          <button
+            onClick={() => setActiveTab('pending-repetitive')}
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+              activeTab === 'pending-repetitive'
+                ? 'bg-[--color-primary] text-white shadow-md'
+                : 'bg-[--color-background] text-[--color-textSecondary] hover:bg-[--color-border]'
+            }`}
+          >
+            Pending Repetitive ({activeTab === 'pending-repetitive' ? tabTotalCount : 0})
+          </button>
+        </div>
       </div>
 
       {/* Enhanced Filters Section */}
@@ -1203,7 +1325,7 @@ const PendingTasks: React.FC = () => {
                 {!fmsTask.canComplete && (
                   <p className="text-xs text-[--color-warning] mt-2">⚠️ Complete previous step first</p>
                 )}
-                {fmsTask.canComplete && user?.role !== 'admin' && (
+                {fmsTask.canComplete && (user?.role === 'employee' || user?.role === 'pc' || user?.role === 'admin' || user?.role === 'superadmin') && (
                   <div className="flex space-x-2 mt-3">
                     <button
                       onClick={() => handleCompleteFMSTask(fmsTask.projectId, fmsTask.taskIndex)}
@@ -1228,27 +1350,27 @@ const PendingTasks: React.FC = () => {
       )}
 
       {/* Content */}
-      {pendingTasks.length === 0 && upcomingTasks.length === 0 && fmsTasks.length === 0 ? (
+      {filteredPending.length === 0 && filteredUpcoming.length === 0 && filteredFMS.length === 0 ? (
         <div className="text-center py-12">
           <div className="rounded-full w-24 h-24 flex items-center justify-center mx-auto mb-4 bg-gradient-to-r from-[--color-primary] to-[--color-accent]">
             <CheckSquare size={48} className="text-[--color-background]" />
           </div>
-          <p className="text-lg text-[--color-textSecondary]">No pending or upcoming tasks found</p>
-          <p className="text-sm mt-2 text-[--color-textSecondary]">Try adjusting your filters or check back later</p>
+          <p className="text-lg text-[--color-textSecondary]">No tasks found for the selected tab</p>
+          <p className="text-sm mt-2 text-[--color-textSecondary]">Try selecting a different tab or adjusting your filters</p>
         </div>
       ) : (
         <>
           {/* Pending Tasks Section */}
-          {pendingTasks.length > 0 && (
+          {filteredPending.length > 0 && (
             <div>
               <h2 className="text-md font-semibold text-[--color-text] mb-3 flex items-center gap-2">
                 <AlertTriangle size={18} className="text-red-500" />
-                Pending Tasks ({pendingTasks.length})
+                Pending Tasks ({filteredPending.length})
               </h2>
-              {isMobile || view === 'card' ? renderCardView(getPaginatedPendingTasks()) : renderTableView(getPaginatedPendingTasks())}
+              {isMobile || view === 'card' ? renderCardView(filteredPending.slice((pendingTasksPage - 1) * tasksPerPage, pendingTasksPage * tasksPerPage)) : renderTableView(filteredPending.slice((pendingTasksPage - 1) * tasksPerPage, pendingTasksPage * tasksPerPage))}
               
               {/* Pending Tasks Pagination */}
-              {getPendingTasksPages() > 1 && (
+              {Math.ceil(filteredPending.length / tasksPerPage) > 1 && (
                 <div className="bg-[--color-background] rounded-xl shadow-sm border border-[--color-border] p-4 mt-4">
                   <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                     {/* Items per page selector */}
@@ -1271,8 +1393,8 @@ const PendingTasks: React.FC = () => {
                     <div className="flex items-center">
                       <p className="text-sm text-[--color-textSecondary]">
                         Showing <span className="font-medium">{(pendingTasksPage - 1) * tasksPerPage + 1}</span> to{' '}
-                        <span className="font-medium">{Math.min(pendingTasksPage * tasksPerPage, pendingTasks.length)}</span> of{' '}
-                        <span className="font-medium">{pendingTasks.length}</span> results
+                        <span className="font-medium">{Math.min(pendingTasksPage * tasksPerPage, filteredPending.length)}</span> of{' '}
+                        <span className="font-medium">{filteredPending.length}</span> results
                       </p>
                     </div>
 
@@ -1297,12 +1419,12 @@ const PendingTasks: React.FC = () => {
                       </button>
 
                       <span className="text-sm text-[--color-textSecondary] px-3 py-2">
-                        {pendingTasksPage} of {getPendingTasksPages()}
+                        {pendingTasksPage} of {Math.ceil(filteredPending.length / tasksPerPage)}
                       </span>
 
                       <button
-                        onClick={() => setPendingTasksPage(Math.min(getPendingTasksPages(), pendingTasksPage + 1))}
-                        disabled={pendingTasksPage === getPendingTasksPages()}
+                        onClick={() => setPendingTasksPage(Math.min(Math.ceil(filteredPending.length / tasksPerPage), pendingTasksPage + 1))}
+                        disabled={pendingTasksPage >= Math.ceil(filteredPending.length / tasksPerPage)}
                         className="p-2 text-sm font-medium text-[--color-textSecondary] bg-[--color-surface] border border-[--color-border] rounded-lg hover:bg-[--color-border] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                         title="Next page"
                       >
@@ -1310,8 +1432,8 @@ const PendingTasks: React.FC = () => {
                       </button>
 
                       <button
-                        onClick={() => setPendingTasksPage(getPendingTasksPages())}
-                        disabled={pendingTasksPage === getPendingTasksPages()}
+                        onClick={() => setPendingTasksPage(Math.ceil(filteredPending.length / tasksPerPage))}
+                        disabled={pendingTasksPage >= Math.ceil(filteredPending.length / tasksPerPage)}
                         className="p-2 text-sm font-medium text-[--color-textSecondary] bg-[--color-surface] border border-[--color-border] rounded-lg hover:bg-[--color-border] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                         title="Last page"
                       >
@@ -1325,7 +1447,7 @@ const PendingTasks: React.FC = () => {
           )}
 
           {/* Regular Pending Tasks Section (FMS) */}
-          {fmsTasks.length > 0 && (
+          {filteredFMS.length > 0 && (
             <div className="mt-8">
               <h2 className="text-md font-semibold text-[--color-text] mb-3">FMS Pending Tasks</h2>
               {/* FMS tasks will be rendered by existing FMS section below */}

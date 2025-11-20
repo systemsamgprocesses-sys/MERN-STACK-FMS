@@ -111,7 +111,7 @@ const ScoreLogs: React.FC = () => {
               <div className="flex items-start justify-between">
                 <div className="flex-1">
                   <h3 className="text-lg font-bold text-[var(--color-text)] mb-2">{log.taskTitle}</h3>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                  <div className="grid grid-cols-2 md:grid-cols-6 gap-4 text-sm">
                     <div>
                       <p className="text-[var(--color-textSecondary)]">User</p>
                       <p className="font-semibold text-[var(--color-text)]">{log.userId?.username}</p>
@@ -121,6 +121,14 @@ const ScoreLogs: React.FC = () => {
                       <p className="font-bold text-2xl" style={{ color: log.wasOnTime ? 'var(--color-success)' : 'var(--color-error)' }}>
                         {log.scorePercentage.toFixed(1)}%
                       </p>
+                    </div>
+                    <div>
+                      <p className="text-[var(--color-textSecondary)]">Planned On</p>
+                      <p className="font-semibold text-[var(--color-text)]">{log.plannedDate ? new Date(log.plannedDate).toLocaleDateString() : 'N/A'}</p>
+                    </div>
+                    <div>
+                      <p className="text-[var(--color-textSecondary)]">Completed On</p>
+                      <p className="font-semibold text-[var(--color-text)]">{log.completedDate ? new Date(log.completedDate).toLocaleDateString() : 'N/A'}</p>
                     </div>
                     <div>
                       <p className="text-[var(--color-textSecondary)]">Planned/Actual Days</p>

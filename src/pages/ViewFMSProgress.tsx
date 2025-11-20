@@ -421,6 +421,8 @@ const ViewFMSProgress: React.FC = () => {
                         <div className="flex items-center space-x-3 text-sm text-[var(--color-textSecondary)]">
                           <span className="flex items-center"><Clock size={14} className="mr-1" /> Started: {new Date(selectedProject.startDate).toLocaleDateString()}</span>
                           <span>•</span>
+                          <span className="flex items-center">Started By: <strong className="ml-1 text-[var(--color-text)]">{selectedProject.createdBy?.username || 'Unknown'}</strong></span>
+                          <span>•</span>
                           <span className="flex items-center gap-2">
                             Status: 
                             <span className="px-2 py-1 rounded-full text-xs font-semibold" style={{ backgroundColor: 'var(--color-primary)10', color: 'var(--color-primary)' }}>

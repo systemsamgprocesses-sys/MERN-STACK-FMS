@@ -263,6 +263,36 @@ const taskSchema = new mongoose.Schema({
   timestamps: true
 });
 
+// ============================================
+// PERFORMANCE INDEXES - Critical for query optimization
+// ============================================
+// Index for finding tasks by assignee and status (most common query)
+taskSchema.index({ assignedTo: 1, status: 1 });
+
+// Index for finding tasks assigned by someone, sorted by creation date
+taskSchema.index({ assignedBy: 1, createdAt: -1 });
+
+// Index for filtering by task type and active status
+taskSchema.index({ taskType: 1, isActive: 1 });
+
+// Index for due date queries and overdue task detection
+taskSchema.index({ dueDate: 1, status: 1 });
+
+// Index for status filtering (pending, completed, etc.)
+taskSchema.index({ status: 1 });
+
+// Index for general sorting by creation date
+taskSchema.index({ createdAt: -1 });
+
+// Compound index for complex queries (assigned tasks by type and status)
+taskSchema.index({ assignedTo: 1, taskType: 1, status: 1 });
+
+// Index for group ID lookups (recurring tasks)
+taskSchema.index({ groupId: 1 });
+
+// Index for finding tasks by title (for duplicate detection)
+taskSchema.index({ title: 1 });
+
 // Pre-save hook to calculate checklist progress
 taskSchema.pre('save', function(next) {
   if (this.requiresChecklist && this.checklistItems && this.checklistItems.length > 0) {

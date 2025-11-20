@@ -27,7 +27,8 @@ import {
   MessageSquare,
   Calendar,
   Activity,
-  ListTodo
+  ListTodo,
+  Star
 } from 'lucide-react';
 
 // Clean and Professional AMG Logo Component
@@ -129,10 +130,11 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
     { section: 'Checklists', icon: Settings, label: 'Manage Checklist Categories', path: '/checklist-categories', requireAdmin: true, highlight: true },
     
     // Tasks Section
-    { section: 'Tasks', icon: CheckSquare, label: 'Pending Tasks', path: '/pending-tasks', permission: 'canViewTasks', countKey: 'pendingTasks', highlight: true },
-    { section: 'Tasks', icon: Archive, label: 'Master Tasks', path: '/master-tasks', permission: 'canViewAllTeamTasks', countKey: 'masterTasks', highlight: true },
-    { section: 'Tasks', icon: RotateCcw, label: 'Master Repetitive', path: '/master-recurring', permission: 'canViewAllTeamTasks', countKey: 'masterRepetitive', highlight: true },
-    { section: 'Tasks', icon: Calendar, label: 'Upcoming Tasks', path: '/upcoming-tasks', permission: 'canViewTasks', highlight: true },
+    { section: '⭐ Tasks', icon: Star, label: 'My Tasks', path: '/admin-tasks', countKey: 'myTasks', highlight: true },
+    { section: '⭐ Tasks', icon: CheckSquare, label: 'Pending Tasks', path: '/pending-tasks', permission: 'canViewTasks', countKey: 'pendingTasks', highlight: true },
+    { section: '⭐ Tasks', icon: Archive, label: 'Master Tasks', path: '/master-tasks', permission: 'canViewAllTeamTasks', countKey: 'masterTasks', highlight: true },
+    { section: '⭐ Tasks', icon: RotateCcw, label: 'Master Repetitive', path: '/master-recurring', permission: 'canViewAllTeamTasks', countKey: 'masterRepetitive', highlight: true },
+    { section: '⭐ Tasks', icon: Calendar, label: 'Upcoming Tasks', path: '/upcoming-tasks', permission: 'canViewTasks', highlight: true },
     
     // Assign Task Section
     { section: 'Assign Task', icon: UserPlus, label: 'Assign Task', path: '/assign-task', permission: 'canAssignTasks', highlight: true },
@@ -141,7 +143,6 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
     // Management Section
     { section: 'Management', icon: LayoutDashboard, label: 'Dashboard', path: '/dashboard' },
     { section: 'Management', icon: Zap, label: 'Performance', path: '/performance' },
-    { section: 'Management', icon: User, label: 'My Tasks', path: '/admin-tasks', permission: 'canViewAllTeamTasks', countKey: 'myTasks' },
     { section: 'Management', icon: Settings, label: 'Admin Panel', path: '/admin', permission: 'canManageUsers' },
     { section: 'Management', icon: Activity, label: 'Admin HR Panel', path: '/admin-hr-panel', permission: 'canManageUsers' },
     
@@ -170,8 +171,9 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
   useEffect(() => {
     if (user?.id) {
       fetchCounts();
-      // Refresh counts every 30 seconds
-      const interval = setInterval(fetchCounts, 30000);
+      // Optimized: Increased from 30s to 90s to reduce server load and prevent CPU spikes
+      // This reduces API calls by 66% while still keeping data reasonably fresh
+      const interval = setInterval(fetchCounts, 90000);
 
       // Listen for task deletion/update events to refresh counts immediately
       const handleTaskUpdate = () => {

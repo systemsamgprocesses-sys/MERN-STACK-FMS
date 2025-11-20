@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Plus, Trash2, Save, Eye, X, Calendar, Filter } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import axios from 'axios';
 import { address } from '../../utils/ipAddress';
 
@@ -32,6 +32,10 @@ interface Step {
 const CreateFMS: React.FC = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const editFmsId = searchParams.get('edit');
+  const isEditMode = !!editFmsId;
+  
   const [fmsName, setFmsName] = useState('');
   const [category, setCategory] = useState('General');
   const [categories, setCategories] = useState<string[]>([]);
@@ -67,7 +71,10 @@ const CreateFMS: React.FC = () => {
     fetchUsers();
     fetchFmsList();
     fetchCategories();
-  }, []);
+    if (isEditMode && editFmsId) {
+      fetchFMSForEdit(editFmsId);
+    }
+  }, [isEditMode, editFmsId]);
 
   const fetchUsers = async () => {
     try {
@@ -100,6 +107,70 @@ const CreateFMS: React.FC = () => {
     } catch (error) {
       console.error('Error fetching categories:', error);
       setCategories(['General']);
+    }
+  };
+
+  const fetchFMSForEdit = async (fmsId: string) => {
+    try {
+      setLoading(true);
+      console.log('Fetching FMS for edit with ID:', fmsId);
+      console.log('Full URL:', `${address}/api/fms/${fmsId}`);
+      const token = localStorage.getItem('token');
+      const response = await axios.get(`${address}/api/fms/${fmsId}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      console.log('FMS data received:', response.data);
+      const fmsData = response.data;
+      
+      // Populate form with existing data
+      setFmsName(fmsData.fmsName || '');
+      setCategory(fmsData.category || 'General');
+      setFrequency(fmsData.frequency || 'one-time');
+      setFrequencySettings(fmsData.frequencySettings || {
+        includeSunday: true,
+        shiftSundayToMonday: true,
+        weeklyDays: [],
+        monthlyDay: 1,
+        yearlyDuration: 3
+      });
+      
+      // Populate steps
+      if (fmsData.steps && fmsData.steps.length > 0) {
+        const loadedSteps = fmsData.steps.map((step: any, index: number) => ({
+          stepNo: index + 1,
+          what: step.what || '',
+          who: step.who?.map((w: any) => typeof w === 'string' ? w : w._id || w.id) || [],
+          how: step.how || '',
+          when: step.when || 1,
+          whenUnit: step.whenUnit || 'days',
+          whenDays: step.whenDays,
+          whenHours: step.whenHours,
+          whenType: step.whenType || 'fixed',
+          requiresChecklist: step.requiresChecklist || false,
+          checklistItems: step.checklistItems || [],
+          attachments: [], // Existing attachments are kept on server
+          triggersFMSId: step.triggersFMSId,
+          requireAttachments: step.requireAttachments || false,
+          mandatoryAttachments: step.mandatoryAttachments || false
+        }));
+        setSteps(loadedSteps);
+        setUserSearchTerms(loadedSteps.map(() => ''));
+      }
+      
+      setLoading(false);
+    } catch (error: any) {
+      console.error('Error fetching FMS for edit:', error);
+      setLoading(false);
+      
+      // Don't show alert or navigate if it's an auth error (401/403)
+      // The axios interceptor will handle the redirect to login
+      if (error.response?.status === 401 || error.response?.status === 403) {
+        return;
+      }
+      
+      alert('Failed to load FMS template for editing');
+      navigate('/fms-templates');
     }
   };
 
@@ -271,19 +342,36 @@ const CreateFMS: React.FC = () => {
         });
       });
 
-      const response = await axios.post(`${address}/api/fms`, formData, {
-        headers: { 'Content-Type': 'multipart/form-data' }
-      });
+      const token = localStorage.getItem('token');
+      let response;
+      
+      if (isEditMode && editFmsId) {
+        // Update existing FMS
+        response = await axios.put(`${address}/api/fms/${editFmsId}`, formData, {
+          headers: { 
+            'Content-Type': 'multipart/form-data',
+            Authorization: `Bearer ${token}`
+          }
+        });
+      } else {
+        // Create new FMS
+        response = await axios.post(`${address}/api/fms`, formData, {
+          headers: { 
+            'Content-Type': 'multipart/form-data',
+            Authorization: `Bearer ${token}`
+          }
+        });
+      }
 
       if (response.data.success) {
-        alert('FMS template created successfully!');
+        alert(isEditMode ? 'FMS template updated successfully!' : 'FMS template created successfully!');
         navigate('/fms-templates');
       } else {
-        alert(response.data.message || 'Failed to create FMS template');
+        alert(response.data.message || `Failed to ${isEditMode ? 'update' : 'create'} FMS template`);
       }
-    } catch (error) {
-      console.error('Error creating FMS:', error);
-      const errorMessage = error.response?.data?.message || error.response?.data?.error || 'Failed to create FMS template';
+    } catch (error: any) {
+      console.error(`Error ${isEditMode ? 'updating' : 'creating'} FMS:`, error);
+      const errorMessage = error.response?.data?.message || error.response?.data?.error || `Failed to ${isEditMode ? 'update' : 'create'} FMS template`;
       alert(errorMessage);
     } finally {
       setLoading(false);
@@ -294,8 +382,12 @@ const CreateFMS: React.FC = () => {
     <div className="min-h-screen p-4 sm:p-6 lg:p-8" style={{ backgroundColor: 'var(--color-background)' }}>
       <div className="max-w-6xl mx-auto">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-[var(--color-text)] mb-2">Create FMS Template</h1>
-          <p className="text-[var(--color-textSecondary)]">Define workflow steps for repeatable processes</p>
+          <h1 className="text-3xl font-bold text-[var(--color-text)] mb-2">
+            {isEditMode ? 'Edit FMS Template' : 'Create FMS Template'}
+          </h1>
+          <p className="text-[var(--color-textSecondary)]">
+            {isEditMode ? 'Update workflow steps and settings' : 'Define workflow steps for repeatable processes'}
+          </p>
         </div>
 
         <div className="mb-6 p-6 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)]">

@@ -139,7 +139,8 @@ router.get('/', async (req, res) => {
     let query = { status: { $ne: 'Deleted' } };
 
     // Role-based filtering
-    if (role !== 'admin' && userId) {
+    // Allow admin, superadmin, and pc roles to see all projects
+    if (role !== 'admin' && role !== 'superadmin' && role !== 'pc' && userId) {
       query['tasks.who'] = userId;
     }
 

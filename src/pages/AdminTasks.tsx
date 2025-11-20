@@ -29,6 +29,7 @@ const AdminTasks: React.FC = () => {
   const [filteredTasks, setFilteredTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
   const [showCompleteModal, setShowCompleteModal] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<'todays-due' | 'pending' | 'completed' | 'total'>('todays-due');
   const [filter, setFilter] = useState({
     status: '',
     priority: '',
@@ -41,11 +42,13 @@ const AdminTasks: React.FC = () => {
 
   useEffect(() => {
     applyFilters();
-  }, [tasks, filter]);
+  }, [tasks, filter, activeTab]);
 
   const fetchAdminTasks = async () => {
     try {
-      const response = await axios.get(`${address}/api/tasks?assignedTo=${user?.id}&limit=1000000`);
+      // Fetch with reasonable limit - removed the 1000000 limit that was causing CPU spikes
+      // Backend will handle pagination properly
+      const response = await axios.get(`${address}/api/tasks?assignedTo=${user?.id}&limit=10000`);
       // Handle both array response and paginated response
       const tasksData = Array.isArray(response.data) ? response.data : (response.data.tasks || []);
       setTasks(tasksData);
@@ -79,6 +82,30 @@ const AdminTasks: React.FC = () => {
         t.title.toLowerCase().includes(filter.search.toLowerCase()) ||
         t.description.toLowerCase().includes(filter.search.toLowerCase())
       );
+    }
+
+    // Apply tab filters
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    switch (activeTab) {
+      case 'todays-due':
+        filtered = filtered.filter(task => {
+          if (!task.dueDate) return false;
+          const dueDate = new Date(task.dueDate);
+          dueDate.setHours(0, 0, 0, 0);
+          return dueDate.getTime() === today.getTime() && task.status !== 'completed';
+        });
+        break;
+      case 'pending':
+        filtered = filtered.filter(task => task.status !== 'completed');
+        break;
+      case 'completed':
+        filtered = filtered.filter(task => task.status === 'completed');
+        break;
+      case 'total':
+        // Show all tasks
+        break;
     }
 
     setFilteredTasks(filtered);
@@ -115,12 +142,72 @@ const AdminTasks: React.FC = () => {
 
   const completingTask = getTaskToComplete();
 
+  // Calculate counts for tabs
+  const todaysDueCount = tasks.filter(task => {
+    if (!task.dueDate) return false;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const dueDate = new Date(task.dueDate);
+    dueDate.setHours(0, 0, 0, 0);
+    return dueDate.getTime() === today.getTime() && task.status !== 'completed';
+  }).length;
+
+  const pendingCount = tasks.filter(task => task.status !== 'completed').length;
+  const completedCount = tasks.filter(task => task.status === 'completed').length;
+  const totalCount = tasks.length;
+
   return (
     <div className="min-h-screen bg-[var(--color-background)] p-6">
       <div className="max-w-7xl mx-auto">
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-[var(--color-text)] mb-2">My Tasks</h1>
           <p className="text-[var(--color-textSecondary)]">Tasks assigned to you for completion</p>
+        </div>
+
+        {/* Tabs Section */}
+        <div className="mb-6 bg-[var(--color-surface)] rounded-xl shadow-sm border border-[var(--color-border)] p-2">
+          <div className="flex flex-wrap gap-2">
+            <button
+              onClick={() => setActiveTab('todays-due')}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                activeTab === 'todays-due'
+                  ? 'bg-[var(--color-primary)] text-white shadow-md'
+                  : 'bg-[var(--color-background)] text-[var(--color-textSecondary)] hover:bg-[var(--color-border)]'
+              }`}
+            >
+              Today's Due ({todaysDueCount})
+            </button>
+            <button
+              onClick={() => setActiveTab('pending')}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                activeTab === 'pending'
+                  ? 'bg-[var(--color-primary)] text-white shadow-md'
+                  : 'bg-[var(--color-background)] text-[var(--color-textSecondary)] hover:bg-[var(--color-border)]'
+              }`}
+            >
+              Pending ({pendingCount})
+            </button>
+            <button
+              onClick={() => setActiveTab('completed')}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                activeTab === 'completed'
+                  ? 'bg-[var(--color-primary)] text-white shadow-md'
+                  : 'bg-[var(--color-background)] text-[var(--color-textSecondary)] hover:bg-[var(--color-border)]'
+              }`}
+            >
+              Completed ({completedCount})
+            </button>
+            <button
+              onClick={() => setActiveTab('total')}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                activeTab === 'total'
+                  ? 'bg-[var(--color-primary)] text-white shadow-md'
+                  : 'bg-[var(--color-background)] text-[var(--color-textSecondary)] hover:bg-[var(--color-border)]'
+              }`}
+            >
+              Total ({totalCount})
+            </button>
+          </div>
         </div>
 
         {/* Filters */}

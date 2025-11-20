@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import axios from 'axios';
 import { address } from '../utils/ipAddress';
 import { toast } from 'react-toastify';
-import { Settings, Calendar, User, Package, TrendingUp, TrendingDown } from 'lucide-react';
+import { Settings, Calendar, Package, TrendingUp, TrendingDown } from 'lucide-react';
 
 interface AdjustmentLog {
   _id: string;

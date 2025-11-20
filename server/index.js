@@ -51,7 +51,7 @@ const allowedOrigins = [
   'https://hub.amgrealty.in', // Main App (Production)
   'https://task.amgrealty.in', // (Legacy or alternate, good to keep)
   'https://tasks.amgrealty.in', // (Legacy or alternate, good to keep)
-  'https://hr.amgrealty.in', // HR Portal (Production)
+  'https://human-resource.amgrealty.in', // HR Portal (Production)
   replitDomain ? `https://${replitDomain}` : null,
   config.corsOrigin
 ].filter(Boolean);

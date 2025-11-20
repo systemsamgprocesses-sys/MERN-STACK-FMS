@@ -1,7 +1,6 @@
-import React from 'react';
 import { Outlet, NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { LogOut, LayoutDashboard, ClipboardList, Package, Archive } from 'lucide-react';
+import { LogOut, LayoutDashboard, Package, Archive } from 'lucide-react';
 
 const Layout: React.FC = () => {
   const { user, logout } = useAuth();

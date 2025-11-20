@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import axios from 'axios';
 import { address } from '../utils/ipAddress';
 import { toast } from 'react-toastify';
-import { Archive, Package, Calendar, User, Settings, TrendingUp, TrendingDown } from 'lucide-react';
+import { Archive, Package, Settings, TrendingUp, TrendingDown } from 'lucide-react';
 
 interface RequestItem {
   item: {

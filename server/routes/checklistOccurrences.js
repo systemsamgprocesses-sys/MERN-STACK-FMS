@@ -39,28 +39,58 @@ router.get('/', authenticateToken, async (req, res) => {
 router.get('/calendar', authenticateToken, async (req, res) => {
   try {
     const { year, month, userId } = req.query;
-    
-    if (!year || !month || !userId) {
-      return res.status(400).json({ 
-        error: 'year, month, and userId are required' 
+    const requestingUser = req.user;
+    const requestingUserId = requestingUser?._id?.toString();
+    const isAdmin = ['admin', 'superadmin'].includes(requestingUser?.role);
+
+    if (!year || !month) {
+      return res.status(400).json({
+        error: 'year and month are required'
       });
     }
-    
+
     const targetYear = parseInt(year);
     const targetMonth = parseInt(month); // 0-based (0 = January)
-    
+
+    if (Number.isNaN(targetYear) || Number.isNaN(targetMonth)) {
+      return res.status(400).json({
+        error: 'Invalid year or month'
+      });
+    }
+
+    const requestedUserId = userId ? userId.toString() : undefined;
+
+    if (!isAdmin && !requestedUserId) {
+      return res.status(400).json({
+        error: 'userId is required for non-admin users'
+      });
+    }
+
+    if (!isAdmin && requestedUserId && requestedUserId !== requestingUserId) {
+      return res.status(403).json({
+        error: 'Access denied'
+      });
+    }
+
     // Get first and last day of the month
     const firstDay = new Date(targetYear, targetMonth, 1);
     const lastDay = new Date(targetYear, targetMonth + 1, 0, 23, 59, 59, 999);
     
-    // Fetch all occurrences for this user in this month
-    const occurrences = await ChecklistOccurrence.find({
-      assignedTo: userId,
+    const query = {
       dueDate: {
         $gte: firstDay,
         $lte: lastDay
       }
-    })
+    };
+
+    if (requestedUserId) {
+      query.assignedTo = requestedUserId;
+    } else if (!isAdmin && requestingUserId) {
+      query.assignedTo = requestingUserId;
+    }
+
+    // Fetch all occurrences for this user/role in this month
+    const occurrences = await ChecklistOccurrence.find(query)
       .populate('templateId', 'name')
       .sort({ dueDate: 1 });
     
@@ -251,32 +281,44 @@ router.post('/:id/complete', authenticateToken, async (req, res) => {
 router.get('/stats/dashboard', authenticateToken, async (req, res) => {
   try {
     const { userId } = req.query;
-    
-    if (!userId) {
+    const requestingUser = req.user;
+    const requestingUserId = requestingUser?._id?.toString();
+    const isAdmin = ['admin', 'superadmin'].includes(requestingUser?.role);
+    const requestedUserId = userId ? userId.toString() : undefined;
+
+    if (!isAdmin && !requestedUserId) {
       return res.status(400).json({ error: 'userId is required' });
     }
-    
+
+    if (!isAdmin && requestedUserId && requestedUserId !== requestingUserId) {
+      return res.status(403).json({ error: 'Access denied' });
+    }
+
+    const assignedToFilter = requestedUserId || (!isAdmin ? requestingUserId : undefined);
+
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const tomorrow = new Date(today);
     tomorrow.setDate(tomorrow.getDate() + 1);
     
+    const baseQuery = assignedToFilter ? { assignedTo: assignedToFilter } : {};
+
     const [totalPending, totalCompleted, todayPending, todayCompleted] = await Promise.all([
       ChecklistOccurrence.countDocuments({ 
-        assignedTo: userId, 
+        ...baseQuery,
         status: 'pending' 
       }),
       ChecklistOccurrence.countDocuments({ 
-        assignedTo: userId, 
+        ...baseQuery,
         status: 'completed' 
       }),
       ChecklistOccurrence.countDocuments({ 
-        assignedTo: userId, 
+        ...baseQuery,
         status: 'pending',
         dueDate: { $gte: today, $lt: tomorrow }
       }),
       ChecklistOccurrence.countDocuments({ 
-        assignedTo: userId, 
+        ...baseQuery,
         status: 'completed',
         dueDate: { $gte: today, $lt: tomorrow }
       })

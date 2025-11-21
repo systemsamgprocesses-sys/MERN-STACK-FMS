@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { 
-  Calendar as CalendarIcon, 
-  ChevronLeft, 
-  ChevronRight, 
-  Plus, 
-  CheckCircle2, 
-  Circle, 
+import {
+  Calendar as CalendarIcon,
+  ChevronLeft,
+  ChevronRight,
+  Plus,
+  CheckCircle2,
+  Circle,
   Clock,
   ListTodo,
   TrendingUp,
@@ -47,7 +47,7 @@ interface CalendarData {
 const ChecklistCalendar: React.FC = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
-  
+
   const [currentDate, setCurrentDate] = useState(new Date());
   const [calendarData, setCalendarData] = useState<CalendarData | null>(null);
   const [loading, setLoading] = useState(false);
@@ -60,6 +60,8 @@ const ChecklistCalendar: React.FC = () => {
     todayCompleted: 0
   });
 
+  const isAdminOrSuper = user?.role === 'admin' || user?.role === 'superadmin';
+
   useEffect(() => {
     if (user) {
       fetchCalendarData();
@@ -69,19 +71,19 @@ const ChecklistCalendar: React.FC = () => {
 
   const fetchCalendarData = async () => {
     if (!user) return;
-    
+
     try {
       setLoading(true);
       const year = currentDate.getFullYear();
       const month = currentDate.getMonth(); // 0-based
       const token = localStorage.getItem('token');
+      const params: Record<string, any> = { year, month };
+      if (!isAdminOrSuper) {
+        params.userId = user.id;
+      }
 
       const response = await axios.get(`${address}/api/checklist-occurrences/calendar`, {
-        params: {
-          year,
-          month,
-          userId: user.id
-        },
+        params,
         headers: { Authorization: `Bearer ${token}` }
       });
 
@@ -95,14 +97,18 @@ const ChecklistCalendar: React.FC = () => {
 
   const fetchStats = async () => {
     if (!user) return;
-    
+
     try {
       const token = localStorage.getItem('token');
+      const params: Record<string, any> = {};
+      if (!isAdminOrSuper) {
+        params.userId = user.id;
+      }
       const response = await axios.get(`${address}/api/checklist-occurrences/stats/dashboard`, {
-        params: { userId: user.id },
+        params,
         headers: { Authorization: `Bearer ${token}` }
       });
-      
+
       setStats({
         totalPending: response.data.totalPending || 0,
         totalCompleted: response.data.totalCompleted || 0,
@@ -146,15 +152,15 @@ const ChecklistCalendar: React.FC = () => {
 
   // Calculate first day of month (0 = Sunday, 6 = Saturday)
   const firstDayOfMonth = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1).getDay();
-  
+
   // Create calendar grid with empty cells for days before month starts
   const calendarGrid: (CalendarDay | null)[] = Array(firstDayOfMonth).fill(null);
   if (calendarData) {
     calendarGrid.push(...calendarData.calendarData);
   }
 
-  const completionRate = stats.totalCompleted + stats.totalPending > 0 
-    ? Math.round((stats.totalCompleted / (stats.totalCompleted + stats.totalPending)) * 100) 
+  const completionRate = stats.totalCompleted + stats.totalPending > 0
+    ? Math.round((stats.totalCompleted / (stats.totalCompleted + stats.totalPending)) * 100)
     : 0;
 
   return (
@@ -234,11 +240,11 @@ const ChecklistCalendar: React.FC = () => {
               >
                 <ChevronLeft className="w-6 h-6" />
               </button>
-              
+
               <h2 className="text-2xl font-bold" style={{ color: 'var(--color-text)' }}>
                 {monthNames[currentDate.getMonth()]} {currentDate.getFullYear()}
               </h2>
-              
+
               <button
                 onClick={handleNextMonth}
                 className="p-2 rounded hover:bg-gray-100"
@@ -293,8 +299,8 @@ const ChecklistCalendar: React.FC = () => {
                           backgroundColor: isFullyCompleted
                             ? 'var(--color-success)'
                             : hasChecklists
-                            ? 'var(--color-warning-light)'
-                            : 'var(--color-background)',
+                              ? 'var(--color-warning-light)'
+                              : 'var(--color-background)',
                           borderColor: isSelected
                             ? 'var(--color-primary)'
                             : 'transparent',
@@ -313,12 +319,12 @@ const ChecklistCalendar: React.FC = () => {
                             </div>
                             <div className="text-xs space-y-1 w-full overflow-hidden">
                               {dayData.occurrences.slice(0, 3).map((occ, idx) => (
-                                <div 
+                                <div
                                   key={occ._id}
                                   className="truncate px-1 py-0.5 rounded"
                                   style={{
-                                    backgroundColor: occ.status === 'completed' 
-                                      ? 'rgba(16, 185, 129, 0.2)' 
+                                    backgroundColor: occ.status === 'completed'
+                                      ? 'rgba(16, 185, 129, 0.2)'
                                       : 'rgba(245, 158, 11, 0.2)',
                                     fontSize: '0.65rem'
                                   }}

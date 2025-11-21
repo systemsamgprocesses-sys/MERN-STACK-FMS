@@ -768,7 +768,7 @@ const PendingTasks: React.FC = () => {
                     </span>
                   )}
                 </div>
-                {(user?.role === 'employee' || user?.role === 'pc' || user?.role === 'admin' || user?.role === 'superadmin') && (
+                {(user?.role === 'superadmin') && (
                   <div className="flex space-x-2 ml-2 opacity-0 group-hover:opacity-100 transition-opacity">
                     <button
                       onClick={() => updateTaskProgress(task._id, 'In Progress')}
@@ -1064,14 +1064,16 @@ const PendingTasks: React.FC = () => {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                     <div className="flex space-x-2 gap-1">
-                      <button
-                        onClick={() => setShowEditModal(task)}
-                        className="px-3 py-2 rounded-lg transition-all transform hover:scale-105 bg-purple-50 hover:bg-purple-500 text-purple-600 hover:text-white border border-purple-300 hover:border-purple-600 font-medium text-xs flex items-center gap-1"
-                        title="Edit task"
-                      >
-                        <Pencil size={14} />
-                        <span>Edit</span>
-                      </button>
+                      {user?.role === 'superadmin' && (
+                        <button
+                          onClick={() => setShowEditModal(task)}
+                          className="px-3 py-2 rounded-lg transition-all transform hover:scale-105 bg-purple-50 hover:bg-purple-500 text-purple-600 hover:text-white border border-purple-300 hover:border-purple-600 font-medium text-xs flex items-center gap-1"
+                          title="Edit task"
+                        >
+                          <Pencil size={14} />
+                          <span>Edit</span>
+                        </button>
+                      )}
                       <button
                         onClick={() => updateTaskProgress(task._id, 'In Progress')}
                         className="px-3 py-2 rounded-lg transition-all transform hover:scale-105 bg-blue-50 hover:bg-blue-500 text-blue-600 hover:text-white border border-blue-300 hover:border-blue-600 font-medium text-xs flex items-center gap-1"
@@ -1506,7 +1508,7 @@ const PendingTasks: React.FC = () => {
                 {!fmsTask.canComplete && (
                   <p className="text-xs text-[--color-warning] mt-2">⚠️ Complete previous step first</p>
                 )}
-                {fmsTask.canComplete && (user?.role === 'employee' || user?.role === 'pc' || user?.role === 'admin' || user?.role === 'superadmin') && (
+                {fmsTask.canComplete && user?.role === 'superadmin' && (
                   <div className="flex space-x-2 mt-3">
                     <button
                       onClick={() => handleCompleteFMSTask(fmsTask.projectId, fmsTask.taskIndex)}

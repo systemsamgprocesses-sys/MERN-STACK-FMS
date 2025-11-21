@@ -2,6 +2,7 @@ import express from 'express';
 import Task from '../models/Task.js';
 import User from '../models/User.js';
 import ScoreLog from '../models/ScoreLog.js';
+import AuditLog from '../models/AuditLog.js';
 import { checkPermission } from '../middleware/permissions.js';
 import { authenticateToken } from '../middleware/auth.js';
 
@@ -25,18 +26,18 @@ const getDailyTaskDates = (startDate, endDate, includeSunday) => {
   const dates = [];
   const current = new Date(startDate);
   const end = new Date(endDate);
-  
+
   while (current <= end) {
     const dayOfWeek = current.getDay();
-    
+
     // Skip Sunday if not included and it's a Sunday
     if (includeSunday || dayOfWeek !== 0) { // 0 is Sunday
       dates.push(new Date(current));
     }
-    
+
     current.setDate(current.getDate() + 1); // Move to the next day
   }
-  
+
   return dates;
 };
 
@@ -45,18 +46,18 @@ const getWeeklyTaskDates = (startDate, endDate, selectedDays) => {
   const dates = [];
   const current = new Date(startDate);
   const end = new Date(endDate);
-  
+
   while (current <= end) {
     const dayOfWeek = current.getDay();
-    
+
     // If the current day of the week is among the selected days
     if (selectedDays.includes(dayOfWeek)) {
       dates.push(new Date(current));
     }
-    
+
     current.setDate(current.getDate() + 1); // Move to the next day
   }
-  
+
   return dates;
 };
 
@@ -65,27 +66,27 @@ const getMonthlyTaskDates = (startDate, endDate, monthlyDay, includeSunday) => {
   const dates = [];
   const start = new Date(startDate);
   const end = new Date(endDate);
-  
+
   // Start from the first day of the start month
   const current = new Date(start.getFullYear(), start.getMonth(), 1);
-  
+
   while (current <= end) {
     // Set to the target day of month
     let targetDate = new Date(current.getFullYear(), current.getMonth(), monthlyDay);
-    
+
     // Handle case where monthlyDay doesn't exist in this month (e.g., Feb 30th)
     if (targetDate.getMonth() !== current.getMonth()) {
       // If the day is out of bounds for the current month, set to the last day of the month
       targetDate = new Date(current.getFullYear(), current.getMonth() + 1, 0);
     }
-    
+
     // Check if the target date is within our overall date range
     if (targetDate >= start && targetDate <= end) {
       // Handle Sunday exclusion
       if (!includeSunday && targetDate.getDay() === 0) { // 0 is Sunday
         // If it's Sunday and Sundays are excluded, move to the next day (Monday)
         targetDate.setDate(targetDate.getDate() - 1);
-        
+
         // Make sure we didn't accidentally go to the next month by moving to Monday
         // and that it's still within the overall end date
         if (targetDate.getMonth() === current.getMonth() && targetDate <= end) {
@@ -95,10 +96,10 @@ const getMonthlyTaskDates = (startDate, endDate, monthlyDay, includeSunday) => {
         dates.push(new Date(targetDate));
       }
     }
-    
+
     current.setMonth(current.getMonth() + 1); // Move to the next month
   }
-  
+
   return dates;
 };
 
@@ -106,20 +107,20 @@ const getMonthlyTaskDates = (startDate, endDate, monthlyDay, includeSunday) => {
 const getQuarterlyTaskDates = (startDate, includeSunday = true) => {
   const dates = [];
   const start = new Date(startDate);
-  
+
   // Create 4 quarterly tasks (every 3 months)
   for (let i = 0; i < 4; i++) {
     const quarterlyDate = new Date(start);
     quarterlyDate.setMonth(start.getMonth() + (i * 3)); // Add 3 months for each quarter
-    
+
     // Handle Sunday exclusion for quarterly tasks
     if (!includeSunday && quarterlyDate.getDay() === 0) { // 0 is Sunday
       quarterlyDate.setDate(quarterlyDate.getDate() - 1); // Move to Saturday
     }
-    
+
     dates.push(quarterlyDate);
   }
-  
+
   return dates;
 };
 
@@ -127,19 +128,19 @@ const getQuarterlyTaskDates = (startDate, includeSunday = true) => {
 const getYearlyTaskDates = (startDate, yearlyDuration, includeSunday = true) => {
   const dates = [];
   const start = new Date(startDate);
-  
+
   for (let i = 0; i < yearlyDuration; i++) {
     const yearlyDate = new Date(start);
     yearlyDate.setFullYear(start.getFullYear() + i); // Increment year
-    
+
     // Handle Sunday exclusion for yearly tasks
     if (!includeSunday && yearlyDate.getDay() === 0) { // 0 is Sunday
       yearlyDate.setDate(yearlyDate.getDate() - 1); // Move to Saturday
     }
-    
+
     dates.push(yearlyDate);
   }
-  
+
   return dates;
 };
 
@@ -238,7 +239,7 @@ router.get('/', async (req, res) => {
         query.taskType = taskType;
       }
     }
-    
+
     if (status) {
       if (status.includes(',')) {
         query.status = { $in: status.split(',') };
@@ -246,7 +247,7 @@ router.get('/', async (req, res) => {
         query.status = status;
       }
     }
-    
+
     if (assignedTo) query.assignedTo = assignedTo;
     if (assignedBy) query.assignedBy = assignedBy;
     if (priority) query.priority = priority;
@@ -489,7 +490,7 @@ router.post('/', async (req, res) => {
     const taskData = req.body;
     const requiresAttachments = taskData.requireAttachments === true || taskData.requireAttachments === 'true';
     const mandatoryAttachments = taskData.mandatoryAttachments === true || taskData.mandatoryAttachments === 'true';
-    
+
     // If 'isForever' is true for a non-scheduled endpoint, set an arbitrary end date
     // This part might need re-evaluation if this endpoint is only for one-time tasks
     // or if scheduled tasks are exclusively created via /create-scheduled
@@ -535,7 +536,7 @@ router.put('/:id', authenticateToken, isSuperAdmin, async (req, res) => {
     // Super admin can set status to any value including changing completed to pending
     if (status !== undefined) {
       updateData.status = status;
-      
+
       // If changing from completed to pending, clear completedAt
       if (status === 'pending' || status === 'in-progress') {
         const currentTask = await Task.findById(req.params.id);
@@ -561,7 +562,7 @@ router.put('/:id', authenticateToken, isSuperAdmin, async (req, res) => {
       updateData,
       { new: true } // Return the updated document
     ).populate('assignedBy', 'username email phoneNumber')
-     .populate('assignedTo', 'username email phoneNumber');
+      .populate('assignedTo', 'username email phoneNumber');
 
     if (!task) {
       return res.status(404).json({ message: 'Task not found' });
@@ -570,6 +571,36 @@ router.put('/:id', authenticateToken, isSuperAdmin, async (req, res) => {
     res.json(task);
   } catch (error) {
     console.error('Error updating task:', error);
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
+// Mark task as In Progress - Available to all users
+router.put('/:id/in-progress', async (req, res) => {
+  try {
+    const { inProgressRemarks } = req.body;
+
+    if (!inProgressRemarks || !inProgressRemarks.trim()) {
+      return res.status(400).json({ message: 'Remarks are required when marking task as In Progress' });
+    }
+
+    const task = await Task.findByIdAndUpdate(
+      req.params.id,
+      {
+        status: 'in-progress',
+        inProgressRemarks: inProgressRemarks.trim()
+      },
+      { new: true }
+    ).populate('assignedBy', 'username email phoneNumber')
+      .populate('assignedTo', 'username email phoneNumber');
+
+    if (!task) {
+      return res.status(404).json({ message: 'Task not found' });
+    }
+
+    res.json(task);
+  } catch (error) {
+    console.error('Error marking task as in progress:', error);
     res.status(500).json({ message: 'Server error', error: error.message });
   }
 });
@@ -595,11 +626,11 @@ router.post('/:id/complete', async (req, res) => {
     // 1. Mark the current task instance as completed
     task.status = 'completed';
     task.completedAt = new Date();
-    
+
     if (completionRemarks && completionRemarks.trim()) {
       task.completionRemarks = completionRemarks.trim();
     }
-    
+
     if (completionAttachments && completionAttachments.length > 0) {
       task.completionAttachments = completionAttachments;
     }
@@ -614,14 +645,14 @@ router.post('/:id/complete', async (req, res) => {
     } else if (completedBy) {
       task.completedBy = completedBy;
     }
-    
+
     task.lastCompletedDate = new Date();
 
     // 2. Calculate scoring
     // For date-range tasks, use startDate as creation and endDate as due date
     let creationDate;
     let targetDate;
-    
+
     if (task.taskCategory === 'date-range' && task.startDate && task.endDate) {
       creationDate = new Date(task.startDate);
       targetDate = new Date(task.endDate);
@@ -630,7 +661,7 @@ router.post('/:id/complete', async (req, res) => {
       creationDate = new Date(task.creationDate || task.createdAt);
       targetDate = new Date(task.originalPlannedDate || task.dueDate);
     }
-    
+
     const completionDate = new Date(task.completedAt);
     const actualDays = Math.ceil((completionDate - creationDate) / (1000 * 60 * 60 * 24));
     task.actualCompletionDays = actualDays;
@@ -638,14 +669,14 @@ router.post('/:id/complete', async (req, res) => {
     // Calculate score based on planned days
     if (targetDate) {
       let plannedDays = Math.ceil((targetDate - creationDate) / (1000 * 60 * 60 * 24));
-      
+
       // Check if there are approved objections that don't impact score
       const approvedObjections = task.objections?.filter(obj =>
         ['approved', 'resolved'].includes(obj.status) && obj.type === 'date_change'
       ) || [];
-      
+
       const scoreImpactingObjection = approvedObjections.find(obj => obj.impactScore);
-      
+
       if (scoreImpactingObjection) {
         // Use extended date for scoring
         const extendedDate = new Date(task.dueDate);
@@ -664,7 +695,7 @@ router.post('/:id/complete', async (req, res) => {
     } else {
       task.completionScore = 1.0; // Default full score if no due date
     }
-    
+
     console.log(`Task ${task._id} completed with score: ${task.completionScore}`);
 
     await task.save();
@@ -672,7 +703,7 @@ router.post('/:id/complete', async (req, res) => {
     // Log the score
     try {
       const plannedDays = Math.ceil((targetDate - creationDate) / (1000 * 60 * 60 * 24));
-      
+
       const scoreLog = new ScoreLog({
         taskId: task._id,
         userId: task.assignedTo,
@@ -719,7 +750,7 @@ router.post('/:id/revise', async (req, res) => {
     }
 
     const oldDate = task.dueDate;
-    
+
     // Add revision to history
     task.revisions.push({
       oldDate,
@@ -792,12 +823,12 @@ router.post('/:id/forward', async (req, res) => {
     task.assignedTo = forwardTo;
     task.forwardedTo = forwardTo;
     task.forwardedAt = new Date();
-    
+
     // Update due date if provided
     if (dueDate) {
       task.dueDate = new Date(dueDate);
     }
-    
+
     // Update checklist if provided
     if (checklistItems && task.requiresChecklist) {
       task.checklistItems = checklistItems;
@@ -825,9 +856,9 @@ router.post('/:id/forward', async (req, res) => {
 router.get('/multi-level', async (req, res) => {
   try {
     const { userId, role } = req.query;
-    
+
     let query = { taskCategory: 'multi-level', isActive: true };
-    
+
     // If not admin, show only tasks assigned to the user
     if (role !== 'admin' && role !== 'superadmin' && role !== 'manager') {
       query.assignedTo = userId;
@@ -870,6 +901,299 @@ router.put('/:id/checklist', async (req, res) => {
     });
   } catch (error) {
     console.error('Error updating checklist:', error);
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
+// ============ SUPER ADMIN ENDPOINTS ============
+
+// Helper function to log Super Admin actions
+const logAdminAction = async (userId, username, action, resourceType, resourceId, changes, reason = '', req) => {
+  try {
+    await AuditLog.create({
+      performedBy: userId,
+      actionType: action,
+      targetType: resourceType,
+      targetId: resourceId,
+      oldValue: changes.oldValue,
+      newValue: changes.newValue,
+      reason,
+      metadata: {
+        ipAddress: req.ip,
+        userAgent: req.get('user-agent')
+      }
+    });
+  } catch (error) {
+    console.error('Error logging admin action:', error);
+  }
+};
+
+// Super Admin: Comprehensive Task Edit
+router.put('/:id/admin-edit', authenticateToken, isSuperAdmin, async (req, res) => {
+  try {
+    const {
+      title,
+      description,
+      assignedTo,
+      assignedBy,
+      dueDate,
+      priority,
+      taskType,
+      taskCategory,
+      startDate,
+      endDate,
+      checklistItems,
+      reason
+    } = req.body;
+
+    const task = await Task.findById(req.params.id);
+    if (!task) {
+      return res.status(404).json({ message: 'Task not found' });
+    }
+
+    // Store old values for audit
+    const oldValues = {
+      title: task.title,
+      description: task.description,
+      assignedTo: task.assignedTo,
+      assignedBy: task.assignedBy,
+      dueDate: task.dueDate,
+      priority: task.priority,
+      taskType: task.taskType,
+      taskCategory: task.taskCategory,
+      startDate: task.startDate,
+      endDate: task.endDate
+    };
+
+    // Update fields
+    if (title !== undefined) task.title = title;
+    if (description !== undefined) task.description = description;
+    if (assignedTo !== undefined) task.assignedTo = assignedTo;
+    if (assignedBy !== undefined) task.assignedBy = assignedBy;
+    if (dueDate !== undefined) task.dueDate = dueDate;
+    if (priority !== undefined) task.priority = priority;
+    if (taskType !== undefined) task.taskType = taskType;
+    if (taskCategory !== undefined) task.taskCategory = taskCategory;
+    if (startDate !== undefined) task.startDate = startDate;
+    if (endDate !== undefined) task.endDate = endDate;
+    if (checklistItems !== undefined) task.checklistItems = checklistItems;
+
+    await task.save();
+
+    // Log the action
+    await logAdminAction(
+      req.user.id,
+      req.user.username,
+      'task_edit',
+      'task',
+      task._id.toString(),
+      { oldValue: oldValues, newValue: req.body },
+      reason || 'Task edited by Super Admin',
+      req
+    );
+
+    const populatedTask = await Task.findById(task._id)
+      .populate('assignedBy', 'username email phoneNumber')
+      .populate('assignedTo', 'username email phoneNumber');
+
+    res.json({
+      message: 'Task updated successfully',
+      task: populatedTask
+    });
+  } catch (error) {
+    console.error('Error updating task:', error);
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
+// Super Admin: Delete Checklist
+router.delete('/:id/checklist', authenticateToken, isSuperAdmin, async (req, res) => {
+  try {
+    const { reason } = req.body;
+    const task = await Task.findById(req.params.id);
+
+    if (!task) {
+      return res.status(404).json({ message: 'Task not found' });
+    }
+
+    const oldChecklist = task.checklistItems;
+    task.checklistItems = [];
+    task.requiresChecklist = false;
+    await task.save();
+
+    // Log the action
+    await logAdminAction(
+      req.user.id,
+      req.user.username,
+      'checklist_delete',
+      'checklist',
+      task._id.toString(),
+      { oldValue: oldChecklist, newValue: [] },
+      reason || 'Checklist deleted by Super Admin',
+      req
+    );
+
+    res.json({
+      message: 'Checklist deleted successfully',
+      task
+    });
+  } catch (error) {
+    console.error('Error deleting checklist:', error);
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
+// Super Admin: Edit Checklist Item
+router.put('/:id/checklist-item/:itemIndex', authenticateToken, isSuperAdmin, async (req, res) => {
+  try {
+    const { itemIndex } = req.params;
+    const { text, completed, reason } = req.body;
+    const task = await Task.findById(req.params.id);
+
+    if (!task) {
+      return res.status(404).json({ message: 'Task not found' });
+    }
+
+    if (!task.checklistItems || itemIndex >= task.checklistItems.length) {
+      return res.status(404).json({ message: 'Checklist item not found' });
+    }
+
+    const oldItem = { ...task.checklistItems[itemIndex] };
+
+    if (text !== undefined) task.checklistItems[itemIndex].text = text;
+    if (completed !== undefined) task.checklistItems[itemIndex].completed = completed;
+
+    await task.save();
+
+    // Log the action
+    await logAdminAction(
+      req.user.id,
+      req.user.username,
+      'checklist_edit',
+      'checklist',
+      task._id.toString(),
+      { oldValue: oldItem, newValue: task.checklistItems[itemIndex] },
+      reason || 'Checklist item edited by Super Admin',
+      req
+    );
+
+    res.json({
+      message: 'Checklist item updated successfully',
+      task
+    });
+  } catch (error) {
+    console.error('Error updating checklist item:', error);
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
+// Super Admin: Delete Attachment
+router.delete('/:id/attachments/:attachmentIndex', authenticateToken, isSuperAdmin, async (req, res) => {
+  try {
+    const { attachmentIndex } = req.params;
+    const { reason } = req.body;
+    const task = await Task.findById(req.params.id);
+
+    if (!task) {
+      return res.status(404).json({ message: 'Task not found' });
+    }
+
+    if (!task.attachments || attachmentIndex >= task.attachments.length) {
+      return res.status(404).json({ message: 'Attachment not found' });
+    }
+
+    const deletedAttachment = task.attachments[attachmentIndex];
+    task.attachments.splice(attachmentIndex, 1);
+    await task.save();
+
+    // Log the action
+    await logAdminAction(
+      req.user.id,
+      req.user.username,
+      'attachment_delete',
+      'attachment',
+      task._id.toString(),
+      { oldValue: deletedAttachment, newValue: null },
+      reason || 'Attachment deleted by Super Admin',
+      req
+    );
+
+    res.json({
+      message: 'Attachment deleted successfully',
+      task
+    });
+  } catch (error) {
+    console.error('Error deleting attachment:', error);
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
+// Super Admin: Reassign Task
+router.put('/:id/reassign', authenticateToken, isSuperAdmin, async (req, res) => {
+  try {
+    const { newAssignee, reason } = req.body;
+    const task = await Task.findById(req.params.id);
+
+    if (!task) {
+      return res.status(404).json({ message: 'Task not found' });
+    }
+
+    const oldAssignee = task.assignedTo;
+    task.assignedTo = newAssignee;
+    await task.save();
+
+    // Log the action
+    await logAdminAction(
+      req.user.id,
+      req.user.username,
+      'task_reassign',
+      'task',
+      task._id.toString(),
+      { oldValue: oldAssignee, newValue: newAssignee },
+      reason || 'Task reassigned by Super Admin',
+      req
+    );
+
+    const populatedTask = await Task.findById(task._id)
+      .populate('assignedBy', 'username email phoneNumber')
+      .populate('assignedTo', 'username email phoneNumber');
+
+    res.json({
+      message: 'Task reassigned successfully',
+      task: populatedTask
+    });
+  } catch (error) {
+    console.error('Error reassigning task:', error);
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
+// Super Admin: Get Audit Logs
+router.get('/admin/audit-logs', authenticateToken, isSuperAdmin, async (req, res) => {
+  try {
+    const { resourceType, resourceId, action, limit = 100, skip = 0 } = req.query;
+
+    let query = {};
+    if (resourceType) query.targetType = resourceType;
+    if (resourceId) query.targetId = resourceId;
+    if (action) query.actionType = action;
+
+    const logs = await AuditLog.find(query)
+      .populate('performedBy', 'username email')
+      .sort({ timestamp: -1 })
+      .limit(parseInt(limit))
+      .skip(parseInt(skip));
+
+    const total = await AuditLog.countDocuments(query);
+
+    res.json({
+      logs,
+      total,
+      limit: parseInt(limit),
+      skip: parseInt(skip)
+    });
+  } catch (error) {
+    console.error('Error fetching audit logs:', error);
     res.status(500).json({ message: 'Server error', error: error.message });
   }
 });

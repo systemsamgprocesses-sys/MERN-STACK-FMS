@@ -2,6 +2,8 @@ import express from 'express';
 import Project from '../models/Project.js';
 import FMS from '../models/FMS.js';
 import User from '../models/User.js';
+import AuditLog from '../models/AuditLog.js';
+import { authenticateToken } from '../middleware/auth.js';
 import multer from 'multer';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -245,112 +247,112 @@ router.put('/:projectId/tasks/:taskIndex', async (req, res) => {
 
 
 
-// Complete FMS task from pending tasks page
-router.post('/:projectId/complete-task/:taskIndex', upload.fields([
-  { name: 'files', maxCount: 10 },
-  { name: 'pcConfirmation', maxCount: 1 }
-]), async (req, res) => {
-  try {
-    const { projectId, taskIndex } = req.params;
-    const { completedBy, remarks, completedOnBehalfBy } = req.body;
+        // Complete FMS task from pending tasks page
+        router.post('/:projectId/complete-task/:taskIndex', upload.fields([
+          { name: 'files', maxCount: 10 },
+          { name: 'pcConfirmation', maxCount: 1 }
+        ]), async (req, res) => {
+          try {
+            const { projectId, taskIndex } = req.params;
+            const { completedBy, remarks, completedOnBehalfBy } = req.body;
 
-    const project = await Project.findOne({ projectId }).populate('fmsId');
-    if (!project) {
-      return res.status(404).json({ success: false, message: 'Project not found' });
-    }
+            const project = await Project.findOne({ projectId }).populate('fmsId');
+            if (!project) {
+              return res.status(404).json({ success: false, message: 'Project not found' });
+            }
 
-    const task = project.tasks[taskIndex];
-    if (!task) {
-      return res.status(404).json({ success: false, message: 'Task not found' });
-    }
+            const task = project.tasks[taskIndex];
+            if (!task) {
+              return res.status(404).json({ success: false, message: 'Task not found' });
+            }
 
-    // Upload attachments if any
-    let uploadedAttachments = [];
-    const filesArray = Array.isArray(req.files?.files) ? req.files.files : [];
-    if (filesArray.length > 0) {
-      uploadedAttachments = filesArray.map(file => ({
-        filename: file.filename,
-        originalName: file.originalname,
-        path: file.path,
-        size: file.size,
-        uploadedBy: completedBy,
-        uploadedAt: new Date()
-      }));
-    }
+            // Upload attachments if any
+            let uploadedAttachments = [];
+            const filesArray = Array.isArray(req.files?.files) ? req.files.files : [];
+            if (filesArray.length > 0) {
+              uploadedAttachments = filesArray.map(file => ({
+                filename: file.filename,
+                originalName: file.originalname,
+                path: file.path,
+                size: file.size,
+                uploadedBy: completedBy,
+                uploadedAt: new Date()
+              }));
+            }
 
-    const pcConfirmationFile = Array.isArray(req.files?.pcConfirmation) ? req.files.pcConfirmation[0] : undefined;
+            const pcConfirmationFile = Array.isArray(req.files?.pcConfirmation) ? req.files.pcConfirmation[0] : undefined;
 
-    task.status = 'Done';
-    task.completedAt = new Date();
-    task.actualCompletedOn = new Date();
-    task.completedBy = completedBy;
-    task.notes = remarks || '';
-    
-    if (uploadedAttachments.length > 0) {
-      task.attachments = [...(task.attachments || []), ...uploadedAttachments];
-    }
+            task.status = 'Done';
+            task.completedAt = new Date();
+            task.actualCompletedOn = new Date();
+            task.completedBy = completedBy;
+            task.notes = remarks || '';
 
-    // Validate mandatory attachments
-    if (task.requireAttachments && task.mandatoryAttachments && (task.attachments?.length || 0) === 0) {
-      return res.status(400).json({ success: false, message: 'Attachments are required to complete this step.' });
-    }
+            if (uploadedAttachments.length > 0) {
+              task.attachments = [...(task.attachments || []), ...uploadedAttachments];
+            }
 
-    // Handle PC completion
-    if (completedOnBehalfBy) {
-      task.completedOnBehalfBy = completedOnBehalfBy;
-      if (pcConfirmationFile) {
-        task.pcConfirmationAttachment = {
-          filename: pcConfirmationFile.filename,
-          originalName: pcConfirmationFile.originalname,
-          path: pcConfirmationFile.path,
-          size: pcConfirmationFile.size,
-          uploadedAt: new Date()
-        };
-      }
-    }
+            // Validate mandatory attachments
+            if (task.requireAttachments && task.mandatoryAttachments && (task.attachments?.length || 0) === 0) {
+              return res.status(400).json({ success: false, message: 'Attachments are required to complete this step.' });
+            }
 
-    // Calculate score
-    if (task.plannedDueDate) {
-      const creationDate = new Date(task.creationDate || project.startDate);
-      const completionDate = new Date(task.completedAt);
-      const actualDays = Math.ceil((completionDate - creationDate) / (1000 * 60 * 60 * 24));
-      task.actualCompletionDays = actualDays;
+            // Handle PC completion
+            if (completedOnBehalfBy) {
+              task.completedOnBehalfBy = completedOnBehalfBy;
+              if (pcConfirmationFile) {
+                task.pcConfirmationAttachment = {
+                  filename: pcConfirmationFile.filename,
+                  originalName: pcConfirmationFile.originalname,
+                  path: pcConfirmationFile.path,
+                  size: pcConfirmationFile.size,
+                  uploadedAt: new Date()
+                };
+              }
+            }
 
-      const plannedDate = new Date(task.originalPlannedDate || task.plannedDueDate);
-      const plannedDays = Math.ceil((plannedDate - creationDate) / (1000 * 60 * 60 * 24));
-      
-      const isOnTime = completionDate <= plannedDate;
-      if (isOnTime) {
-        project.tasksOnTime = (project.tasksOnTime || 0) + 1;
-      } else {
-        project.tasksLate = (project.tasksLate || 0) + 1;
-      }
+            // Calculate score
+            if (task.plannedDueDate) {
+              const creationDate = new Date(task.creationDate || project.startDate);
+              const completionDate = new Date(task.completedAt);
+              const actualDays = Math.ceil((completionDate - creationDate) / (1000 * 60 * 60 * 24));
+              task.actualCompletionDays = actualDays;
 
-      const completedTasks = project.tasks.filter(t => t.status === 'Done').length;
-      if (completedTasks > 0) {
-        project.totalScore = Math.round((project.tasksOnTime / completedTasks) * 100);
-      }
-    }
+              const plannedDate = new Date(task.originalPlannedDate || task.plannedDueDate);
+              const plannedDays = Math.ceil((plannedDate - creationDate) / (1000 * 60 * 60 * 24));
 
-    // Activate next step if current step is done
-    const nextTaskIndex = parseInt(taskIndex) + 1;
-    if (nextTaskIndex < project.tasks.length) {
-      const nextTask = project.tasks[nextTaskIndex];
-      if (nextTask.whenType === 'ask-on-completion') {
-        nextTask.status = 'Awaiting Date';
-        nextTask.plannedDateAsked = false;
-      } else if (nextTask.status === 'Not Started' || nextTask.status === 'Awaiting Date') {
-        nextTask.status = 'Pending';
-      }
-    }
+              const isOnTime = completionDate <= plannedDate;
+              if (isOnTime) {
+                project.tasksOnTime = (project.tasksOnTime || 0) + 1;
+              } else {
+                project.tasksLate = (project.tasksLate || 0) + 1;
+              }
 
-    await project.save();
-    res.json({ success: true, message: 'Task completed successfully' });
-  } catch (error) {
-    console.error('Error completing FMS task:', error);
-    res.status(500).json({ success: false, message: 'Server error', error: error.message });
-  }
-});
+              const completedTasks = project.tasks.filter(t => t.status === 'Done').length;
+              if (completedTasks > 0) {
+                project.totalScore = Math.round((project.tasksOnTime / completedTasks) * 100);
+              }
+            }
+
+            // Activate next step if current step is done
+            const nextTaskIndex = parseInt(taskIndex) + 1;
+            if (nextTaskIndex < project.tasks.length) {
+              const nextTask = project.tasks[nextTaskIndex];
+              if (nextTask.whenType === 'ask-on-completion') {
+                nextTask.status = 'Awaiting Date';
+                nextTask.plannedDateAsked = false;
+              } else if (nextTask.status === 'Not Started' || nextTask.status === 'Awaiting Date') {
+                nextTask.status = 'Pending';
+              }
+            }
+
+            await project.save();
+            res.json({ success: true, message: 'Task completed successfully' });
+          } catch (error) {
+            console.error('Error completing FMS task:', error);
+            res.status(500).json({ success: false, message: 'Server error', error: error.message });
+          }
+        });
 
         nextTask.plannedDueDate = shiftSundayForward(dueDate, project.fmsId?.frequencySettings);
         nextTask.originalPlannedDate = nextTask.plannedDueDate;
@@ -385,12 +387,12 @@ router.post('/:projectId/complete-task/:taskIndex', upload.fields([
               if (idx === 0) {
                 taskStatus = 'Pending';
                 if (step.whenUnit === 'days') {
-                plannedDueDate = new Date(triggerDate.getTime() + step.when * 24 * 60 * 60 * 1000);
+                  plannedDueDate = new Date(triggerDate.getTime() + step.when * 24 * 60 * 60 * 1000);
                 } else if (step.whenUnit === 'hours') {
-                plannedDueDate = new Date(triggerDate.getTime() + step.when * 60 * 60 * 1000);
+                  plannedDueDate = new Date(triggerDate.getTime() + step.when * 60 * 60 * 1000);
                 } else if (step.whenUnit === 'days+hours') {
                   const totalHours = (step.whenDays || 0) * 24 + (step.whenHours || 0);
-                plannedDueDate = new Date(triggerDate.getTime() + totalHours * 60 * 60 * 1000);
+                  plannedDueDate = new Date(triggerDate.getTime() + totalHours * 60 * 60 * 1000);
                 }
               } else if (step.whenType === 'fixed') {
                 let totalHours = 0;
@@ -493,6 +495,267 @@ router.get('/pending-fms-tasks/:userId', async (req, res) => {
     res.json({ success: true, tasks: userPendingTasks });
   } catch (error) {
     console.error('Error fetching FMS pending tasks:', error);
+    res.status(500).json({ success: false, message: 'Server error', error: error.message });
+  }
+});
+
+// Delete project - Super Admin only
+router.delete('/:projectId', async (req, res) => {
+  try {
+    const { role } = req.query;
+
+    // Check if user is Super Admin
+    if (role !== 'superadmin') {
+      return res.status(403).json({ success: false, message: 'Only Super Admins can delete projects' });
+    }
+
+    const { projectId } = req.params;
+
+    const project = await Project.findOneAndDelete({ projectId });
+
+    if (!project) {
+      return res.status(404).json({ success: false, message: 'Project not found' });
+    }
+
+    res.json({ success: true, message: 'Project deleted successfully' });
+  } catch (error) {
+    console.error('Delete project error:', error);
+    res.status(500).json({ success: false, message: 'Server error', error: error.message });
+  }
+});
+
+// ============ SUPER ADMIN FMS ENDPOINTS ============
+
+// Middleware to check if user is superadmin
+const isSuperAdmin = (req, res, next) => {
+  if (!req.user) {
+    return res.status(401).json({ message: 'Authentication required' });
+  }
+  if (req.user.role === 'superadmin') {
+    return next();
+  }
+  return res.status(403).json({ message: 'Access denied. Only Super Admin can perform this action.' });
+};
+
+// Helper function to log Super Admin actions
+const logAdminAction = async (userId, username, action, resourceType, resourceId, changes, reason = '', req) => {
+  try {
+    await AuditLog.create({
+      performedBy: userId,
+      actionType: action,
+      targetType: resourceType,
+      targetId: resourceId,
+      oldValue: changes.oldValue,
+      newValue: changes.newValue,
+      reason,
+      metadata: {
+        ipAddress: req.ip,
+        userAgent: req.get('user-agent')
+      }
+    });
+  } catch (error) {
+    console.error('Error logging admin action:', error);
+  }
+};
+
+// Super Admin: Delete FMS Task Completion (Reset to Pending)
+router.delete('/:projectId/tasks/:taskIndex/completion', authenticateToken, isSuperAdmin, async (req, res) => {
+  try {
+    const { projectId, taskIndex } = req.params;
+    const { reason } = req.body;
+
+    const project = await Project.findOne({ projectId });
+    if (!project) {
+      return res.status(404).json({ success: false, message: 'Project not found' });
+    }
+
+    const task = project.tasks[taskIndex];
+    if (!task) {
+      return res.status(404).json({ success: false, message: 'Task not found' });
+    }
+
+    // Store old values for audit
+    const oldValues = {
+      status: task.status,
+      completedAt: task.completedAt,
+      actualCompletedOn: task.actualCompletedOn,
+      completedBy: task.completedBy,
+      notes: task.notes,
+      attachments: task.attachments,
+      completedOnBehalfBy: task.completedOnBehalfBy,
+      pcConfirmationAttachment: task.pcConfirmationAttachment
+    };
+
+    // Reset task to Pending
+    task.status = 'Pending';
+    task.completedAt = null;
+    task.actualCompletedOn = null;
+    task.completedBy = null;
+    task.notes = '';
+    task.attachments = [];
+    task.completedOnBehalfBy = null;
+    task.pcConfirmationAttachment = null;
+    task.actualCompletionDays = null;
+
+    // Recalculate project score
+    if (task.plannedDueDate && oldValues.completedAt) {
+      const completionDate = new Date(oldValues.completedAt);
+      const plannedDate = new Date(task.originalPlannedDate || task.plannedDueDate);
+      const wasOnTime = completionDate <= plannedDate;
+
+      if (wasOnTime && project.tasksOnTime > 0) {
+        project.tasksOnTime -= 1;
+      } else if (!wasOnTime && project.tasksLate > 0) {
+        project.tasksLate -= 1;
+      }
+
+      // Recalculate total score
+      const completedTasks = project.tasks.filter(t => t.status === 'Done').length;
+      if (completedTasks > 0) {
+        project.totalScore = Math.round((project.tasksOnTime / completedTasks) * 100);
+      } else {
+        project.totalScore = 0;
+      }
+    }
+
+    await project.save();
+
+    // Log the action
+    await logAdminAction(
+      req.user.id,
+      req.user.username,
+      'fms_progress_delete',
+      'fms',
+      `${projectId}-${taskIndex}`,
+      { oldValue: oldValues, newValue: { status: 'Pending' } },
+      reason || 'FMS progress deleted by Super Admin',
+      req
+    );
+
+    res.json({
+      success: true,
+      message: 'FMS task progress deleted successfully',
+      project
+    });
+  } catch (error) {
+    console.error('Error deleting FMS progress:', error);
+    res.status(500).json({ success: false, message: 'Server error', error: error.message });
+  }
+});
+
+// Super Admin: Edit FMS Task
+router.put('/:projectId/tasks/:taskIndex/admin-edit', authenticateToken, isSuperAdmin, async (req, res) => {
+  try {
+    const { projectId, taskIndex } = req.params;
+    const {
+      what,
+      who,
+      how,
+      plannedDueDate,
+      status,
+      notes,
+      checklistItems,
+      reason
+    } = req.body;
+
+    const project = await Project.findOne({ projectId });
+    if (!project) {
+      return res.status(404).json({ success: false, message: 'Project not found' });
+    }
+
+    const task = project.tasks[taskIndex];
+    if (!task) {
+      return res.status(404).json({ success: false, message: 'Task not found' });
+    }
+
+    // Store old values for audit
+    const oldValues = {
+      what: task.what,
+      who: task.who,
+      how: task.how,
+      plannedDueDate: task.plannedDueDate,
+      status: task.status,
+      notes: task.notes,
+      checklistItems: task.checklistItems
+    };
+
+    // Update fields
+    if (what !== undefined) task.what = what;
+    if (who !== undefined) task.who = who;
+    if (how !== undefined) task.how = how;
+    if (plannedDueDate !== undefined) task.plannedDueDate = plannedDueDate;
+    if (status !== undefined) task.status = status;
+    if (notes !== undefined) task.notes = notes;
+    if (checklistItems !== undefined) task.checklistItems = checklistItems;
+
+    await project.save();
+
+    // Log the action
+    await logAdminAction(
+      req.user.id,
+      req.user.username,
+      'fms_task_edit',
+      'fms',
+      `${projectId}-${taskIndex}`,
+      { oldValue: oldValues, newValue: req.body },
+      reason || 'FMS task edited by Super Admin',
+      req
+    );
+
+    res.json({
+      success: true,
+      message: 'FMS task updated successfully',
+      project
+    });
+  } catch (error) {
+    console.error('Error updating FMS task:', error);
+    res.status(500).json({ success: false, message: 'Server error', error: error.message });
+  }
+});
+
+// Super Admin: Delete FMS Task Attachment
+router.delete('/:projectId/tasks/:taskIndex/attachments/:attachmentIndex', authenticateToken, isSuperAdmin, async (req, res) => {
+  try {
+    const { projectId, taskIndex, attachmentIndex } = req.params;
+    const { reason } = req.body;
+
+    const project = await Project.findOne({ projectId });
+    if (!project) {
+      return res.status(404).json({ success: false, message: 'Project not found' });
+    }
+
+    const task = project.tasks[taskIndex];
+    if (!task) {
+      return res.status(404).json({ success: false, message: 'Task not found' });
+    }
+
+    if (!task.attachments || attachmentIndex >= task.attachments.length) {
+      return res.status(404).json({ success: false, message: 'Attachment not found' });
+    }
+
+    const deletedAttachment = task.attachments[attachmentIndex];
+    task.attachments.splice(attachmentIndex, 1);
+    await project.save();
+
+    // Log the action
+    await logAdminAction(
+      req.user.id,
+      req.user.username,
+      'attachment_delete',
+      'attachment',
+      `${projectId}-${taskIndex}`,
+      { oldValue: deletedAttachment, newValue: null },
+      reason || 'FMS attachment deleted by Super Admin',
+      req
+    );
+
+    res.json({
+      success: true,
+      message: 'FMS attachment deleted successfully',
+      project
+    });
+  } catch (error) {
+    console.error('Error deleting FMS attachment:', error);
     res.status(500).json({ success: false, message: 'Server error', error: error.message });
   }
 });

@@ -54,7 +54,7 @@ const checklistTemplateSchema = new mongoose.Schema({
   updatedAt: { type: Date, default: Date.now }
 });
 
-checklistTemplateSchema.pre('save', function(next) {
+checklistTemplateSchema.pre('save', function (next) {
   this.updatedAt = new Date();
   next();
 });

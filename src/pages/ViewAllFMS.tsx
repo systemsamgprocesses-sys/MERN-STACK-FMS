@@ -373,13 +373,13 @@ const ViewAllFMS: React.FC = () => {
           acc[category] = (acc[category] || 0) + 1;
           return acc;
         }, {});
-        
+
         // Merge API categories with counts from FMS list
         const categoriesList = response.data.categories.map((cat: any) => ({
           name: cat.name,
           count: categoryCounts[cat.name] || 0
         })).sort((a: any, b: any) => a.name.localeCompare(b.name));
-        
+
         setCategories(categoriesList);
       }
     } catch (error) {
@@ -390,12 +390,12 @@ const ViewAllFMS: React.FC = () => {
         acc[category] = (acc[category] || 0) + 1;
         return acc;
       }, {});
-      
+
       const categoriesList = Object.entries(categoryMap).map(([name, count]) => ({
         name,
         count: count as number
       })).sort((a, b) => a.name.localeCompare(b.name));
-      
+
       setCategories(categoriesList);
     }
   };
@@ -426,7 +426,7 @@ const ViewAllFMS: React.FC = () => {
       alert('Only Super Admin can change FMS categories');
       return;
     }
-    
+
     try {
       await axios.put(`${address}/api/fms-categories/${fmsId}/category`, {
         category: newCategory,
@@ -442,12 +442,12 @@ const ViewAllFMS: React.FC = () => {
 
   const handleAddCategory = async () => {
     if (!newCategory.trim()) return;
-    
+
     if (user?.role !== 'superadmin') {
       alert('Only Super Admin can add categories');
       return;
     }
-    
+
     try {
       await axios.post(`${address}/api/fms-categories/categories`, {
         name: newCategory.trim(),
@@ -469,7 +469,7 @@ const ViewAllFMS: React.FC = () => {
   const handlePrintFMS = (fms: FMSTemplate) => {
     const printWindow = window.open('', '', 'height=600,width=1000');
     if (!printWindow) return;
-    
+
     let stepsHTML = fms.steps.map((step) => `
       <div style="page-break-inside: avoid; border: 1px solid #ddd; padding: 15px; margin-bottom: 15px; border-radius: 8px;">
         <h4 style="margin: 0 0 10px 0; color: #333; font-size: 16px;">Step ${step.stepNo}: ${step.what}</h4>
@@ -515,7 +515,7 @@ const ViewAllFMS: React.FC = () => {
       </body>
       </html>
     `;
-    
+
     printWindow.document.write(content);
     printWindow.document.close();
   };
@@ -574,7 +574,7 @@ const ViewAllFMS: React.FC = () => {
     // Use LR (left-right) layout for better horizontal flow
     let diagram = 'graph LR\n';
     const usersMap = new Map();
-    
+
     // Create a cache of users for faster lookup
     if (usersCache && Array.isArray(usersCache)) {
       usersCache.forEach(user => {
@@ -583,15 +583,15 @@ const ViewAllFMS: React.FC = () => {
         }
       });
     }
-    
+
     // Style definitions for better appearance
     diagram += '    classDef stepBox fill:#e3f2fd,stroke:#1976d2,stroke-width:2px,color:#000\n';
     diagram += '    classDef stepBoxAlt fill:#f3e5f5,stroke:#7b1fa2,stroke-width:2px,color:#000\n';
-    
+
     steps.forEach((step, index) => {
       const stepId = `S${step.stepNo}`;
       const nextStepId = index < steps.length - 1 ? `S${steps[index + 1].stepNo}` : null;
-      
+
       // Enhanced assignee resolution - truncate for compact display
       let assignees = 'N/A';
       if (Array.isArray(step.who)) {
@@ -613,36 +613,36 @@ const ViewAllFMS: React.FC = () => {
           }
           return 'Unknown';
         }).filter((name: string) => name !== 'Unknown').join(', ');
-        
+
         if (!assignees) assignees = 'N/A';
         // Truncate if too long
         if (assignees.length > 30) assignees = assignees.substring(0, 30) + '...';
       }
-      
+
       const duration = step.whenUnit === 'days+hours'
         ? `${step.whenDays || 0}d ${step.whenHours || 0}h`
         : step.whenType === 'ask-on-completion'
           ? 'Ask on completion'
           : `${step.when || 0} ${step.whenUnit || 'days'}`;
-      
+
       // Create compact step description - truncate long text
       let stepDescription = step.what || `Step ${step.stepNo}`;
       if (stepDescription.length > 40) stepDescription = stepDescription.substring(0, 40) + '...';
-      
+
       let howDescription = step.how || 'Method not specified';
       if (howDescription.length > 30) howDescription = howDescription.substring(0, 30) + '...';
-      
+
       // Use alternating colors for better visual distinction
       const boxClass = index % 2 === 0 ? 'stepBox' : 'stepBoxAlt';
-      
+
       diagram += `    ${stepId}["<b>Step ${step.stepNo}</b><br/><b>WHAT:</b> ${stepDescription}<br/><b>WHO:</b> ${assignees}<br/><b>HOW:</b> ${howDescription}<br/><b>WHEN:</b> ${duration}"]\n`;
       diagram += `    class ${stepId} ${boxClass}\n`;
-      
+
       if (nextStepId) {
         diagram += `    ${stepId} -->|Next| ${nextStepId}\n`;
       }
     });
-    
+
     return diagram;
   };
 
@@ -809,12 +809,12 @@ const ViewAllFMS: React.FC = () => {
             {categories
               .filter(category => selectedCategory === 'all' || category.name === selectedCategory)
               .map(category => {
-                const categoryFMS = fmsList.filter(fms => 
+                const categoryFMS = fmsList.filter(fms =>
                   (fms.category || 'Uncategorized') === category.name
                 );
-                
+
                 if (categoryFMS.length === 0) return null;
-                
+
                 return (
                   <div key={category.name} className="space-y-4">
                     <div className="flex items-center justify-between">
@@ -956,12 +956,12 @@ const ViewAllFMS: React.FC = () => {
                           </div>
 
                           {showMermaid === fms.fmsId && (
-                            <div 
-                              className="fixed inset-0 bg-gradient-to-br from-gray-900/95 via-gray-900/90 to-black/95 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fadeIn" 
+                            <div
+                              className="fixed inset-0 bg-gradient-to-br from-gray-900/95 via-gray-900/90 to-black/95 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fadeIn"
                               onClick={() => setShowMermaid(null)}
                             >
-                              <div 
-                                className="bg-white dark:bg-gray-800 rounded-3xl max-w-[95vw] w-full max-h-[95vh] overflow-hidden shadow-2xl transform transition-all animate-slideUp border-2 border-gray-200 dark:border-gray-700" 
+                              <div
+                                className="bg-white dark:bg-gray-800 rounded-3xl max-w-[95vw] w-full max-h-[95vh] overflow-hidden shadow-2xl transform transition-all animate-slideUp border-2 border-gray-200 dark:border-gray-700"
                                 onClick={(e) => e.stopPropagation()}
                               >
                                 {/* Premium Header */}
@@ -1062,13 +1062,12 @@ const ViewAllFMS: React.FC = () => {
                                     <div className="flex items-start justify-between mb-3">
                                       <h5 className="text-lg font-bold text-[var(--color-text)]">Step {step.stepNo}</h5>
                                       <span
-                                        className={`px-3 py-1 rounded-full text-xs ${
-                                          step.whenType === 'fixed'
+                                        className={`px-3 py-1 rounded-full text-xs ${step.whenType === 'fixed'
                                             ? 'bg-blue-100 text-blue-800'
                                             : step.whenType === 'dependent'
                                               ? 'bg-purple-100 text-purple-800'
                                               : 'bg-amber-100 text-amber-800'
-                                        }`}
+                                          }`}
                                       >
                                         {step.whenType === 'fixed'
                                           ? 'Fixed Duration'
@@ -1077,27 +1076,27 @@ const ViewAllFMS: React.FC = () => {
                                             : 'Ask On Completion'}
                                       </span>
                                     </div>
-                                    
+
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                       <div>
                                         <p className="text-sm font-medium text-[var(--color-textSecondary)] mb-1">What</p>
                                         <p className="text-[var(--color-text)]">{step.what}</p>
                                       </div>
-                                      
+
                                       <div>
                                         <p className="text-sm font-medium text-[var(--color-textSecondary)] mb-1">Who</p>
                                         <p className="text-[var(--color-text)]">{formatAssigneeForDetails(step.who)}</p>
                                       </div>
-                                      
+
                                       <div>
                                         <p className="text-sm font-medium text-[var(--color-textSecondary)] mb-1">How</p>
                                         <p className="text-[var(--color-text)]">{step.how}</p>
                                       </div>
-                                      
+
                                       <div>
                                         <p className="text-sm font-medium text-[var(--color-textSecondary)] mb-1">Duration</p>
                                         <p className="text-[var(--color-text)]">
-                                          {step.whenUnit === 'days+hours' 
+                                          {step.whenUnit === 'days+hours'
                                             ? `${step.whenDays || 0} days, ${step.whenHours || 0} hours`
                                             : step.whenType === 'ask-on-completion'
                                               ? 'Ask on completion'

@@ -61,7 +61,7 @@ router.post('/', upload.array('files', 10), async (req, res) => {
       frequencySettings,
       shiftSundayToMonday
     } = req.body;
-    
+
     // Validate required fields
     if (!fmsName || !fmsName.trim()) {
       return res.status(400).json({ success: false, message: 'FMS name is required' });
@@ -69,7 +69,7 @@ router.post('/', upload.array('files', 10), async (req, res) => {
     if (!createdBy) {
       return res.status(400).json({ success: false, message: 'Creator ID is required' });
     }
-    
+
     // Parse steps if sent as string
     let parsedSteps = typeof steps === 'string' ? JSON.parse(steps) : steps;
     let parsedFrequencySettings = typeof frequencySettings === 'string'
@@ -83,11 +83,11 @@ router.post('/', upload.array('files', 10), async (req, res) => {
       monthlyDay: parsedFrequencySettings.monthlyDay,
       yearlyDuration: parsedFrequencySettings.yearlyDuration
     };
-    
+
     if (!Array.isArray(parsedSteps) || parsedSteps.length === 0) {
       return res.status(400).json({ success: false, message: 'At least one step is required' });
     }
-    
+
     // Validate and convert step data
     parsedSteps = parsedSteps.map((step, index) => {
       // Validate required fields
@@ -97,7 +97,7 @@ router.post('/', upload.array('files', 10), async (req, res) => {
       if (!step.who || !Array.isArray(step.who) || step.who.length === 0) {
         throw new Error(`Step ${index + 1}: At least one assignee is required`);
       }
-      
+
       // Ensure who array contains valid ObjectIds
       step.who = step.who.map(id => {
         if (typeof id === 'string' && id.length === 24) {
@@ -105,14 +105,14 @@ router.post('/', upload.array('files', 10), async (req, res) => {
         }
         throw new Error(`Step ${index + 1}: Invalid user ID format`);
       });
-      
+
       // Handle triggersFMSId if provided
       if (step.triggersFMSId && typeof step.triggersFMSId === 'string' && step.triggersFMSId.length === 24) {
         // Keep as string, MongoDB will convert
       } else if (step.triggersFMSId) {
         delete step.triggersFMSId; // Remove invalid triggersFMSId
       }
-      
+
       // Default whenType if missing
       if (!step.whenType) {
         step.whenType = index === 0 ? 'fixed' : 'dependent';
@@ -135,11 +135,11 @@ router.post('/', upload.array('files', 10), async (req, res) => {
 
       return step;
     });
-    
+
     // Generate unique FMS ID
     const count = await FMS.countDocuments();
     const fmsId = `FMS-${(count + 1).toString().padStart(4, '0')}`;
-    
+
     // Process file uploads
     if (req.files && req.files.length > 0) {
       const fileMap = {};
@@ -155,14 +155,14 @@ router.post('/', upload.array('files', 10), async (req, res) => {
           uploadedAt: new Date()
         });
       });
-      
+
       parsedSteps.forEach((step, index) => {
         if (fileMap[index]) {
           step.attachments = fileMap[index];
         }
       });
     }
-    
+
     const fms = new FMS({
       fmsId,
       fmsName,
@@ -173,9 +173,9 @@ router.post('/', upload.array('files', 10), async (req, res) => {
       frequency: frequency || 'one-time',
       frequencySettings: parsedFrequencySettings
     });
-    
+
     await fms.save();
-    
+
     res.json({ success: true, message: 'FMS template created successfully', fmsId });
   } catch (error) {
     console.error('Create FMS error:', error);
@@ -187,9 +187,9 @@ router.post('/', upload.array('files', 10), async (req, res) => {
 router.get('/', async (req, res) => {
   try {
     const { userId, isAdmin } = req.query;
-    
+
     let query = {};
-    
+
     // If not admin/superadmin, only show FMS where user is part of at least one step
     // Admin and superadmin can see all FMS templates
     if (!isAdmin || isAdmin === 'false') {
@@ -202,12 +202,12 @@ router.get('/', async (req, res) => {
       }
     }
     // For admin/superadmin, query remains empty {} to fetch all FMS
-    
+
     const fmsList = await FMS.find(query)
       .populate('createdBy', 'username email')
       .populate('steps.who', 'username email name')
       .sort({ createdAt: -1 }); // Sort by newest first
-    
+
     const formattedList = fmsList.map(fms => {
       let totalHours = 0;
       fms.steps.forEach(step => {
@@ -219,11 +219,11 @@ router.get('/', async (req, res) => {
           totalHours += (step.whenDays || 0) * 24 + (step.whenHours || 0);
         }
       });
-      
+
       const days = Math.floor(totalHours / 24);
       const hours = totalHours % 24;
       const totalTimeFormatted = days > 0 ? `${days} days ${hours} hours` : `${hours} hours`;
-      
+
       return {
         _id: fms._id,
         fmsId: fms.fmsId,
@@ -238,7 +238,7 @@ router.get('/', async (req, res) => {
         frequencySettings: fms.frequencySettings
       };
     });
-    
+
     res.json({ success: true, fmsList: formattedList });
   } catch (error) {
     console.error('Get FMS error:', error);
@@ -251,9 +251,9 @@ router.get('/:fmsId', authenticateToken, async (req, res) => {
   try {
     const idParam = req.params.fmsId;
     let fms;
-    
+
     console.log('Fetching FMS with ID:', idParam);
-    
+
     // Try to find by MongoDB _id first (for edit mode), then by fmsId
     if (idParam.match(/^[0-9a-fA-F]{24}$/)) {
       // Valid MongoDB ObjectId format
@@ -263,7 +263,7 @@ router.get('/:fmsId', authenticateToken, async (req, res) => {
         .populate('steps.who', 'username email name');
       console.log('FMS found by _id:', !!fms);
     }
-    
+
     // If not found by _id, try by fmsId
     if (!fms) {
       console.log('Searching by fmsId field');
@@ -272,12 +272,12 @@ router.get('/:fmsId', authenticateToken, async (req, res) => {
         .populate('steps.who', 'username email name');
       console.log('FMS found by fmsId:', !!fms);
     }
-    
+
     if (!fms) {
       console.log('FMS not found with ID:', idParam);
       return res.status(404).json({ success: false, message: 'FMS template not found' });
     }
-    
+
     res.json(fms);
   } catch (error) {
     console.error('Get FMS error:', error);

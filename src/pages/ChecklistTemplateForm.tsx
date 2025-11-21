@@ -19,7 +19,7 @@ interface User {
 const ChecklistTemplateForm: React.FC = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
-  
+
   const [formData, setFormData] = useState({
     name: '',
     category: 'General',
@@ -30,11 +30,11 @@ const ChecklistTemplateForm: React.FC = () => {
     weeklyDays: [] as number[],
     monthlyDates: [] as number[],
   });
-  
+
   const [items, setItems] = useState<ChecklistItem[]>([
     { label: 'A', description: '' }
   ]);
-  
+
   const [users, setUsers] = useState<User[]>([]);
   const [categories, setCategories] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
@@ -65,7 +65,7 @@ const ChecklistTemplateForm: React.FC = () => {
       const response = await axios.get(`${address}/api/checklist-categories/categories`, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      
+
       if (response.data.success && Array.isArray(response.data.categories)) {
         setCategories(response.data.categories.map((cat: any) => cat.name));
       } else {
@@ -184,9 +184,9 @@ const ChecklistTemplateForm: React.FC = () => {
       const response = await axios.post(`${address}/api/checklist-templates`, payload, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      
+
       setSuccess(`Template created successfully! Generated ${response.data.occurrenceCount} checklist occurrences.`);
-      
+
       setTimeout(() => {
         navigate('/checklist-calendar');
       }, 2000);
@@ -228,7 +228,7 @@ const ChecklistTemplateForm: React.FC = () => {
           <h2 className="text-xl font-semibold mb-4" style={{ color: 'var(--color-text)' }}>
             Basic Information
           </h2>
-          
+
           <div className="space-y-4">
             <div>
               <label className="block text-sm font-medium mb-1" style={{ color: 'var(--color-text)' }}>
@@ -410,11 +410,11 @@ const ChecklistTemplateForm: React.FC = () => {
                       onClick={() => toggleWeeklyDay(day.value)}
                       className="px-4 py-2 rounded border"
                       style={{
-                        backgroundColor: formData.weeklyDays.includes(day.value) 
-                          ? 'var(--color-primary)' 
+                        backgroundColor: formData.weeklyDays.includes(day.value)
+                          ? 'var(--color-primary)'
                           : 'var(--color-background)',
-                        color: formData.weeklyDays.includes(day.value) 
-                          ? 'white' 
+                        color: formData.weeklyDays.includes(day.value)
+                          ? 'white'
                           : 'var(--color-text)',
                         borderColor: formData.weeklyDays.includes(day.value)
                           ? 'var(--color-primary)'

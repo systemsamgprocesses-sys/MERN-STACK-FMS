@@ -121,31 +121,31 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
     { section: 'FMS', icon: Settings, label: 'Start Project', path: '/start-project', permission: 'canAssignTasks', highlight: true },
     { section: 'FMS', icon: Settings, label: 'FMS Progress', path: '/fms-progress', highlight: true },
     { section: 'FMS', icon: Settings, label: 'Manage FMS Categories', path: '/fms-categories', requireAdmin: true, highlight: true },
-    
+
     // Checklists Section
     { section: 'Checklists', icon: ListTodo, label: 'Pending Checklists', path: '/pending-checklists', highlight: true },
     { section: 'Checklists', icon: Calendar, label: 'Checklist Calendar', path: '/checklist-calendar', highlight: true },
     { section: 'Checklists', icon: CheckSquare, label: 'My Checklists', path: '/checklists', highlight: true },
     { section: 'Checklists', icon: BarChart2, label: 'Checklist Dashboard', path: '/checklist-dashboard', permission: 'canViewAllChecklists', highlight: true },
     { section: 'Checklists', icon: Settings, label: 'Manage Checklist Categories', path: '/checklist-categories', requireAdmin: true, highlight: true },
-    
+
     // Tasks Section
     { section: '⭐ Tasks', icon: Star, label: 'My Tasks', path: '/admin-tasks', countKey: 'myTasks', highlight: true },
     { section: '⭐ Tasks', icon: CheckSquare, label: 'Pending Tasks', path: '/pending-tasks', permission: 'canViewTasks', countKey: 'pendingTasks', highlight: true },
     { section: '⭐ Tasks', icon: Archive, label: 'Master Tasks', path: '/master-tasks', permission: 'canViewAllTeamTasks', countKey: 'masterTasks', highlight: true },
     { section: '⭐ Tasks', icon: RotateCcw, label: 'Master Repetitive', path: '/master-recurring', permission: 'canViewAllTeamTasks', countKey: 'masterRepetitive', highlight: true },
     { section: '⭐ Tasks', icon: Calendar, label: 'Upcoming Tasks', path: '/upcoming-tasks', permission: 'canViewTasks', highlight: true },
-    
+
     // Assign Task Section
     { section: 'Assign Task', icon: UserPlus, label: 'Assign Task', path: '/assign-task', permission: 'canAssignTasks', highlight: true },
     { section: 'Assign Task', icon: UserCheck, label: 'Assigned By Me', path: '/assigned-by-me', permission: 'canAssignTasks', countKey: 'assignedByMe', highlight: true },
-    
+
     // Management Section
     { section: 'Management', icon: LayoutDashboard, label: 'Dashboard', path: '/dashboard' },
     { section: 'Management', icon: Zap, label: 'Performance', path: '/performance' },
     { section: 'Management', icon: Settings, label: 'Admin Panel', path: '/admin', permission: 'canManageUsers' },
     { section: 'Management', icon: Activity, label: 'Admin HR Panel', path: '/admin-hr-panel', permission: 'canManageUsers' },
-    
+
     // Workflow Section
     { section: 'Workflow', icon: AlertCircle, label: 'Objections Hub', path: '/objections', countKey: 'myObjections' },
     { section: 'Workflow', icon: AlertCircle, label: 'Objection Approvals', path: '/objection-approvals', countKey: 'objections', permission: 'canApproveObjections' },
@@ -158,11 +158,11 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
     { section: 'Workflow', icon: ClipboardList, label: 'My Stationery Requests', path: '/my-stationery-requests' },
     { section: 'Workflow', icon: Package, label: 'HR Stationery Approval', path: '/hr-stationery-approval', permission: 'canManageStationery' },
     { section: 'Workflow', icon: Package, label: 'Stationery Inventory', path: '/stationery-inventory', permission: 'canManageStationery' },
-    
+
     // Analytics Section
     { section: 'Analytics', icon: BarChart2, label: 'Purchase Dashboard', path: '/purchase-dashboard', requireAdmin: true },
     { section: 'Analytics', icon: BarChart2, label: 'Sales Dashboard', path: '/sales-dashboard', requireAdmin: true },
-    
+
     // Admin Section
     { section: 'Admin', icon: Shield, label: 'Audit Logs', path: '/audit-logs', requireSuperAdmin: true },
     { section: 'Admin', icon: Award, label: 'Score Logs', path: '/score-logs', requireSuperAdmin: true },
@@ -277,16 +277,16 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
   const filteredMenuItems = menuItems.filter(item => {
     // Super admin can see everything
     if (user?.role === 'superadmin') return true;
-    
+
     // Hide items that require super admin (for non-superadmins)
     if (item.requireSuperAdmin && user?.role !== 'superadmin') return false;
-    
+
     // Admin can see admin panel and below (legacy check)
     if (item.requireAdmin && !['admin', 'superadmin'].includes(user?.role || '')) return false;
-    
+
     // Check for specific role requirement
     if (item.requireRole && user?.role !== item.requireRole) return false;
-    
+
     // Check for specific permissions - this is the primary access control
     if (item.permission) {
       const hasPermission = user?.permissions?.[item.permission as keyof typeof user.permissions];
@@ -295,7 +295,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
         return false;
       }
     }
-    
+
     // Regular users see the rest
     return true;
   });
@@ -326,9 +326,8 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
 
       {/* Sidebar */}
       <div
-        className={`fixed inset-y-0 left-0 z-30 flex flex-col transition-all duration-300 ease-in-out transform lg:translate-x-0 lg:static lg:inset-0 ${
-          isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
-        } border-r backdrop-blur-xl`}
+        className={`fixed inset-y-0 left-0 z-30 flex flex-col transition-all duration-300 ease-in-out transform lg:translate-x-0 lg:static lg:inset-0 ${isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
+          } border-r backdrop-blur-xl`}
         style={{
           backgroundColor: 'rgba(var(--color-surface-rgb, 255, 255, 255), 0.95)',
           borderColor: 'var(--color-border)',
@@ -366,70 +365,69 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
           {Object.entries(groupedMenuItems).map(([section, items]) => {
             const isHighlightedSection = ['FMS', 'Checklists', 'Tasks', 'Assign Task'].includes(section);
             return (
-              <div 
-                key={section} 
+              <div
+                key={section}
                 className={`px-2 py-3 border-t first:border-t-0 ${isHighlightedSection ? 'bg-gradient-to-r from-[var(--color-primary)]/5 to-transparent' : ''}`}
                 style={{ borderColor: 'var(--color-border)' }}
               >
                 {!isCollapsed && (
-                  <h3 
+                  <h3
                     className={`text-xs font-semibold uppercase tracking-wider mb-2 ${isHighlightedSection ? 'text-[var(--color-primary)]' : ''}`}
                     style={{ color: isHighlightedSection ? 'var(--color-primary)' : 'var(--color-textSecondary)' }}
                   >
                     {isHighlightedSection && '⭐ '}{section}
                   </h3>
                 )}
-              <div className="space-y-1">
-                {items.map((item) => (
-                  <Tooltip
-                    key={item.path}
-                    content={item.label}
-                    show={isCollapsed}
-                  >
-                    <NavLink
-                      to={item.path}
-                      onClick={onClose}
-                      className={({ isActive }) =>
-                        `flex items-center px-3 py-3 text-sm font-semibold rounded-xl transition-all duration-300 group ${
-                          isActive
+                <div className="space-y-1">
+                  {items.map((item) => (
+                    <Tooltip
+                      key={item.path}
+                      content={item.label}
+                      show={isCollapsed}
+                    >
+                      <NavLink
+                        to={item.path}
+                        onClick={onClose}
+                        className={({ isActive }) =>
+                          `flex items-center px-3 py-3 text-sm font-semibold rounded-xl transition-all duration-300 group ${isActive
                             ? 'text-white shadow-lg scale-105'
                             : 'hover:scale-105 hover:translate-x-1'
-                        } ${isCollapsed ? 'justify-center' : ''}`
-                      }
-                      style={({ isActive }) => ({
-                        background: isActive
-                          ? 'linear-gradient(135deg, var(--color-primary), var(--color-secondary))'
-                          : 'transparent',
-                        color: isActive ? 'white' : 'var(--color-text)',
-                      })}
-                      onMouseEnter={(e) => {
-                        if (!e.currentTarget.classList.contains('text-white')) {
-                          e.currentTarget.style.backgroundColor = 'rgba(99, 102, 241, 0.1)';
-                          e.currentTarget.style.borderRadius = '0.75rem';
+                          } ${isCollapsed ? 'justify-center' : ''}`
                         }
-                      }}
-                      onMouseLeave={(e) => {
-                        if (!e.currentTarget.classList.contains('text-white')) {
-                          e.currentTarget.style.backgroundColor = 'transparent';
-                        }
-                      }}
-                    >
-                      <item.icon size={18} className={isCollapsed ? '' : 'mr-3'} />
-                      {!isCollapsed && (
-                        <span className="transition-opacity duration-200 flex-1">
-                          {item.label}
-                        </span>
-                      )}
-                      {item.countKey && counts[item.countKey as keyof typeof counts] > 0 && (
-                         <span className="ml-auto bg-gradient-to-r from-red-500 to-red-600 text-white text-xs font-bold rounded-full px-2 py-0.5 min-w-[1.5rem] text-center shadow-sm border border-red-400">
-                           {counts[item.countKey as keyof typeof counts]}
-                         </span>
-                       )}
-                    </NavLink>
-                  </Tooltip>
-                ))}
+                        style={({ isActive }) => ({
+                          background: isActive
+                            ? 'linear-gradient(135deg, var(--color-primary), var(--color-secondary))'
+                            : 'transparent',
+                          color: isActive ? 'white' : 'var(--color-text)',
+                        })}
+                        onMouseEnter={(e) => {
+                          if (!e.currentTarget.classList.contains('text-white')) {
+                            e.currentTarget.style.backgroundColor = 'rgba(99, 102, 241, 0.1)';
+                            e.currentTarget.style.borderRadius = '0.75rem';
+                          }
+                        }}
+                        onMouseLeave={(e) => {
+                          if (!e.currentTarget.classList.contains('text-white')) {
+                            e.currentTarget.style.backgroundColor = 'transparent';
+                          }
+                        }}
+                      >
+                        <item.icon size={18} className={isCollapsed ? '' : 'mr-3'} />
+                        {!isCollapsed && (
+                          <span className="transition-opacity duration-200 flex-1">
+                            {item.label}
+                          </span>
+                        )}
+                        {item.countKey && counts[item.countKey as keyof typeof counts] > 0 && (
+                          <span className="ml-auto bg-gradient-to-r from-red-500 to-red-600 text-white text-xs font-bold rounded-full px-2 py-0.5 min-w-[1.5rem] text-center shadow-sm border border-red-400">
+                            {counts[item.countKey as keyof typeof counts]}
+                          </span>
+                        )}
+                      </NavLink>
+                    </Tooltip>
+                  ))}
+                </div>
               </div>
-            </div>
             );
           })}
         </nav>

@@ -1,12 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { CheckSquare, Clock, RefreshCcw, Search, Users, Calendar, ArrowUpDown, ArrowUp, ArrowDown, Filter, Paperclip, FileText, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, AlertTriangle } from 'lucide-react';
+import { CheckSquare, Clock, RefreshCcw, Search, Users, Calendar, ArrowUpDown, ArrowUp, ArrowDown, Filter, Paperclip, FileText, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, AlertTriangle, Pencil } from 'lucide-react';
 import axios from 'axios';
 import ViewToggle from '../components/ViewToggle';
 import PriorityBadge from '../components/PriorityBadge';
 import TaskTypeBadge from '../components/TaskTypeBadge';
 import TaskCompletionModal from '../components/TaskCompletionModal';
 import MultiLevelTaskCompletionModal from '../components/MultiLevelTaskCompletionModal';
+import { EditTaskModal } from '../components/EditTaskModal';
+import { SuperAdminActions } from '../components/SuperAdminActions';
+import { ConfirmationDialog } from '../components/ConfirmationDialog';
+import { TaskEditModal } from '../components/TaskEditModal';
 import { useTaskSettings } from '../hooks/useTaskSettings';
 import { useTheme } from '../contexts/ThemeContext';
 import { address } from '../../utils/ipAddress';
@@ -105,7 +109,7 @@ const PendingTasks: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [view, setView] = useState<'table' | 'card'>(getInitialViewPreference);
   const [sortOrder, setSortOrder] = useState<SortOrder>('none');
-  const [activeTab, setActiveTab] = useState<'todays-due' | 'pending' | 'completed' | 'total' | 'pending-repetitive'>('todays-due');
+  const [activeTab, setActiveTab] = useState<'todays-due' | 'pending' | 'upcoming' | 'completed' | 'total' | 'pending-repetitive'>('todays-due');
   const [filter, setFilter] = useState({
     taskType: '',
     priority: '',
@@ -136,6 +140,14 @@ const PendingTasks: React.FC = () => {
   const [downloading, setDownloading] = useState<{ [key: string]: boolean }>({});
   const [pendingTasksPage, setPendingTasksPage] = useState(1);
   const [tasksPerPage, setTasksPerPage] = useState(10);
+
+  // Super Admin state
+  const [showTaskEditModal, setShowTaskEditModal] = useState<Task | null>(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState<Task | null>(null);
+  const [showDeleteProgressConfirm, setShowDeleteProgressConfirm] = useState<any>(null);
+  const [showDeleteChecklistConfirm, setShowDeleteChecklistConfirm] = useState<Task | null>(null);
+  const [allUsers, setAllUsers] = useState<User[]>([]);
+  const [showEditModal, setShowEditModal] = useState<Task | null>(null);
 
   const activeFmsTask = showFMSCompleteModal
     ? fmsTasks.find(t => t.projectId === showFMSCompleteModal.projectId && t.taskIndex === showFMSCompleteModal.taskIndex)
@@ -349,27 +361,143 @@ const PendingTasks: React.FC = () => {
   };
 
   const handleFMSTaskCompletion = async (projectId: string, taskIndex: number, remarks: string, attachments: File[], completedOnBehalfBy?: string, pcConfirmation?: File) => {
-    const formData = new FormData();
-    formData.append('remarks', remarks);
-    formData.append('completedBy', completedOnBehalfBy || user?.id || '');
+    try {
+      const formData = new FormData();
+      formData.append('remarks', remarks);
+      formData.append('completedBy', completedOnBehalfBy || user?.id || '');
 
-    if (completedOnBehalfBy) {
-      formData.append('completedOnBehalfBy', user?.id || '');
+      if (completedOnBehalfBy) {
+        formData.append('completedOnBehalfBy', user?.id || '');
+      }
+
+      attachments.forEach((file) => {
+        formData.append('files', file);
+      });
+
+      if (pcConfirmation) {
+        formData.append('pcConfirmation', pcConfirmation);
+      }
+
+      const response = await axios.post(`${address}/api/projects/${projectId}/complete-task/${taskIndex}`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+
+      if (response.data.success) {
+        alert('FMS task completed successfully!');
+        setShowFMSCompleteModal(null);
+        fetchTasks();
+      } else {
+        throw new Error(response.data.message || 'Failed to complete FMS task');
+      }
+    } catch (error: any) {
+      console.error('Error completing FMS task:', error);
+      alert(error.response?.data?.message || error.message || 'Failed to complete FMS task. Please try again.');
     }
+  };
 
-    attachments.forEach((file) => {
-      formData.append('files', file);
-    });
+  // Super Admin: Fetch all users for assignment dropdown
+  useEffect(() => {
+    const fetchAllUsers = async () => {
+      if (user?.role === 'superadmin') {
+        try {
+          const token = localStorage.getItem('token');
+          const response = await axios.get(`${address}/api/users`, {
+            headers: { Authorization: `Bearer ${token}` }
+          });
+          setAllUsers(response.data);
+        } catch (error) {
+          console.error('Error fetching users:', error);
+        }
+      }
+    };
+    fetchAllUsers();
+  }, [user]);
 
-    if (pcConfirmation) {
-      formData.append('pcConfirmation', pcConfirmation);
+  // Super Admin: Delete task
+  const handleDeleteTask = async (taskId: string) => {
+    try {
+      const token = localStorage.getItem('token');
+      await axios.delete(`${address}/api/tasks/${taskId}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      alert('Task deleted successfully');
+      setShowDeleteConfirm(null);
+      fetchTasks();
+    } catch (error: any) {
+      console.error('Error deleting task:', error);
+      alert(error.response?.data?.message || 'Failed to delete task');
     }
+  };
 
-    await axios.post(`${address}/api/projects/${projectId}/complete-task/${taskIndex}`, formData, {
-      headers: { 'Content-Type': 'multipart/form-data' }
-    });
+  // Super Admin: Delete FMS progress
+  const handleDeleteFMSProgress = async (projectId: string, taskIndex: number) => {
+    try {
+      const token = localStorage.getItem('token');
+      const reason = prompt('Reason for deleting FMS progress (required for audit):');
+      if (!reason || !reason.trim()) {
+        alert('Reason is required');
+        return;
+      }
 
-    fetchTasks();
+      await axios.delete(
+        `${address}/api/projects/${projectId}/tasks/${taskIndex}/completion`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+          data: { reason }
+        }
+      );
+      alert('FMS progress deleted successfully. Task has been reset to Pending.');
+      setShowDeleteProgressConfirm(null);
+      fetchTasks();
+    } catch (error: any) {
+      console.error('Error deleting FMS progress:', error);
+      alert(error.response?.data?.message || 'Failed to delete FMS progress');
+    }
+  };
+
+  // Super Admin: Delete checklist
+  const handleDeleteChecklist = async (taskId: string) => {
+    try {
+      const token = localStorage.getItem('token');
+      const reason = prompt('Reason for deleting checklist (required for audit):');
+      if (!reason || !reason.trim()) {
+        alert('Reason is required');
+        return;
+      }
+
+      await axios.delete(`${address}/api/tasks/${taskId}/checklist`, {
+        headers: { Authorization: `Bearer ${token}` },
+        data: { reason }
+      });
+      alert('Checklist deleted successfully');
+      setShowDeleteChecklistConfirm(null);
+      fetchTasks();
+    } catch (error: any) {
+      console.error('Error deleting checklist:', error);
+      alert(error.response?.data?.message || 'Failed to delete checklist');
+    }
+  };
+
+  // Handle task edit save
+  const handleSaveTask = async (taskId: string, updates: any) => {
+    try {
+      const token = localStorage.getItem('token');
+      await axios.put(
+        `${address}/api/tasks/${taskId}`,
+        updates,
+        {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        }
+      );
+      setShowEditModal(null);
+      fetchTasks();
+    } catch (error: any) {
+      console.error('Error updating task:', error);
+      throw error;
+    }
   };
 
   const handleRaiseFMSObjection = async () => {
@@ -742,10 +870,10 @@ const PendingTasks: React.FC = () => {
                   </span>
                   <span className={`font-medium ${task.dueDate && isOverdue(task.dueDate) ? 'text-[--color-error]' : task.dueDate && isDueToday(task.dueDate) ? 'text-[--color-accent]' : 'text-[--color-text]'}`}>
                     {task.dueDate ? new Date(task.dueDate).toLocaleDateString('en-GB', {
-                        day: '2-digit',
-                        month: 'numeric',
-                        year: 'numeric',
-                      }) : 'N/A'}
+                      day: '2-digit',
+                      month: 'numeric',
+                      year: 'numeric',
+                    }) : 'N/A'}
                   </span>
                 </div>
                 <div className={`flex items-center justify-between p-2 rounded-lg ${theme === 'light' ? 'bg-gray-50' : 'bg-[--color-background]'}`}>
@@ -755,10 +883,10 @@ const PendingTasks: React.FC = () => {
                   </span>
                   <span className="font-medium text-[--color-text]">
                     {new Date(task.createdAt).toLocaleDateString('en-GB', {
-                        day: '2-digit',
-                        month: 'numeric',
-                        year: 'numeric',
-                      })}
+                      day: '2-digit',
+                      month: 'numeric',
+                      year: 'numeric',
+                    })}
                   </span>
                 </div>
                 <div className={`flex items-center justify-between p-2 rounded-lg ${theme === 'light' ? 'bg-gray-50' : 'bg-[--color-background]'}`}>
@@ -934,37 +1062,54 @@ const PendingTasks: React.FC = () => {
                       })}
                     </div>
                   </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                      <div className="flex space-x-2 gap-1">
-                        <button
-                          onClick={() => updateTaskProgress(task._id, 'In Progress')}
-                          className="px-3 py-2 rounded-lg transition-all transform hover:scale-105 bg-blue-50 hover:bg-blue-500 text-blue-600 hover:text-white border border-blue-300 hover:border-blue-600 font-medium text-xs flex items-center gap-1"
-                          title="Mark as In Progress"
-                          disabled={task.status === 'In Progress'}
-                        >
-                          <Clock size={14} />
-                          <span>In Progress</span>
-                        </button>
-                        <button
-                          onClick={() => setShowCompleteModal(task._id)}
-                          className="px-3 py-2 rounded-lg transition-all transform hover:scale-105 bg-green-50 hover:bg-green-500 text-green-600 hover:text-white border border-green-300 hover:border-green-600 font-medium text-xs flex items-center gap-1"
-                          title="Complete task"
-                        >
-                          <CheckSquare size={14} />
-                          <span>Complete</span>
-                        </button>
-                        <button
-                          onClick={() => setShowObjectionModal(task._id)}
-                          className="px-3 py-2 rounded-lg transition-all transform hover:scale-105 bg-orange-50 hover:bg-orange-500 text-orange-600 hover:text-white border border-orange-300 hover:border-orange-600 font-medium text-xs flex items-center gap-1"
-                          title="Raise objection"
-                        >
-                          <RefreshCcw size={14} />
-                          <span>Objection</span>
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                    <div className="flex space-x-2 gap-1">
+                      <button
+                        onClick={() => setShowEditModal(task)}
+                        className="px-3 py-2 rounded-lg transition-all transform hover:scale-105 bg-purple-50 hover:bg-purple-500 text-purple-600 hover:text-white border border-purple-300 hover:border-purple-600 font-medium text-xs flex items-center gap-1"
+                        title="Edit task"
+                      >
+                        <Pencil size={14} />
+                        <span>Edit</span>
+                      </button>
+                      <button
+                        onClick={() => updateTaskProgress(task._id, 'In Progress')}
+                        className="px-3 py-2 rounded-lg transition-all transform hover:scale-105 bg-blue-50 hover:bg-blue-500 text-blue-600 hover:text-white border border-blue-300 hover:border-blue-600 font-medium text-xs flex items-center gap-1"
+                        title="Mark as In Progress"
+                        disabled={task.status === 'In Progress'}
+                      >
+                        <Clock size={14} />
+                        <span>In Progress</span>
+                      </button>
+                      <button
+                        onClick={() => setShowCompleteModal(task._id)}
+                        className="px-3 py-2 rounded-lg transition-all transform hover:scale-105 bg-green-50 hover:bg-green-500 text-green-600 hover:text-white border border-green-300 hover:border-green-600 font-medium text-xs flex items-center gap-1"
+                        title="Complete task"
+                      >
+                        <CheckSquare size={14} />
+                        <span>Complete</span>
+                      </button>
+                      <button
+                        onClick={() => setShowObjectionModal(task._id)}
+                        className="px-3 py-2 rounded-lg transition-all transform hover:scale-105 bg-orange-50 hover:bg-orange-500 text-orange-600 hover:text-white border border-orange-300 hover:border-orange-600 font-medium text-xs flex items-center gap-1"
+                        title="Raise objection"
+                      >
+                        <RefreshCcw size={14} />
+                        <span>Objection</span>
+                      </button>
+                      {user?.role === 'superadmin' && (
+                        <SuperAdminActions
+                          itemType="task"
+                          onEdit={() => setShowTaskEditModal(task)}
+                          onDelete={() => setShowDeleteConfirm(task)}
+                          onDeleteChecklist={task.requiresChecklist ? () => setShowDeleteChecklistConfirm(task) : undefined}
+                          isDark={theme === 'dark'}
+                        />
+                      )}
+                    </div>
+                  </td>
+                </tr>
+              ))}
             </tbody>
           </table>
         </div>
@@ -1013,8 +1158,8 @@ const PendingTasks: React.FC = () => {
 
     try {
       await axios.put(
-        `${address}/api/tasks/${showInProgressModal}`,
-        { status: 'in-progress', inProgressRemarks: inProgressRemarks.trim() },
+        `${address}/api/tasks/${showInProgressModal}/in-progress`,
+        { inProgressRemarks: inProgressRemarks.trim() },
         { headers: { 'Content-Type': 'application/json' } }
       );
 
@@ -1032,11 +1177,11 @@ const PendingTasks: React.FC = () => {
   const getTabFilteredData = () => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    
+
     let filteredPending = [...pendingTasks];
     let filteredUpcoming = [...upcomingTasks];
     let filteredFMS = [...fmsTasks];
-    
+
     switch (activeTab) {
       case 'todays-due':
         // Only show tasks due today (exclude repetitive tasks without due dates)
@@ -1055,8 +1200,26 @@ const PendingTasks: React.FC = () => {
         });
         break;
       case 'pending':
-        // Show all pending tasks (including repetitive)
-        // Keep existing filtering
+        // Show only overdue and due today tasks (not future tasks)
+        filteredPending = pendingTasks; // Already filtered to dueDate <= today in applyFiltersAndSort
+        filteredUpcoming = []; // No upcoming tasks in pending tab
+        filteredFMS = fmsTasks.filter(task => {
+          if (!task.task.plannedDueDate) return true; // Tasks without due date are pending
+          const dueDate = new Date(task.task.plannedDueDate);
+          dueDate.setHours(0, 0, 0, 0);
+          return dueDate <= today;
+        });
+        break;
+      case 'upcoming':
+        // Show only future tasks (dueDate > today)
+        filteredPending = []; // No pending tasks in upcoming tab
+        filteredUpcoming = upcomingTasks; // Already filtered to dueDate > today in applyFiltersAndSort
+        filteredFMS = fmsTasks.filter(task => {
+          if (!task.task.plannedDueDate) return false;
+          const dueDate = new Date(task.task.plannedDueDate);
+          dueDate.setHours(0, 0, 0, 0);
+          return dueDate > today;
+        });
         break;
       case 'completed':
         // Show only completed tasks
@@ -1065,12 +1228,12 @@ const PendingTasks: React.FC = () => {
         filteredFMS = fmsTasks.filter(task => task.task.status === 'Completed');
         break;
       case 'total':
-        // Show all tasks
-        // Keep existing
+        // Show all tasks (pending + upcoming)
+        // Keep existing - shows everything
         break;
       case 'pending-repetitive':
         // Show only repetitive/recurring tasks that are pending
-        filteredPending = pendingTasks.filter(task => 
+        filteredPending = pendingTasks.filter(task =>
           !task.dueDate || task.taskType === 'recurring' || task.taskType === 'daily' || task.taskType === 'weekly' || task.taskType === 'monthly'
         );
         filteredUpcoming = []; // Upcoming doesn't apply to repetitive
@@ -1080,7 +1243,7 @@ const PendingTasks: React.FC = () => {
         // Keep existing
         break;
     }
-    
+
     return {
       filteredPending,
       filteredUpcoming,
@@ -1089,7 +1252,7 @@ const PendingTasks: React.FC = () => {
   };
 
   const { filteredPending, filteredUpcoming, filteredFMS } = getTabFilteredData();
-  
+
   // Calculate total for tab display
   const tabTotalCount = filteredPending.length + filteredUpcoming.length + filteredFMS.length;
 
@@ -1139,51 +1302,69 @@ const PendingTasks: React.FC = () => {
         <div className="flex flex-wrap gap-2">
           <button
             onClick={() => setActiveTab('todays-due')}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-              activeTab === 'todays-due'
-                ? 'bg-[--color-primary] text-white shadow-md'
-                : 'bg-[--color-background] text-[--color-textSecondary] hover:bg-[--color-border]'
-            }`}
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${activeTab === 'todays-due'
+              ? 'bg-[--color-primary] text-white shadow-md'
+              : 'bg-[--color-background] text-[--color-textSecondary] hover:bg-[--color-border]'
+              }`}
           >
             Today's Due ({activeTab === 'todays-due' ? tabTotalCount : 0})
           </button>
           <button
             onClick={() => setActiveTab('pending')}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-              activeTab === 'pending'
-                ? 'bg-[--color-primary] text-white shadow-md'
-                : 'bg-[--color-background] text-[--color-textSecondary] hover:bg-[--color-border]'
-            }`}
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${activeTab === 'pending'
+              ? 'bg-[--color-primary] text-white shadow-md'
+              : 'bg-[--color-background] text-[--color-textSecondary] hover:bg-[--color-border]'
+              }`}
           >
-            Pending ({pendingTasks.length + fmsTasks.filter(t => t.task.status !== 'Completed').length})
+            Pending ({pendingTasks.length + fmsTasks.filter(t => {
+              if (!t.task.plannedDueDate) return true;
+              const today = new Date();
+              today.setHours(0, 0, 0, 0);
+              const dueDate = new Date(t.task.plannedDueDate);
+              dueDate.setHours(0, 0, 0, 0);
+              return dueDate <= today && t.task.status !== 'Completed';
+            }).length})
+          </button>
+          <button
+            onClick={() => setActiveTab('upcoming')}
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${activeTab === 'upcoming'
+              ? 'bg-[--color-primary] text-white shadow-md'
+              : 'bg-[--color-background] text-[--color-textSecondary] hover:bg-[--color-border]'
+              }`}
+          >
+            Upcoming ({upcomingTasks.length + fmsTasks.filter(t => {
+              if (!t.task.plannedDueDate) return false;
+              const today = new Date();
+              today.setHours(0, 0, 0, 0);
+              const dueDate = new Date(t.task.plannedDueDate);
+              dueDate.setHours(0, 0, 0, 0);
+              return dueDate > today;
+            }).length})
           </button>
           <button
             onClick={() => setActiveTab('completed')}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-              activeTab === 'completed'
-                ? 'bg-[--color-primary] text-white shadow-md'
-                : 'bg-[--color-background] text-[--color-textSecondary] hover:bg-[--color-border]'
-            }`}
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${activeTab === 'completed'
+              ? 'bg-[--color-primary] text-white shadow-md'
+              : 'bg-[--color-background] text-[--color-textSecondary] hover:bg-[--color-border]'
+              }`}
           >
             Completed ({activeTab === 'completed' ? tabTotalCount : 0})
           </button>
           <button
             onClick={() => setActiveTab('total')}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-              activeTab === 'total'
-                ? 'bg-[--color-primary] text-white shadow-md'
-                : 'bg-[--color-background] text-[--color-textSecondary] hover:bg-[--color-border]'
-            }`}
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${activeTab === 'total'
+              ? 'bg-[--color-primary] text-white shadow-md'
+              : 'bg-[--color-background] text-[--color-textSecondary] hover:bg-[--color-border]'
+              }`}
           >
             Total ({pendingTasks.length + upcomingTasks.length + fmsTasks.length})
           </button>
           <button
             onClick={() => setActiveTab('pending-repetitive')}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-              activeTab === 'pending-repetitive'
-                ? 'bg-[--color-primary] text-white shadow-md'
-                : 'bg-[--color-background] text-[--color-textSecondary] hover:bg-[--color-border]'
-            }`}
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${activeTab === 'pending-repetitive'
+              ? 'bg-[--color-primary] text-white shadow-md'
+              : 'bg-[--color-background] text-[--color-textSecondary] hover:bg-[--color-border]'
+              }`}
           >
             Pending Repetitive ({activeTab === 'pending-repetitive' ? tabTotalCount : 0})
           </button>
@@ -1368,7 +1549,7 @@ const PendingTasks: React.FC = () => {
                 Pending Tasks ({filteredPending.length})
               </h2>
               {isMobile || view === 'card' ? renderCardView(filteredPending.slice((pendingTasksPage - 1) * tasksPerPage, pendingTasksPage * tasksPerPage)) : renderTableView(filteredPending.slice((pendingTasksPage - 1) * tasksPerPage, pendingTasksPage * tasksPerPage))}
-              
+
               {/* Pending Tasks Pagination */}
               {Math.ceil(filteredPending.length / tasksPerPage) > 1 && (
                 <div className="bg-[--color-background] rounded-xl shadow-sm border border-[--color-border] p-4 mt-4">
@@ -1434,6 +1615,92 @@ const PendingTasks: React.FC = () => {
                       <button
                         onClick={() => setPendingTasksPage(Math.ceil(filteredPending.length / tasksPerPage))}
                         disabled={pendingTasksPage >= Math.ceil(filteredPending.length / tasksPerPage)}
+                        className="p-2 text-sm font-medium text-[--color-textSecondary] bg-[--color-surface] border border-[--color-border] rounded-lg hover:bg-[--color-border] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                        title="Last page"
+                      >
+                        <ChevronsRight size={16} />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Upcoming Tasks Section */}
+          {filteredUpcoming.length > 0 && (
+            <div className="mt-8">
+              <h2 className="text-md font-semibold text-[--color-text] mb-3 flex items-center gap-2">
+                <Clock size={18} className="text-blue-500" />
+                Upcoming Tasks ({filteredUpcoming.length})
+              </h2>
+              {isMobile || view === 'card' ? renderCardView(filteredUpcoming.slice((pendingTasksPage - 1) * tasksPerPage, pendingTasksPage * tasksPerPage)) : renderTableView(filteredUpcoming.slice((pendingTasksPage - 1) * tasksPerPage, pendingTasksPage * tasksPerPage))}
+
+              {/* Upcoming Tasks Pagination */}
+              {Math.ceil(filteredUpcoming.length / tasksPerPage) > 1 && (
+                <div className="bg-[--color-background] rounded-xl shadow-sm border border-[--color-border] p-4 mt-4">
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                    {/* Items per page selector */}
+                    <div className="flex items-center space-x-2">
+                      <span className="text-sm text-[--color-textSecondary]">Show:</span>
+                      <select
+                        value={tasksPerPage}
+                        onChange={(e) => handleTasksPerPageChange(Number(e.target.value))}
+                        className="text-sm px-2 py-1 border border-[--color-border] rounded-lg focus:ring-2 focus:ring-[--color-primary] focus:border-[--color-primary] bg-[--color-surface] text-[--color-text]"
+                      >
+                        <option value={10}>10</option>
+                        <option value={25}>25</option>
+                        <option value={50}>50</option>
+                        <option value={100}>100</option>
+                      </select>
+                      <span className="text-sm text-[--color-textSecondary]">per page</span>
+                    </div>
+
+                    {/* Page info */}
+                    <div className="flex items-center">
+                      <p className="text-sm text-[--color-textSecondary]">
+                        Showing <span className="font-medium">{(pendingTasksPage - 1) * tasksPerPage + 1}</span> to{' '}
+                        <span className="font-medium">{Math.min(pendingTasksPage * tasksPerPage, filteredUpcoming.length)}</span> of{' '}
+                        <span className="font-medium">{filteredUpcoming.length}</span> results
+                      </p>
+                    </div>
+
+                    {/* Pagination controls */}
+                    <div className="flex items-center space-x-1">
+                      <button
+                        onClick={() => setPendingTasksPage(1)}
+                        disabled={pendingTasksPage === 1}
+                        className="p-2 text-sm font-medium text-[--color-textSecondary] bg-[--color-surface] border border-[--color-border] rounded-lg hover:bg-[--color-border] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                        title="First page"
+                      >
+                        <ChevronsLeft size={16} />
+                      </button>
+
+                      <button
+                        onClick={() => setPendingTasksPage(Math.max(1, pendingTasksPage - 1))}
+                        disabled={pendingTasksPage === 1}
+                        className="p-2 text-sm font-medium text-[--color-textSecondary] bg-[--color-surface] border border-[--color-border] rounded-lg hover:bg-[--color-border] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                        title="Previous page"
+                      >
+                        <ChevronLeft size={16} />
+                      </button>
+
+                      <span className="text-sm text-[--color-textSecondary] px-3 py-2">
+                        {pendingTasksPage} of {Math.ceil(filteredUpcoming.length / tasksPerPage)}
+                      </span>
+
+                      <button
+                        onClick={() => setPendingTasksPage(Math.min(Math.ceil(filteredUpcoming.length / tasksPerPage), pendingTasksPage + 1))}
+                        disabled={pendingTasksPage >= Math.ceil(filteredUpcoming.length / tasksPerPage)}
+                        className="p-2 text-sm font-medium text-[--color-textSecondary] bg-[--color-surface] border border-[--color-border] rounded-lg hover:bg-[--color-border] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                        title="Next page"
+                      >
+                        <ChevronRight size={16} />
+                      </button>
+
+                      <button
+                        onClick={() => setPendingTasksPage(Math.ceil(filteredUpcoming.length / tasksPerPage))}
+                        disabled={pendingTasksPage >= Math.ceil(filteredUpcoming.length / tasksPerPage)}
                         className="p-2 text-sm font-medium text-[--color-textSecondary] bg-[--color-surface] border border-[--color-border] rounded-lg hover:bg-[--color-border] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                         title="Last page"
                       >
@@ -1761,7 +2028,7 @@ const PendingTasks: React.FC = () => {
           mandatoryAttachments={activeFmsTask.task.requireAttachments ? activeFmsTask.task.mandatoryAttachments : false}
           mandatoryRemarks={taskSettings.pendingTasks.mandatoryRemarks}
           onClose={() => setShowFMSCompleteModal(null)}
-          onComplete={() => {}}
+          onComplete={() => { }}
           onSubmitOverride={async ({ remarks, attachments, selectedUserId, pcConfirmationFile }) => {
             const completedBy = user?.role === 'pc' ? selectedUserId || undefined : undefined;
             await handleFMSTaskCompletion(
@@ -1897,6 +2164,74 @@ const PendingTasks: React.FC = () => {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Edit Task Modal */}
+      {showEditModal && (
+        <EditTaskModal
+          isOpen={!!showEditModal}
+          onClose={() => setShowEditModal(null)}
+          task={showEditModal}
+          users={users}
+          onSave={handleSaveTask}
+        />
+      )}
+
+      {/* Super Admin: Task Edit Modal */}
+      {showTaskEditModal && (
+        <TaskEditModal
+          isOpen={!!showTaskEditModal}
+          onClose={() => setShowTaskEditModal(null)}
+          task={showTaskEditModal}
+          onSuccess={fetchTasks}
+          users={allUsers}
+          isDark={theme === 'dark'}
+        />
+      )}
+
+      {/* Super Admin: Delete Task Confirmation */}
+      {showDeleteConfirm && (
+        <ConfirmationDialog
+          isOpen={!!showDeleteConfirm}
+          onClose={() => setShowDeleteConfirm(null)}
+          onConfirm={() => handleDeleteTask(showDeleteConfirm._id)}
+          title="Delete Task"
+          message={`Are you sure you want to delete "${showDeleteConfirm.title}"? This action cannot be undone and will be logged in the audit trail.`}
+          confirmText="Delete Task"
+          isDangerous
+          isDark={theme === 'dark'}
+        />
+      )}
+
+      {/* Super Admin: Delete FMS Progress Confirmation */}
+      {showDeleteProgressConfirm && (
+        <ConfirmationDialog
+          isOpen={!!showDeleteProgressConfirm}
+          onClose={() => setShowDeleteProgressConfirm(null)}
+          onConfirm={() => handleDeleteFMSProgress(
+            showDeleteProgressConfirm.projectId,
+            showDeleteProgressConfirm.taskIndex
+          )}
+          title="Delete FMS Progress"
+          message="Are you sure you want to delete this FMS task progress? The task will be reset to Pending status and scores will be recalculated. This action will be logged in the audit trail."
+          confirmText="Delete Progress"
+          isDangerous
+          isDark={theme === 'dark'}
+        />
+      )}
+
+      {/* Super Admin: Delete Checklist Confirmation */}
+      {showDeleteChecklistConfirm && (
+        <ConfirmationDialog
+          isOpen={!!showDeleteChecklistConfirm}
+          onClose={() => setShowDeleteChecklistConfirm(null)}
+          onConfirm={() => handleDeleteChecklist(showDeleteChecklistConfirm._id)}
+          title="Delete Checklist"
+          message={`Are you sure you want to delete the checklist from "${showDeleteChecklistConfirm.title}"? This action cannot be undone and will be logged in the audit trail.`}
+          confirmText="Delete Checklist"
+          isDangerous
+          isDark={theme === 'dark'}
+        />
       )}
     </div>
   );

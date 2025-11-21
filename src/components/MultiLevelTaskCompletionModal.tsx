@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { CheckSquare, Paperclip, X, Upload, File, ArrowRight, User } from 'lucide-react';
+import { CheckSquare, X, Upload, File, ArrowRight } from 'lucide-react';
 import axios from 'axios';
 import { address } from '../../utils/ipAddress';
 import { toast } from 'react-toastify';
@@ -26,23 +26,23 @@ const MultiLevelTaskCompletionModal: React.FC<MultiLevelTaskCompletionModalProps
   const [attachments, setAttachments] = useState<File[]>([]);
   const [uploading, setUploading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  
+
   // Forward-specific states
   const [forwardTo, setForwardTo] = useState('');
   const [forwardDate, setForwardDate] = useState('');
   const [forwardRemarks, setForwardRemarks] = useState('');
   const [users, setUsers] = useState<Array<{ _id: string; username: string; email: string }>>([]);
-  
+
   // Checklist state
   const [checklistItems, setChecklistItems] = useState(
-    task.requiresChecklist && task.checklistItems 
+    task.requiresChecklist && task.checklistItems
       ? task.checklistItems.map((item: any) => ({ ...item }))
       : []
   );
 
-  const [errors, setErrors] = useState<{ 
-    remarks?: string; 
-    attachments?: string; 
+  const [errors, setErrors] = useState<{
+    remarks?: string;
+    attachments?: string;
     forwardTo?: string;
     forwardDate?: string;
     checklist?: string;
@@ -177,24 +177,28 @@ const MultiLevelTaskCompletionModal: React.FC<MultiLevelTaskCompletionModalProps
           onClose();
         }
       } else {
-        // Complete the task
+        // Complete the task using the proper completion endpoint
         const completionData: any = {
-          status: 'completed',
           completionRemarks: completionRemarks.trim(),
           completedBy: user?.id,
-          completedAt: new Date().toISOString(),
         };
 
         if (uploadedAttachments.length > 0) {
           completionData.completionAttachments = uploadedAttachments;
         }
 
+        // Update checklist if required
         if (task.requiresChecklist && checklistItems.length > 0) {
-          completionData.checklistItems = checklistItems;
+          // First update the checklist
+          await axios.put(
+            `${address}/api/tasks/${taskId}/checklist`,
+            { checklistItems }
+          );
         }
 
-        const response = await axios.put(
-          `${address}/api/tasks/${taskId}`,
+        // Then complete the task using the proper endpoint
+        const response = await axios.post(
+          `${address}/api/tasks/${taskId}/complete`,
           completionData
         );
 
@@ -230,17 +234,17 @@ const MultiLevelTaskCompletionModal: React.FC<MultiLevelTaskCompletionModalProps
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4">
-      <div 
+      <div
         className="w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-2xl shadow-2xl"
-        style={{ 
+        style={{
           backgroundColor: 'var(--color-surface)',
           border: '2px solid var(--color-primary)'
         }}
       >
         {/* Header */}
-        <div 
+        <div
           className="sticky top-0 z-10 flex items-center justify-between p-6 border-b"
-          style={{ 
+          style={{
             backgroundColor: 'var(--color-primary)',
             borderColor: 'var(--color-border)'
           }}
@@ -248,9 +252,14 @@ const MultiLevelTaskCompletionModal: React.FC<MultiLevelTaskCompletionModalProps
           <div>
             <h2 className="text-2xl font-bold text-white flex items-center gap-2">
               <CheckSquare size={24} />
-              Multi-Level Task (MLT)
+              {task.taskCategory === 'date-range' ? 'Date-Range Task' : 'Multi-Level Task (MLT)'}
             </h2>
             <p className="text-white/80 text-sm mt-1">{task.title}</p>
+            {task.taskCategory === 'date-range' && task.startDate && task.endDate && (
+              <p className="text-white/70 text-xs mt-1">
+                Period: {new Date(task.startDate).toLocaleDateString('en-GB')} - {new Date(task.endDate).toLocaleDateString('en-GB')}
+              </p>
+            )}
           </div>
           <button
             onClick={onClose}
@@ -266,8 +275,9 @@ const MultiLevelTaskCompletionModal: React.FC<MultiLevelTaskCompletionModalProps
           {/* Info Banner for Multi-Level Tasks */}
           <div className="p-3 rounded-lg bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800">
             <p className="text-sm text-blue-700 dark:text-blue-300">
-              <strong>Multi-Level Task:</strong> You can either complete this task or forward it to another person. 
+              <strong>{task.taskCategory === 'date-range' ? 'Date-Range Task:' : 'Multi-Level Task:'}</strong> You can either complete this task or forward it to another person.
               {task.requiresChecklist && ' Please complete the checklist items below.'}
+              {task.taskCategory === 'date-range' && ' This task has a specific date range for completion.'}
             </p>
           </div>
 
@@ -280,15 +290,14 @@ const MultiLevelTaskCompletionModal: React.FC<MultiLevelTaskCompletionModalProps
               <button
                 type="button"
                 onClick={() => setCompletionType('complete')}
-                className={`p-4 rounded-xl border-2 transition-all ${
-                  completionType === 'complete'
-                    ? 'border-[var(--color-primary)] bg-[var(--color-primary)]/10'
-                    : 'border-[var(--color-border)] hover:border-[var(--color-primary)]/50'
-                }`}
+                className={`p-4 rounded-xl border-2 transition-all ${completionType === 'complete'
+                  ? 'border-[var(--color-primary)] bg-[var(--color-primary)]/10'
+                  : 'border-[var(--color-border)] hover:border-[var(--color-primary)]/50'
+                  }`}
               >
                 <div className="flex flex-col items-center gap-2">
-                  <CheckSquare 
-                    size={32} 
+                  <CheckSquare
+                    size={32}
                     style={{ color: completionType === 'complete' ? 'var(--color-primary)' : 'var(--color-textSecondary)' }}
                   />
                   <span className="font-semibold" style={{ color: 'var(--color-text)' }}>
@@ -303,15 +312,14 @@ const MultiLevelTaskCompletionModal: React.FC<MultiLevelTaskCompletionModalProps
               <button
                 type="button"
                 onClick={() => setCompletionType('forward')}
-                className={`p-4 rounded-xl border-2 transition-all ${
-                  completionType === 'forward'
-                    ? 'border-[var(--color-accent)] bg-[var(--color-accent)]/10'
-                    : 'border-[var(--color-border)] hover:border-[var(--color-accent)]/50'
-                }`}
+                className={`p-4 rounded-xl border-2 transition-all ${completionType === 'forward'
+                  ? 'border-[var(--color-accent)] bg-[var(--color-accent)]/10'
+                  : 'border-[var(--color-border)] hover:border-[var(--color-accent)]/50'
+                  }`}
               >
                 <div className="flex flex-col items-center gap-2">
-                  <ArrowRight 
-                    size={32} 
+                  <ArrowRight
+                    size={32}
                     style={{ color: completionType === 'forward' ? 'var(--color-accent)' : 'var(--color-textSecondary)' }}
                   />
                   <span className="font-semibold" style={{ color: 'var(--color-text)' }}>
@@ -333,7 +341,7 @@ const MultiLevelTaskCompletionModal: React.FC<MultiLevelTaskCompletionModalProps
               </label>
               {checklistItems.length > 0 ? (
                 <>
-                  <div 
+                  <div
                     className="p-4 rounded-lg space-y-2"
                     style={{ backgroundColor: 'var(--color-background)', border: '1px solid var(--color-border)' }}
                   >
@@ -345,7 +353,7 @@ const MultiLevelTaskCompletionModal: React.FC<MultiLevelTaskCompletionModalProps
                           onChange={() => toggleChecklistItem(index)}
                           className="w-5 h-5 rounded accent-blue-500"
                         />
-                        <span 
+                        <span
                           className={item.completed ? 'line-through' : ''}
                           style={{ color: item.completed ? 'var(--color-textSecondary)' : 'var(--color-text)' }}
                         >
@@ -479,7 +487,7 @@ const MultiLevelTaskCompletionModal: React.FC<MultiLevelTaskCompletionModalProps
                 <label className="block text-sm font-semibold mb-2" style={{ color: 'var(--color-text)' }}>
                   Attachments {task.mandatoryAttachments && <span className="text-red-500">*</span>}
                 </label>
-                <div 
+                <div
                   className="border-2 border-dashed rounded-lg p-6 text-center"
                   style={{ borderColor: errors.attachments ? '#ef4444' : 'var(--color-border)' }}
                 >
@@ -539,9 +547,9 @@ const MultiLevelTaskCompletionModal: React.FC<MultiLevelTaskCompletionModalProps
         </div>
 
         {/* Footer */}
-        <div 
+        <div
           className="sticky bottom-0 flex items-center justify-end gap-3 p-6 border-t"
-          style={{ 
+          style={{
             backgroundColor: 'var(--color-surface)',
             borderColor: 'var(--color-border)'
           }}

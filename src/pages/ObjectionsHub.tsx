@@ -44,8 +44,43 @@ const ObjectionsHub: React.FC = () => {
       setLoading(true);
       if (!user?.id) return;
 
-      const response = await axios.get(`${address}/api/objections/my/${user.id}`);
-      setMyObjections(response.data || { regular: [], fms: [] });
+      // Admin/SuperAdmin can see all objections
+      if (user?.role === 'admin' || user?.role === 'superadmin') {
+        const token = localStorage.getItem('token');
+        const response = await axios.get(`${address}/api/objections/all`, {
+          headers: token ? { Authorization: `Bearer ${token}` } : undefined
+        });
+
+        // Transform the data to match the expected format
+        const regularObjections = (response.data.regularTasks || []).map((task: any) => ({
+          taskId: task._id,
+          taskTitle: task.title,
+          taskDueDate: task.dueDate,
+          objections: task.objections
+        }));
+
+        const fmsObjections = (response.data.fmsTasks || []).flatMap((project: any) =>
+          project.tasks.map((task: any) => ({
+            taskId: `${project._id}-${task.taskIndex || 0}`,
+            taskTitle: task.what,
+            taskDueDate: task.plannedDueDate,
+            objections: task.objections,
+            isFMS: true,
+            projectId: project._id,
+            projectName: project.projectName,
+            taskIndex: task.taskIndex
+          }))
+        );
+
+        setMyObjections({
+          regular: regularObjections,
+          fms: fmsObjections
+        });
+      } else {
+        // Regular employees see only their own objections
+        const response = await axios.get(`${address}/api/objections/my/${user.id}`);
+        setMyObjections(response.data || { regular: [], fms: [] });
+      }
     } catch (error) {
       console.error('Error fetching my objections:', error);
     } finally {
@@ -107,7 +142,16 @@ const ObjectionsHub: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-[--color-background] p-4">
-      <h1 className="text-2xl font-bold text-[--color-text] mb-6">My Objections</h1>
+      <div className="mb-6">
+        <h1 className="text-2xl font-bold text-[--color-text] mb-2">
+          {user?.role === 'admin' || user?.role === 'superadmin' ? 'All Objections' : 'My Objections'}
+        </h1>
+        <p className="text-sm text-[--color-textSecondary]">
+          {user?.role === 'admin' || user?.role === 'superadmin'
+            ? 'View all objections raised by all users'
+            : 'View objections you have raised'}
+        </p>
+      </div>
 
       {allObjections.length === 0 ? (
         <div className="text-center py-12">

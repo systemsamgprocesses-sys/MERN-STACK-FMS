@@ -9,8 +9,7 @@ const stationerySchema = new mongoose.Schema({
   category: {
     type: String,
     required: true,
-    trim: true,
-    enum: ['Writing', 'Paper', 'Binding', 'Storage', 'General', 'Office Supplies']
+    trim: true
   },
   description: {
     type: String,

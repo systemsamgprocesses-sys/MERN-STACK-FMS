@@ -148,7 +148,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
 
     // Workflow Section
     { section: 'Workflow', icon: AlertCircle, label: 'Objections Hub', path: '/objections', countKey: 'myObjections' },
-    { section: 'Workflow', icon: AlertCircle, label: 'Objection Approvals', path: '/objection-approvals', countKey: 'objections', permission: 'canApproveObjections' },
+    { section: 'Workflow', icon: AlertCircle, label: 'Objection Approvals', path: '/objection-approvals', countKey: 'objections' },
     { section: 'Workflow', icon: AlertCircle, label: 'All Objections', path: '/all-objections', requireRole: 'pc' },
     { section: 'Workflow', icon: MessageSquare, label: 'Complaints', path: '/complaints', permission: 'canRaiseComplaints', countKey: 'complaintsInbox' },
     { section: 'Workflow', icon: AlertCircle, label: 'Complaints Dashboard', path: '/complaints-dashboard', permission: 'canViewAllComplaints' },

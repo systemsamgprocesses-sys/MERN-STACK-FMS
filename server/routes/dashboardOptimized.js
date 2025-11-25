@@ -20,6 +20,10 @@ router.get('/counts-optimized', async (req, res) => {
       return res.status(400).json({ message: 'userId or assignedById is required' });
     }
 
+    if (!mongoose.Types.ObjectId.isValid(targetUserId)) {
+      return res.status(400).json({ message: 'Invalid userId/assignedById provided' });
+    }
+
     const userObjectId = new mongoose.Types.ObjectId(targetUserId);
     const today = new Date();
     today.setHours(0, 0, 0, 0);

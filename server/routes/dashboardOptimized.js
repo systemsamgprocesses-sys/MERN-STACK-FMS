@@ -50,13 +50,8 @@ router.get('/counts-optimized', async (req, res) => {
                     $cond: [
                       {
                         $and: [
-                          { $nin: ['$status', ['completed', 'Completed']] },
-                          {
-                            $or: [
-                              { $lte: ['$dueDate', today] },
-                              { $lte: ['$nextDueDate', today] }
-                            ]
-                          }
+                          { $ne: ['$status', 'completed'] },
+                          { $lte: ['$dueDate', today] }
                         ]
                       },
                       1,
@@ -69,13 +64,8 @@ router.get('/counts-optimized', async (req, res) => {
                     $cond: [
                       {
                         $and: [
-                          { $nin: ['$status', ['completed', 'Completed']] },
-                          {
-                            $or: [
-                              { $gt: ['$dueDate', today] },
-                              { $gt: ['$nextDueDate', today] }
-                            ]
-                          }
+                          { $ne: ['$status', 'completed'] },
+                          { $gt: ['$dueDate', today] }
                         ]
                       },
                       1,
@@ -88,13 +78,8 @@ router.get('/counts-optimized', async (req, res) => {
                     $cond: [
                       {
                         $and: [
-                          { $nin: ['$status', ['completed', 'Completed']] },
-                          {
-                            $or: [
-                              { $lt: ['$dueDate', today] },
-                              { $lt: ['$nextDueDate', today] }
-                            ]
-                          }
+                          { $ne: ['$status', 'completed'] },
+                          { $lt: ['$dueDate', today] }
                         ]
                       },
                       1,
@@ -104,12 +89,12 @@ router.get('/counts-optimized', async (req, res) => {
                 },
                 completed: {
                   $sum: {
-                    $cond: [{ $in: ['$status', ['completed', 'Completed']] }, 1, 0]
+                    $cond: [{ $eq: ['$status', 'completed'] }, 1, 0]
                   }
                 },
                 inProgress: {
                   $sum: {
-                    $cond: [{ $in: ['$status', ['in-progress', 'In Progress']] }, 1, 0]
+                    $cond: [{ $eq: ['$status', 'in-progress'] }, 1, 0]
                   }
                 }
               }
@@ -123,12 +108,12 @@ router.get('/counts-optimized', async (req, res) => {
                 total: { $sum: 1 },
                 pending: {
                   $sum: {
-                    $cond: [{ $in: ['$status', ['pending', 'Pending']] }, 1, 0]
+                    $cond: [{ $eq: ['$status', 'pending'] }, 1, 0]
                   }
                 },
                 completed: {
                   $sum: {
-                    $cond: [{ $in: ['$status', ['completed', 'Completed']] }, 1, 0]
+                    $cond: [{ $eq: ['$status', 'completed'] }, 1, 0]
                   }
                 }
               }

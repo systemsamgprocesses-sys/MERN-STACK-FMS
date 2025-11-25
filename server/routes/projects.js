@@ -96,12 +96,12 @@ router.post('/', async (req, res) => {
       return {
         stepNo: step.stepNo,
         what: step.what,
-        who: step.who.map(u => u._id),
+        who: (step.who || []).map(u => u._id),
         how: step.how,
         plannedDueDate: normalizedDueDate,
         status,
         requiresChecklist: step.requiresChecklist,
-        checklistItems: step.checklistItems.map(item => ({
+        checklistItems: (step.checklistItems || []).map(item => ({
           id: item.id,
           text: item.text,
           completed: false
@@ -413,12 +413,12 @@ router.put('/:projectId/tasks/:taskIndex', async (req, res) => {
               return {
                 stepNo: step.stepNo,
                 what: step.what,
-                who: step.who,
+                who: (step.who || []).map(u => u._id),
                 how: step.how,
                 plannedDueDate: normalizedTriggeredDueDate,
                 status: taskStatus,
                 requiresChecklist: step.requiresChecklist,
-                checklistItems: step.checklistItems.map(item => ({
+                checklistItems: (step.checklistItems || []).map(item => ({
                   id: item.id,
                   text: item.text,
                   completed: false

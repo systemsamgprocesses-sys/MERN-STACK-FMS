@@ -120,6 +120,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
     { section: 'FMS', icon: Settings, label: 'FMS Templates', path: '/fms-templates', permission: 'canAssignTasks', highlight: true },
     { section: 'FMS', icon: Settings, label: 'Start Project', path: '/start-project', permission: 'canAssignTasks', highlight: true },
     { section: 'FMS', icon: Settings, label: 'FMS Progress', path: '/fms-progress', highlight: true },
+    { section: 'FMS', icon: BarChart2, label: 'FMS Dashboard', path: '/fms-dashboard', permission: 'canAssignTasks', highlight: true },
     { section: 'FMS', icon: Settings, label: 'Manage FMS Categories', path: '/fms-categories', requireAdmin: true, highlight: true },
 
     // Checklists Section
@@ -156,8 +157,6 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
     { section: 'Workflow', icon: HelpCircle, label: 'Manage Tickets', path: '/admin-help-tickets', permission: 'canViewAllComplaints' },
     { section: 'Workflow', icon: Package, label: 'New Stationery Request', path: '/stationery-request' },
     { section: 'Workflow', icon: ClipboardList, label: 'My Stationery Requests', path: '/my-stationery-requests' },
-    { section: 'Workflow', icon: Package, label: 'HR Stationery Approval', path: '/hr-stationery-approval', permission: 'canManageStationery' },
-    { section: 'Workflow', icon: Package, label: 'Stationery Inventory', path: '/stationery-inventory', permission: 'canManageStationery' },
 
     // Analytics Section
     { section: 'Analytics', icon: BarChart2, label: 'Purchase Dashboard', path: '/purchase-dashboard', requireAdmin: true },
@@ -195,14 +194,14 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
     try {
       // Fetch dashboard counts which includes all the logic for totals
       const countsParams = new URLSearchParams();
-      if (!user?.permissions?.canViewAllTeamTasks && user?.id) {
+      // Always send userId (or assignedById as fallback) - endpoint accepts both
+      if (user?.id) {
         countsParams.append('userId', user.id);
+        // Also send assignedById for compatibility
+        countsParams.append('assignedById', user.id);
       }
       if (user?.role === 'admin' || user?.role === 'superadmin' || user?.role === 'manager') {
         countsParams.append('isAdmin', 'true');
-      }
-      if (user?.id) {
-        countsParams.append('assignedById', user.id);
       }
 
       // Use optimized counts endpoint (single aggregation query instead of 50+ queries)
@@ -362,74 +361,59 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
 
         {/* Navigation */}
         <nav className="flex-1 overflow-y-auto overflow-x-hidden" style={{ scrollbarWidth: 'thin' }}>
-          {Object.entries(groupedMenuItems).map(([section, items]) => {
-            const isHighlightedSection = ['FMS', 'Checklists', 'Tasks', 'Assign Task'].includes(section);
-            return (
-              <div
-                key={section}
-                className={`px-2 py-3 border-t first:border-t-0 ${isHighlightedSection ? 'bg-gradient-to-r from-[var(--color-primary)]/5 to-transparent' : ''}`}
-                style={{ borderColor: 'var(--color-border)' }}
-              >
-                {!isCollapsed && (
-                  <h3
-                    className={`text-xs font-semibold uppercase tracking-wider mb-2 ${isHighlightedSection ? 'text-[var(--color-primary)]' : ''}`}
-                    style={{ color: isHighlightedSection ? 'var(--color-primary)' : 'var(--color-textSecondary)' }}
-                  >
-                    {isHighlightedSection && '⭐ '}{section}
-                  </h3>
-                )}
-                <div className="space-y-1">
-                  {items.map((item) => (
-                    <Tooltip
-                      key={item.path}
-                      content={item.label}
-                      show={isCollapsed}
+          {Object.entries(groupedMenuItems).map(([section, items]) => (
+            <div
+              key={section}
+              className="px-3 py-4 border-t first:border-t-0"
+              style={{ borderColor: 'var(--color-border)' }}
+            >
+              {!isCollapsed && (
+                <h3 className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--color-textSecondary)] mb-3">
+                  {section}
+                </h3>
+              )}
+              <div className="space-y-1.5">
+                {items.map((item) => (
+                  <Tooltip key={item.path} content={item.label} show={isCollapsed}>
+                    <NavLink
+                      to={item.path}
+                      onClick={onClose}
+                      className={({ isActive }) =>
+                        `group flex items-center rounded-2xl border text-sm font-medium transition-all ${isCollapsed ? 'justify-center px-0' : 'px-3'} ${isActive
+                          ? 'border-[var(--color-primary)] bg-[var(--color-primary)]/15 text-[var(--color-primary)] shadow-sm'
+                          : 'border-transparent text-[var(--color-text)] hover:border-[var(--color-border)] hover:bg-[var(--color-border)]/40'
+                        } ${isCollapsed ? 'py-3' : 'py-2.5'}`
+                      }
                     >
-                      <NavLink
-                        to={item.path}
-                        onClick={onClose}
-                        className={({ isActive }) =>
-                          `flex items-center px-3 py-3 text-sm font-semibold rounded-xl transition-all duration-300 group ${isActive
-                            ? 'text-white shadow-lg scale-105'
-                            : 'hover:scale-105 hover:translate-x-1'
-                          } ${isCollapsed ? 'justify-center' : ''}`
-                        }
-                        style={({ isActive }) => ({
-                          background: isActive
-                            ? 'linear-gradient(135deg, var(--color-primary), var(--color-secondary))'
-                            : 'transparent',
-                          color: isActive ? 'white' : 'var(--color-text)',
-                        })}
-                        onMouseEnter={(e) => {
-                          if (!e.currentTarget.classList.contains('text-white')) {
-                            e.currentTarget.style.backgroundColor = 'rgba(99, 102, 241, 0.1)';
-                            e.currentTarget.style.borderRadius = '0.75rem';
-                          }
-                        }}
-                        onMouseLeave={(e) => {
-                          if (!e.currentTarget.classList.contains('text-white')) {
-                            e.currentTarget.style.backgroundColor = 'transparent';
-                          }
-                        }}
-                      >
-                        <item.icon size={18} className={isCollapsed ? '' : 'mr-3'} />
-                        {!isCollapsed && (
-                          <span className="transition-opacity duration-200 flex-1">
-                            {item.label}
+                      {({ isActive }) => (
+                        <>
+                          <span
+                            className={`flex items-center justify-center ${isCollapsed ? 'w-9 h-9' : 'w-8 h-8 mr-3'} rounded-xl transition-colors ${
+                              isActive
+                                ? 'bg-[var(--color-primary)]/20 text-[var(--color-primary)]'
+                                : 'bg-[var(--color-border)] text-[var(--color-textSecondary)] group-hover:bg-[var(--color-primary)]/10 group-hover:text-[var(--color-primary)]'
+                            }`}
+                          >
+                            <item.icon size={16} />
                           </span>
-                        )}
-                        {item.countKey && counts[item.countKey as keyof typeof counts] > 0 && (
-                          <span className="ml-auto bg-gradient-to-r from-red-500 to-red-600 text-white text-xs font-bold rounded-full px-2 py-0.5 min-w-[1.5rem] text-center shadow-sm border border-red-400">
-                            {counts[item.countKey as keyof typeof counts]}
-                          </span>
-                        )}
-                      </NavLink>
-                    </Tooltip>
-                  ))}
-                </div>
+                          {!isCollapsed && (
+                            <span className="flex-1 text-left">
+                              {item.label}
+                            </span>
+                          )}
+                          {item.countKey && counts[item.countKey as keyof typeof counts] > 0 && (
+                            <span className="ml-auto text-xs font-semibold px-2 py-0.5 rounded-full bg-[var(--color-border)] text-[var(--color-textSecondary)]">
+                              {counts[item.countKey as keyof typeof counts]}
+                            </span>
+                          )}
+                        </>
+                      )}
+                    </NavLink>
+                  </Tooltip>
+                ))}
               </div>
-            );
-          })}
+            </div>
+          ))}
         </nav>
       </div>
     </>

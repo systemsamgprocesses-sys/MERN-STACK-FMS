@@ -9,9 +9,22 @@ const Login: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const { user, login } = useAuth();
+  const { user, login, isLoading: authLoading } = useAuth();
   const navigate = useNavigate();
 
+  // Show loading state while auth is initializing
+  if (authLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: 'var(--color-background)' }}>
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 mx-auto mb-4" style={{ borderColor: 'var(--color-primary)' }}></div>
+          <p style={{ color: 'var(--color-textSecondary)' }}>Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Redirect if user is already logged in
   if (user) {
     return <Navigate to="/dashboard" replace />;
   }

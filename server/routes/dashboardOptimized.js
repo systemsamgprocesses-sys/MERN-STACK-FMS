@@ -12,13 +12,15 @@ const router = express.Router();
 
 router.get('/counts-optimized', async (req, res) => {
   try {
-    const { userId, isAdmin } = req.query;
+    const { userId, assignedById, isAdmin } = req.query;
     
-    if (!userId) {
-      return res.status(400).json({ message: 'userId is required' });
+    // Accept either userId or assignedById
+    const targetUserId = userId || assignedById;
+    if (!targetUserId) {
+      return res.status(400).json({ message: 'userId or assignedById is required' });
     }
 
-    const userObjectId = new mongoose.Types.ObjectId(userId);
+    const userObjectId = new mongoose.Types.ObjectId(targetUserId);
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 

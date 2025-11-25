@@ -920,16 +920,6 @@ const ViewAllFMS: React.FC = () => {
                                 <button
                                   onClick={(e) => {
                                     e.stopPropagation();
-                                    handlePrintFMS(fms);
-                                  }}
-                                  className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 flex items-center space-x-2"
-                                >
-                                  <Printer size={16} />
-                                  <span>Print</span>
-                                </button>
-                                <button
-                                  onClick={(e) => {
-                                    e.stopPropagation();
                                     void printFMS(fms);
                                   }}
                                   className="px-4 py-2 bg-[var(--color-secondary)] text-white rounded-lg hover:opacity-90 flex items-center gap-2"

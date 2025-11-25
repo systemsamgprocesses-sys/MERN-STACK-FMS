@@ -1,9 +1,10 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { CheckSquare, Clock, AlertCircle, Upload, RotateCcw, Printer, ArrowRight, Users } from 'lucide-react';
 import axios from 'axios';
 import { address } from '../../utils/ipAddress';
+import { useLocation, useNavigate } from 'react-router-dom';
 
 interface Project {
   _id: string;
@@ -39,8 +40,22 @@ interface MultiLevelTask {
   createdAt: string;
 }
 
+type TaskFilter = 'all' | 'pending' | 'in-progress' | 'completed' | 'overdue';
+const VALID_FILTERS: TaskFilter[] = ['all', 'pending', 'in-progress', 'completed', 'overdue'];
+
+const normalizeTasks = (tasks: any[] | undefined | null): any[] => {
+  return Array.isArray(tasks) ? tasks : [];
+};
+
 const ViewFMSProgress: React.FC = () => {
   const { user } = useAuth();
+  const location = useLocation();
+  const navigate = useNavigate();
+  const params = new URLSearchParams(location.search);
+  const initialFilterParam = params.get('view');
+  const initialFilter = VALID_FILTERS.includes((initialFilterParam as TaskFilter) || 'all')
+    ? (initialFilterParam as TaskFilter)
+    : 'all';
   const [activeTab, setActiveTab] = useState<'fms' | 'multilevel'>('fms');
   const [projects, setProjects] = useState<Project[]>([]);
   const [multiLevelTasks, setMultiLevelTasks] = useState<MultiLevelTask[]>([]);
@@ -58,6 +73,14 @@ const ViewFMSProgress: React.FC = () => {
   const [users, setUsers] = useState<any[]>([]);
   const [showForwardModal, setShowForwardModal] = useState(false);
   const [forwarding, setForwarding] = useState(false);
+  const [taskFilter, setTaskFilter] = useState<TaskFilter>(initialFilter);
+
+  useEffect(() => {
+    const view = new URLSearchParams(location.search).get('view');
+    if (view && VALID_FILTERS.includes(view as TaskFilter)) {
+      setTaskFilter(view as TaskFilter);
+    }
+  }, [location.search]);
 
   useEffect(() => {
     fetchProjects();
@@ -230,8 +253,9 @@ const ViewFMSProgress: React.FC = () => {
   };
 
   const calculateProgress = (tasks: any[]) => {
-    const completed = tasks.filter(t => t.status === 'Done').length;
-    return tasks.length > 0 ? Math.round((completed / tasks.length) * 100) : 0;
+    const list = normalizeTasks(tasks);
+    const completed = list.filter(t => t?.status === 'Done').length;
+    return list.length > 0 ? Math.round((completed / list.length) * 100) : 0;
   };
 
   // Add a helper function to check if a step can be updated
@@ -242,6 +266,171 @@ const ViewFMSProgress: React.FC = () => {
     // For other steps, check if previous step is 'Done'
     const previousStep = tasks[currentIndex - 1];
     return previousStep && previousStep.status === 'Done';
+  };
+
+  const matchesFilter = (task: any, filter: TaskFilter) => {
+    if (!task) return false;
+    const status = (task.status || '').toLowerCase();
+    const isOverdue = task.plannedDueDate && new Date(task.plannedDueDate) < new Date() && status !== 'done';
+    switch (filter) {
+      case 'pending':
+        return ['pending', 'not started', 'awaiting date'].includes(status);
+      case 'in-progress':
+        return status === 'in progress';
+      case 'completed':
+        return status === 'done';
+      case 'overdue':
+        return isOverdue;
+      default:
+        return true;
+    }
+  };
+
+  const filteredProjects = useMemo(() => {
+    if (taskFilter === 'all') return projects;
+    return projects.filter(project => {
+      const tasks = normalizeTasks(project.tasks);
+      return tasks.some(task => matchesFilter(task, taskFilter));
+    });
+  }, [projects, taskFilter]);
+
+  useEffect(() => {
+    if (!selectedProject && filteredProjects.length > 0) {
+      setSelectedProject(filteredProjects[0]);
+    }
+  }, [filteredProjects, selectedProject]);
+
+  useEffect(() => {
+    if (selectedProject && taskFilter !== 'all') {
+      const stillValid = normalizeTasks(selectedProject.tasks).some(task => matchesFilter(task, taskFilter));
+      if (!stillValid) {
+        setSelectedProject(null);
+      }
+    }
+  }, [selectedProject, taskFilter]);
+
+  const fmsStats = useMemo(() => {
+    let pending = 0;
+    let inProgress = 0;
+    let completed = 0;
+    let overdue = 0;
+    let totalTasks = 0;
+
+    projects.forEach(project => {
+      const tasks = normalizeTasks(project.tasks);
+      tasks.forEach(task => {
+        totalTasks++;
+        const status = (task.status || '').toLowerCase();
+        const isOverdue = task.plannedDueDate && new Date(task.plannedDueDate) < new Date() && status !== 'done';
+        if (isOverdue) overdue++;
+        if (status === 'done') completed++;
+        else if (status === 'in progress') inProgress++;
+        else pending++;
+      });
+    });
+
+    return {
+      totalProjects: projects.length,
+      totalTasks,
+      pending,
+      inProgress,
+      completed,
+      overdue
+    };
+  }, [projects]);
+
+  const myPendingSteps = useMemo(() => {
+    if (!user) return [];
+    const items: Array<{
+      projectId: string;
+      projectName: string;
+      task: any;
+      isOverdue: boolean;
+    }> = [];
+
+    projects.forEach(project => {
+      const tasks = normalizeTasks(project.tasks);
+      tasks.forEach(task => {
+        const assignedToUser = task.who?.some((w: any) => (w?._id || w) === user.id);
+        if (!assignedToUser) return;
+        if (task.status === 'Done') return;
+        const isOverdue = task.plannedDueDate && new Date(task.plannedDueDate) < new Date();
+        items.push({
+          projectId: project.projectId,
+          projectName: project.projectName,
+          task,
+          isOverdue
+        });
+      });
+    });
+
+    return items.sort((a, b) => {
+      if (a.isOverdue && !b.isOverdue) return -1;
+      if (!a.isOverdue && b.isOverdue) return 1;
+      return new Date(a.task.plannedDueDate || a.task.creationDate || 0).getTime() -
+        new Date(b.task.plannedDueDate || b.task.creationDate || 0).getTime();
+    });
+  }, [projects, user]);
+
+  const visibleTasks = useMemo(() => {
+    if (!selectedProject) return [];
+    return normalizeTasks(selectedProject.tasks)
+      .map((task, index) => ({ task, index }))
+      .filter(({ task }) => taskFilter === 'all' || matchesFilter(task, taskFilter));
+  }, [selectedProject, taskFilter]);
+
+  const filterOptions = useMemo(() => ([
+    {
+      value: 'all' as TaskFilter,
+      label: 'All Steps',
+      description: 'Every step in your projects',
+      count: fmsStats.totalTasks,
+      gradient: 'from-slate-600 to-slate-800',
+      icon: <RotateCcw size={18} />,
+    },
+    {
+      value: 'pending' as TaskFilter,
+      label: 'Pending',
+      description: 'Not started or awaiting date',
+      count: fmsStats.pending,
+      gradient: 'from-amber-500 to-orange-500',
+      icon: <Clock size={18} />,
+    },
+    {
+      value: 'in-progress' as TaskFilter,
+      label: 'In Progress',
+      description: 'Actively being worked on',
+      count: fmsStats.inProgress,
+      gradient: 'from-indigo-500 to-blue-600',
+      icon: <Users size={18} />,
+    },
+    {
+      value: 'completed' as TaskFilter,
+      label: 'Completed',
+      description: 'Finished steps',
+      count: fmsStats.completed,
+      gradient: 'from-emerald-500 to-teal-500',
+      icon: <CheckSquare size={18} />,
+    },
+    {
+      value: 'overdue' as TaskFilter,
+      label: 'Overdue',
+      description: 'Past due date, needs attention',
+      count: fmsStats.overdue,
+      gradient: 'from-rose-500 to-red-600',
+      icon: <AlertCircle size={18} />,
+    },
+  ]), [fmsStats]);
+
+  const handleFilterChange = (value: TaskFilter) => {
+    setTaskFilter(value);
+    const searchParams = new URLSearchParams(location.search);
+    if (value === 'all') {
+      searchParams.delete('view');
+    } else {
+      searchParams.set('view', value);
+    }
+    navigate({ pathname: location.pathname, search: searchParams.toString() }, { replace: true });
   };
 
   if (loading) {
@@ -274,6 +463,96 @@ const ViewFMSProgress: React.FC = () => {
             Print
           </button>
         </div>
+
+        {/* Summary Cards */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+          {[
+            { label: 'Total Projects', value: fmsStats.totalProjects, accent: 'from-blue-500 to-indigo-600' },
+            { label: 'Pending Steps', value: fmsStats.pending, accent: 'from-yellow-500 to-amber-500' },
+            { label: 'In Progress', value: fmsStats.inProgress, accent: 'from-purple-500 to-fuchsia-500' },
+            { label: 'Overdue', value: fmsStats.overdue, accent: 'from-red-500 to-rose-500' },
+          ].map(card => (
+            <div key={card.label} className={`p-5 rounded-2xl text-white bg-gradient-to-br ${card.accent} shadow-lg`}>
+              <p className="text-sm uppercase tracking-wide opacity-80">{card.label}</p>
+              <p className="text-3xl font-bold mt-2">{card.value}</p>
+            </div>
+          ))}
+        </div>
+
+        {/* Filter Pills */}
+        <div className="mb-6 grid grid-cols-1 md:grid-cols-3 xl:grid-cols-5 gap-4">
+          {filterOptions.map(option => {
+            const active = taskFilter === option.value;
+            return (
+              <button
+                key={option.value}
+                onClick={() => handleFilterChange(option.value)}
+                className={`relative w-full rounded-2xl border transition-all p-4 text-left overflow-hidden group ${
+                  active
+                    ? `bg-gradient-to-br ${option.gradient} text-white border-transparent shadow-xl`
+                    : 'bg-[var(--color-surface)] border-[var(--color-border)] text-[var(--color-text)] hover:border-[var(--color-primary)]/60 hover:shadow-lg'
+                }`}
+              >
+                {!active && (
+                  <div className="absolute inset-0 bg-gradient-to-br from-transparent to-[var(--color-background)]/40 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
+                )}
+                <div className="relative flex items-start justify-between gap-3">
+                  <div className={`flex-shrink-0 w-10 h-10 rounded-xl flex items-center justify-center text-base font-bold ${
+                    active ? 'bg-white/20 text-white' : 'bg-[var(--color-primary)]/10 text-[var(--color-primary)]'
+                  }`}>
+                    {option.icon}
+                  </div>
+                  <span className={`text-sm font-bold ${active ? 'text-white' : 'text-[var(--color-text)]'}`}>
+                    {option.count}
+                  </span>
+                </div>
+                <div className="relative mt-3">
+                  <p className={`text-base font-semibold ${active ? 'text-white' : 'text-[var(--color-text)]'}`}>
+                    {option.label}
+                  </p>
+                  <p className={`text-xs mt-1 leading-snug ${active ? 'text-white/80' : 'text-[var(--color-textSecondary)]'}`}>
+                    {option.description}
+                  </p>
+                </div>
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Pending Steps Snapshot */}
+        {myPendingSteps.length > 0 && (
+          <div className="mb-8 p-5 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-sm">
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h2 className="text-lg font-bold text-[var(--color-text)]">My Pending Steps</h2>
+                <p className="text-sm text-[var(--color-textSecondary)]">Steps assigned to you that still need attention</p>
+              </div>
+              <span className="text-sm font-semibold text-[var(--color-primary)]">{myPendingSteps.length} pending</span>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {myPendingSteps.slice(0, 6).map((item, idx) => (
+                <div key={idx} className="p-4 rounded-xl border border-[var(--color-border)] bg-[var(--color-background)]">
+                  <div className="flex items-center justify-between mb-2">
+                    <p className="text-sm font-semibold text-[var(--color-text)] truncate">{item.task.what}</p>
+                    <span
+                      className={`px-2 py-0.5 text-xs rounded-full font-semibold ${
+                        item.isOverdue ? 'bg-red-100 text-red-600' : 'bg-yellow-100 text-yellow-700'
+                      }`}
+                    >
+                      {item.isOverdue ? 'Overdue' : item.task.status}
+                    </span>
+                  </div>
+                  <p className="text-xs text-[var(--color-textSecondary)] truncate mb-1">{item.projectName}</p>
+                  {item.task.plannedDueDate && (
+                    <p className="text-xs text-[var(--color-textSecondary)] flex items-center gap-1">
+                      <Clock size={12} /> Due {new Date(item.task.plannedDueDate).toLocaleDateString()}
+                    </p>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Tabs */}
         <div className="mb-6 flex gap-2 border-b border-[var(--color-border)]">
@@ -326,13 +605,13 @@ const ViewFMSProgress: React.FC = () => {
         {/* FMS Projects Tab Content */}
         {activeTab === 'fms' && (
           <>
-            {projects.length === 0 ? (
+            {filteredProjects.length === 0 ? (
               <div className="text-center py-20">
                 <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl mb-4" style={{ backgroundColor: 'var(--color-primary)10' }}>
                   <RotateCcw size={40} style={{ color: 'var(--color-primary)' }} />
                 </div>
-                <p className="text-[var(--color-textSecondary)] text-lg font-medium">No projects found</p>
-                <p className="text-[var(--color-textSecondary)] text-sm">Create a project to get started</p>
+                <p className="text-[var(--color-textSecondary)] text-lg font-medium">No projects match this filter</p>
+                <p className="text-[var(--color-textSecondary)] text-sm">Try selecting a different view above</p>
               </div>
             ) : (
               <div className="space-y-8">
@@ -343,7 +622,7 @@ const ViewFMSProgress: React.FC = () => {
                 Your Projects
               </h2>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5 mb-8">
-                {projects.map((project) => {
+                {filteredProjects.map((project) => {
                   const progress = calculateProgress(project.tasks);
                   const isSelected = selectedProject?._id === project._id;
                   
@@ -458,7 +737,12 @@ const ViewFMSProgress: React.FC = () => {
                       Steps & Tasks
                     </h3>
                     <div className="space-y-4">
-                      {selectedProject.tasks.map((task, index) => (
+                      {visibleTasks.length === 0 && (
+                        <div className="p-6 text-center rounded-2xl border border-dashed border-[var(--color-border)] text-[var(--color-textSecondary)]">
+                          No tasks found for the “{taskFilter.replace('-', ' ')}” filter in this project.
+                        </div>
+                      )}
+                      {visibleTasks.map(({ task, index }) => (
                         <div
                           key={index}
                           className="p-5 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] hover:shadow-lg hover:border-[var(--color-primary)]/50 transition-all duration-300"

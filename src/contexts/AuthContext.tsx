@@ -101,15 +101,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       (response) => response,
       (error) => {
         if (error.response && (error.response.status === 401 || error.response.status === 403)) {
-          // Token is invalid or expired
-          console.error('Authentication error:', error.response.data?.message);
-          // Clear auth data
-          setUser(null);
-          localStorage.removeItem('user');
-          localStorage.removeItem('token');
-          delete axios.defaults.headers.common['Authorization'];
-          // Redirect to login
-          if (window.location.pathname !== '/login') {
+          // Don't redirect if we're already on the login page or if it's a login request
+          const isLoginRequest = error.config?.url?.includes('/api/auth/login');
+          const isOnLoginPage = window.location.pathname === '/login';
+          
+          if (!isLoginRequest && !isOnLoginPage) {
+            // Token is invalid or expired
+            console.error('Authentication error:', error.response.data?.message);
+            // Clear auth data
+            setUser(null);
+            localStorage.removeItem('user');
+            localStorage.removeItem('token');
+            delete axios.defaults.headers.common['Authorization'];
+            // Redirect to login
             window.location.href = '/login';
           }
         }

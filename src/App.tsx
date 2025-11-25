@@ -33,7 +33,6 @@ import HelpTickets from './pages/HelpTickets';
 import AdminHelpTickets from './pages/AdminHelpTickets';
 import Complaints from './pages/Complaints';
 import ComplaintsDashboard from './pages/ComplaintsDashboard';
-import AdminComplaints from './pages/AdminComplaints';
 import PurchaseDashboard from './pages/PurchaseDashboard';
 import SalesDashboard from './pages/SalesDashboard';
 import StationeryRequestForm from './pages/StationeryRequestForm';
@@ -43,6 +42,7 @@ import ChecklistCalendar from './pages/ChecklistCalendar';
 import ChecklistTemplateForm from './pages/ChecklistTemplateForm';
 import ChecklistOccurrenceDetail from './pages/ChecklistOccurrenceDetail';
 import PendingChecklists from './pages/PendingChecklists';
+import FMSDashboard from './pages/FMSDashboard';
 
 function App() {
   return (
@@ -71,6 +71,7 @@ function App() {
                   <Route path="create-fms" element={<ProtectedRoute><CreateFMS /></ProtectedRoute>} />
                   <Route path="start-project" element={<ProtectedRoute><StartProject /></ProtectedRoute>} />
                   <Route path="fms-progress" element={<ProtectedRoute><ViewFMSProgress /></ProtectedRoute>} />
+                  <Route path="fms-dashboard" element={<ProtectedRoute><FMSDashboard /></ProtectedRoute>} />
                   <Route path="/checklists" element={<ProtectedRoute><Checklists /></ProtectedRoute>} />
                   <Route path="/checklists/create" element={<ProtectedRoute><CreateChecklist /></ProtectedRoute>} />
                   <Route path="/checklists/:id" element={<ProtectedRoute><ChecklistDetail /></ProtectedRoute>} />

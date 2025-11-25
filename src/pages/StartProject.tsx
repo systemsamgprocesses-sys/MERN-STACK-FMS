@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Play, Calendar } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import axios from 'axios';
@@ -17,6 +17,7 @@ interface FMSTemplate {
 const StartProject: React.FC = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [fmsList, setFmsList] = useState<FMSTemplate[]>([]);
   const [selectedFMS, setSelectedFMS] = useState('');
   const [projectName, setProjectName] = useState('');
@@ -24,11 +25,22 @@ const StartProject: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [fetchingTemplates, setFetchingTemplates] = useState(true);
   const [errors, setErrors] = useState<any>({});
-  const [searchTerm, setSearchTerm] = useState('');
 
   useEffect(() => {
     fetchFMSTemplates();
   }, [user]);
+
+  // Prefill from URL parameters
+  useEffect(() => {
+    const fmsIdFromUrl = searchParams.get('fmsId');
+    if (fmsIdFromUrl && fmsList.length > 0) {
+      setSelectedFMS(fmsIdFromUrl);
+      const template = fmsList.find(fms => fms._id === fmsIdFromUrl);
+      if (template) {
+        setProjectName(template.fmsName);
+      }
+    }
+  }, [searchParams, fmsList]);
 
   const fetchFMSTemplates = async () => {
     try {
@@ -50,7 +62,7 @@ const StartProject: React.FC = () => {
 
   const validateForm = () => {
     const newErrors: any = {};
-    
+
     if (!selectedFMS) {
       newErrors.fms = 'Please select an FMS template';
     }
@@ -63,23 +75,23 @@ const StartProject: React.FC = () => {
       const selectedDate = new Date(startDate);
       const today = new Date();
       today.setHours(0, 0, 0, 0);
-      
+
       if (selectedDate < today) {
         newErrors.startDate = 'Start date cannot be in the past';
       }
     }
-    
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!validateForm()) {
       return;
     }
-    
+
     setLoading(true);
     try {
       const response = await axios.post(`${address}/api/projects`, {
@@ -88,7 +100,7 @@ const StartProject: React.FC = () => {
         startDate,
         createdBy: user?.id
       });
-      
+
       if (response.data.success) {
         alert(`Project created successfully! Project ID: ${response.data.projectId}`);
         navigate('/fms-progress');
@@ -102,10 +114,6 @@ const StartProject: React.FC = () => {
   };
 
   const selectedTemplate = fmsList.find(fms => fms._id === selectedFMS);
-  const filteredTemplates = fmsList.filter(template =>
-    template.fmsName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    template.fmsId.toLowerCase().includes(searchTerm.toLowerCase())
-  );
 
   if (fetchingTemplates) {
     return (
@@ -133,26 +141,23 @@ const StartProject: React.FC = () => {
                 <label className="block text-sm font-medium text-[var(--color-text)] mb-2">
                   Select FMS Template *
                 </label>
-                <div className="mb-2">
-                  <input
-                    type="text"
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    placeholder="Search by FMS name or ID..."
-                    className="w-full px-3 py-2 border border-[var(--color-border)] rounded-lg bg-[var(--color-background)] text-[var(--color-text)] text-sm"
-                  />
-                </div>
                 <select
                   value={selectedFMS}
-                  onChange={(e) => setSelectedFMS(e.target.value)}
+                  onChange={(e) => {
+                    setSelectedFMS(e.target.value);
+                    const template = fmsList.find(fms => fms._id === e.target.value);
+                    if (template) {
+                      setProjectName(template.fmsName);
+                    }
+                  }}
                   disabled={loading}
                   className="w-full px-4 py-3 rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] text-[var(--color-text)] disabled:opacity-50"
                 >
                   <option value="">Choose an FMS template</option>
-                  {filteredTemplates.length === 0 ? (
+                  {fmsList.length === 0 ? (
                     <option disabled>No FMS templates available</option>
                   ) : (
-                    filteredTemplates.map((fms) => (
+                    fmsList.map((fms) => (
                       <option key={fms._id} value={fms._id}>
                         {fms.fmsName} ({fms.fmsId}) - {fms.stepCount} steps
                       </option>

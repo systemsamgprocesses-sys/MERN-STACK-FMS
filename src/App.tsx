@@ -43,6 +43,7 @@ import ChecklistTemplateForm from './pages/ChecklistTemplateForm';
 import ChecklistOccurrenceDetail from './pages/ChecklistOccurrenceDetail';
 import PendingChecklists from './pages/PendingChecklists';
 import FMSDashboard from './pages/FMSDashboard';
+import SuperAdminManagement from './pages/SuperAdminManagement';
 
 function App() {
   return (
@@ -99,6 +100,7 @@ function App() {
                   <Route path="admin-hr-panel" element={<ProtectedRoute requireAdmin><AdminHRPanel /></ProtectedRoute>} />
                   <Route path="fms-categories" element={<ProtectedRoute requireAdmin><CategoryManagement type="fms" /></ProtectedRoute>} />
                   <Route path="checklist-categories" element={<ProtectedRoute requireAdmin><CategoryManagement type="checklist" /></ProtectedRoute>} />
+                  <Route path="super-admin-management" element={<ProtectedRoute requireSuperAdmin><SuperAdminManagement /></ProtectedRoute>} />
                 </Route>
               </Routes>
             </div>

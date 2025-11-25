@@ -760,4 +760,139 @@ router.delete('/:projectId/tasks/:taskIndex/attachments/:attachmentIndex', authe
   }
 });
 
+// Super Admin: Update FMS Task Status
+router.patch('/:projectId/tasks/:taskIndex/admin-status', authenticateToken, isSuperAdmin, async (req, res) => {
+  try {
+    const { projectId, taskIndex } = req.params;
+    const { status, reason } = req.body;
+
+    const validStatuses = ['Not Started', 'Pending', 'In Progress', 'Done', 'Awaiting Date'];
+    if (!validStatuses.includes(status)) {
+      return res.status(400).json({ success: false, message: 'Invalid status' });
+    }
+
+    const project = await Project.findOne({ projectId });
+    if (!project) {
+      return res.status(404).json({ success: false, message: 'Project not found' });
+    }
+
+    const task = project.tasks[taskIndex];
+    if (!task) {
+      return res.status(404).json({ success: false, message: 'Task not found' });
+    }
+
+    const oldStatus = task.status;
+    task.status = status;
+
+    // If changing from Done to another status, recalculate scores
+    if (oldStatus === 'Done' && status !== 'Done') {
+      if (task.plannedDueDate && task.actualCompletedOn) {
+        const completionDate = new Date(task.actualCompletedOn);
+        const plannedDate = new Date(task.originalPlannedDate || task.plannedDueDate);
+        const wasOnTime = completionDate <= plannedDate;
+
+        if (wasOnTime && project.tasksOnTime > 0) {
+          project.tasksOnTime -= 1;
+        } else if (!wasOnTime && project.tasksLate > 0) {
+          project.tasksLate -= 1;
+        }
+
+        // Recalculate total score
+        const completedTasks = project.tasks.filter(t => t.status === 'Done').length - 1;
+        if (completedTasks > 0) {
+          project.totalScore = Math.round((project.tasksOnTime / completedTasks) * 100);
+        } else {
+          project.totalScore = 0;
+        }
+      }
+
+      // Clear completion data
+      task.actualCompletedOn = null;
+      task.completedBy = null;
+      task.completedAt = null;
+    }
+
+    await project.save();
+
+    // Log the action
+    await logAdminAction(
+      req.user.id,
+      req.user.username,
+      'fms_status_change',
+      'fms',
+      `${projectId}-${taskIndex}`,
+      { oldValue: oldStatus, newValue: status },
+      reason || 'FMS task status changed by Super Admin',
+      req
+    );
+
+    res.json({
+      success: true,
+      message: `Status updated from ${oldStatus} to ${status}`,
+      project
+    });
+  } catch (error) {
+    console.error('Error updating FMS task status:', error);
+    res.status(500).json({ success: false, message: 'Server error', error: error.message });
+  }
+});
+
+// Super Admin: Update FMS Task Due Date
+router.patch('/:projectId/tasks/:taskIndex/admin-duedate', authenticateToken, isSuperAdmin, async (req, res) => {
+  try {
+    const { projectId, taskIndex } = req.params;
+    const { plannedDueDate, reason } = req.body;
+
+    if (!plannedDueDate) {
+      return res.status(400).json({ success: false, message: 'Due date is required' });
+    }
+
+    const newDueDate = new Date(plannedDueDate);
+    if (isNaN(newDueDate.getTime())) {
+      return res.status(400).json({ success: false, message: 'Invalid date format' });
+    }
+
+    const project = await Project.findOne({ projectId });
+    if (!project) {
+      return res.status(404).json({ success: false, message: 'Project not found' });
+    }
+
+    const task = project.tasks[taskIndex];
+    if (!task) {
+      return res.status(404).json({ success: false, message: 'Task not found' });
+    }
+
+    const oldDueDate = task.plannedDueDate;
+    task.plannedDueDate = newDueDate;
+
+    // Update original planned date if not set
+    if (!task.originalPlannedDate) {
+      task.originalPlannedDate = newDueDate;
+    }
+
+    await project.save();
+
+    // Log the action
+    await logAdminAction(
+      req.user.id,
+      req.user.username,
+      'fms_duedate_change',
+      'fms',
+      `${projectId}-${taskIndex}`,
+      { oldValue: oldDueDate, newValue: newDueDate },
+      reason || 'FMS task due date changed by Super Admin',
+      req
+    );
+
+    res.json({
+      success: true,
+      message: `Due date updated from ${oldDueDate ? new Date(oldDueDate).toISOString().split('T')[0] : 'N/A'} to ${newDueDate.toISOString().split('T')[0]}`,
+      project
+    });
+  } catch (error) {
+    console.error('Error updating FMS task due date:', error);
+    res.status(500).json({ success: false, message: 'Server error', error: error.message });
+  }
+});
+
 export default router;

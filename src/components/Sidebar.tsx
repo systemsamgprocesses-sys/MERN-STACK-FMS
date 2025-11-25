@@ -163,6 +163,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
     { section: 'Analytics', icon: BarChart2, label: 'Sales Dashboard', path: '/sales-dashboard', requireAdmin: true },
 
     // Admin Section
+    { section: 'Admin', icon: Shield, label: 'Super Admin Management', path: '/super-admin-management', requireSuperAdmin: true, highlight: true },
     { section: 'Admin', icon: Shield, label: 'Audit Logs', path: '/audit-logs', requireSuperAdmin: true },
     { section: 'Admin', icon: Award, label: 'Score Logs', path: '/score-logs', requireSuperAdmin: true },
   ];
@@ -388,11 +389,10 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
                       {({ isActive }) => (
                         <>
                           <span
-                            className={`flex items-center justify-center ${isCollapsed ? 'w-9 h-9' : 'w-8 h-8 mr-3'} rounded-xl transition-colors ${
-                              isActive
-                                ? 'bg-[var(--color-primary)]/20 text-[var(--color-primary)]'
-                                : 'bg-[var(--color-border)] text-[var(--color-textSecondary)] group-hover:bg-[var(--color-primary)]/10 group-hover:text-[var(--color-primary)]'
-                            }`}
+                            className={`flex items-center justify-center ${isCollapsed ? 'w-9 h-9' : 'w-8 h-8 mr-3'} rounded-xl transition-colors ${isActive
+                              ? 'bg-[var(--color-primary)]/20 text-[var(--color-primary)]'
+                              : 'bg-[var(--color-border)] text-[var(--color-textSecondary)] group-hover:bg-[var(--color-primary)]/10 group-hover:text-[var(--color-primary)]'
+                              }`}
                           >
                             <item.icon size={16} />
                           </span>
@@ -401,11 +401,12 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
                               {item.label}
                             </span>
                           )}
-                          {item.countKey && counts[item.countKey as keyof typeof counts] > 0 && (
+                          {/* Count badges hidden as per user request */}
+                          {/* {item.countKey && counts[item.countKey as keyof typeof counts] > 0 && (
                             <span className="ml-auto text-xs font-semibold px-2 py-0.5 rounded-full bg-[var(--color-border)] text-[var(--color-textSecondary)]">
                               {counts[item.countKey as keyof typeof counts]}
                             </span>
-                          )}
+                          )} */}
                         </>
                       )}
                     </NavLink>

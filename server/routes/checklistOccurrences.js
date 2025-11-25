@@ -9,25 +9,25 @@ const router = express.Router();
 router.get('/', authenticateToken, async (req, res) => {
   try {
     const { assignedTo, status, templateId, dateFrom, dateTo } = req.query;
-    
+
     let query = {};
-    
+
     if (assignedTo) query.assignedTo = assignedTo;
     if (status) query.status = status;
     if (templateId) query.templateId = templateId;
-    
+
     if (dateFrom || dateTo) {
       query.dueDate = {};
       if (dateFrom) query.dueDate.$gte = new Date(dateFrom);
       if (dateTo) query.dueDate.$lte = new Date(dateTo);
     }
-    
+
     const occurrences = await ChecklistOccurrence.find(query)
       .populate('assignedTo', 'username email')
       .populate('templateId', 'name frequency')
       .populate('completedBy', 'username email')
       .sort({ dueDate: 1 });
-    
+
     res.json(occurrences);
   } catch (error) {
     console.error('Error fetching occurrences:', error);
@@ -75,7 +75,7 @@ router.get('/calendar', authenticateToken, async (req, res) => {
     // Get first and last day of the month
     const firstDay = new Date(targetYear, targetMonth, 1);
     const lastDay = new Date(targetYear, targetMonth + 1, 0, 23, 59, 59, 999);
-    
+
     const query = {
       dueDate: {
         $gte: firstDay,
@@ -93,27 +93,27 @@ router.get('/calendar', authenticateToken, async (req, res) => {
     const occurrences = await ChecklistOccurrence.find(query)
       .populate('templateId', 'name')
       .sort({ dueDate: 1 });
-    
+
     // Group occurrences by date
     const daysInMonth = new Date(targetYear, targetMonth + 1, 0).getDate();
     const calendarData = [];
-    
+
     for (let day = 1; day <= daysInMonth; day++) {
       const date = new Date(targetYear, targetMonth, day);
       const dateString = date.toISOString().split('T')[0];
-      
+
       // Find all occurrences for this day
       const dayOccurrences = occurrences.filter(occ => {
         const occDate = new Date(occ.dueDate);
         return occDate.getDate() === day &&
-               occDate.getMonth() === targetMonth &&
-               occDate.getFullYear() === targetYear;
+          occDate.getMonth() === targetMonth &&
+          occDate.getFullYear() === targetYear;
       });
-      
+
       const totalCount = dayOccurrences.length;
       const completedCount = dayOccurrences.filter(occ => occ.status === 'completed').length;
       const isFullyCompleted = totalCount > 0 && completedCount === totalCount;
-      
+
       calendarData.push({
         date: dateString,
         day: day,
@@ -123,7 +123,7 @@ router.get('/calendar', authenticateToken, async (req, res) => {
         isFullyCompleted: isFullyCompleted
       });
     }
-    
+
     res.json({
       year: targetYear,
       month: targetMonth,
@@ -139,20 +139,20 @@ router.get('/calendar', authenticateToken, async (req, res) => {
 router.get('/by-date', authenticateToken, async (req, res) => {
   try {
     const { date, userId } = req.query;
-    
+
     if (!date || !userId) {
-      return res.status(400).json({ 
-        error: 'date and userId are required' 
+      return res.status(400).json({
+        error: 'date and userId are required'
       });
     }
-    
+
     const targetDate = new Date(date);
     const startOfDay = new Date(targetDate);
     startOfDay.setHours(0, 0, 0, 0);
-    
+
     const endOfDay = new Date(targetDate);
     endOfDay.setHours(23, 59, 59, 999);
-    
+
     const occurrences = await ChecklistOccurrence.find({
       assignedTo: userId,
       dueDate: {
@@ -164,7 +164,7 @@ router.get('/by-date', authenticateToken, async (req, res) => {
       .populate('templateId', 'name frequency')
       .populate('completedBy', 'username email')
       .sort({ templateName: 1 });
-    
+
     res.json(occurrences);
   } catch (error) {
     console.error('Error fetching occurrences by date:', error);
@@ -179,11 +179,11 @@ router.get('/:id', authenticateToken, async (req, res) => {
       .populate('assignedTo', 'username email')
       .populate('templateId', 'name frequency')
       .populate('completedBy', 'username email');
-    
+
     if (!occurrence) {
       return res.status(404).json({ error: 'Occurrence not found' });
     }
-    
+
     res.json(occurrence);
   } catch (error) {
     console.error('Error fetching occurrence:', error);
@@ -195,21 +195,21 @@ router.get('/:id', authenticateToken, async (req, res) => {
 router.patch('/:id', authenticateToken, async (req, res) => {
   try {
     const { items } = req.body;
-    
+
     const occurrence = await ChecklistOccurrence.findById(req.params.id);
-    
+
     if (!occurrence) {
       return res.status(404).json({ error: 'Occurrence not found' });
     }
-    
+
     // Update items
     if (items) {
       occurrence.items = items;
     }
-    
+
     await occurrence.save();
     await occurrence.populate('assignedTo templateId completedBy');
-    
+
     res.json(occurrence);
   } catch (error) {
     console.error('Error updating occurrence:', error);
@@ -222,29 +222,29 @@ router.patch('/:id/items/:itemIndex', authenticateToken, async (req, res) => {
   try {
     const { checked, remarks } = req.body;
     const itemIndex = parseInt(req.params.itemIndex);
-    
+
     const occurrence = await ChecklistOccurrence.findById(req.params.id);
-    
+
     if (!occurrence) {
       return res.status(404).json({ error: 'Occurrence not found' });
     }
-    
+
     if (itemIndex < 0 || itemIndex >= occurrence.items.length) {
       return res.status(400).json({ error: 'Invalid item index' });
     }
-    
+
     if (checked !== undefined) {
       occurrence.items[itemIndex].checked = checked;
       occurrence.items[itemIndex].checkedAt = checked ? new Date() : null;
     }
-    
+
     if (remarks !== undefined) {
       occurrence.items[itemIndex].remarks = remarks;
     }
-    
+
     await occurrence.save();
     await occurrence.populate('assignedTo templateId completedBy');
-    
+
     res.json(occurrence);
   } catch (error) {
     console.error('Error updating item:', error);
@@ -256,20 +256,20 @@ router.patch('/:id/items/:itemIndex', authenticateToken, async (req, res) => {
 router.post('/:id/complete', authenticateToken, async (req, res) => {
   try {
     const { userId } = req.body;
-    
+
     const occurrence = await ChecklistOccurrence.findById(req.params.id);
-    
+
     if (!occurrence) {
       return res.status(404).json({ error: 'Occurrence not found' });
     }
-    
+
     occurrence.status = 'completed';
     occurrence.completedAt = new Date();
     occurrence.completedBy = userId;
-    
+
     await occurrence.save();
     await occurrence.populate('assignedTo templateId completedBy');
-    
+
     res.json(occurrence);
   } catch (error) {
     console.error('Error completing occurrence:', error);
@@ -300,30 +300,30 @@ router.get('/stats/dashboard', authenticateToken, async (req, res) => {
     today.setHours(0, 0, 0, 0);
     const tomorrow = new Date(today);
     tomorrow.setDate(tomorrow.getDate() + 1);
-    
+
     const baseQuery = assignedToFilter ? { assignedTo: assignedToFilter } : {};
 
     const [totalPending, totalCompleted, todayPending, todayCompleted] = await Promise.all([
-      ChecklistOccurrence.countDocuments({ 
+      ChecklistOccurrence.countDocuments({
         ...baseQuery,
-        status: 'pending' 
+        status: 'pending'
       }),
-      ChecklistOccurrence.countDocuments({ 
+      ChecklistOccurrence.countDocuments({
         ...baseQuery,
-        status: 'completed' 
+        status: 'completed'
       }),
-      ChecklistOccurrence.countDocuments({ 
+      ChecklistOccurrence.countDocuments({
         ...baseQuery,
         status: 'pending',
         dueDate: { $gte: today, $lt: tomorrow }
       }),
-      ChecklistOccurrence.countDocuments({ 
+      ChecklistOccurrence.countDocuments({
         ...baseQuery,
         status: 'completed',
         dueDate: { $gte: today, $lt: tomorrow }
       })
     ]);
-    
+
     res.json({
       totalPending,
       totalCompleted,
@@ -333,6 +333,121 @@ router.get('/stats/dashboard', authenticateToken, async (req, res) => {
     });
   } catch (error) {
     console.error('Error fetching dashboard stats:', error);
+    res.status(500).json({ error: 'Server error', message: error.message });
+  }
+});
+
+// ============ SUPER ADMIN CHECKLIST MANAGEMENT ENDPOINTS ============
+
+// Middleware to check if user is superadmin
+const isSuperAdmin = (req, res, next) => {
+  if (!req.user) {
+    return res.status(401).json({ message: 'Authentication required' });
+  }
+  if (req.user.role === 'superadmin') {
+    return next();
+  }
+  return res.status(403).json({ message: 'Access denied. Only Super Admin can perform this action.' });
+};
+
+// Super Admin: Delete checklist occurrence
+router.delete('/:id/admin-delete', authenticateToken, isSuperAdmin, async (req, res) => {
+  try {
+    const { reason } = req.body;
+
+    const occurrence = await ChecklistOccurrence.findById(req.params.id);
+
+    if (!occurrence) {
+      return res.status(404).json({ error: 'Occurrence not found' });
+    }
+
+    // Store for audit log
+    const deletedData = occurrence.toObject();
+
+    await ChecklistOccurrence.findByIdAndDelete(req.params.id);
+
+    res.json({
+      success: true,
+      message: 'Checklist occurrence deleted successfully',
+      deletedData
+    });
+  } catch (error) {
+    console.error('Error deleting checklist occurrence:', error);
+    res.status(500).json({ error: 'Server error', message: error.message });
+  }
+});
+
+// Super Admin: Update checklist occurrence status
+router.patch('/:id/admin-status', authenticateToken, isSuperAdmin, async (req, res) => {
+  try {
+    const { status, reason } = req.body;
+
+    if (!['pending', 'completed'].includes(status)) {
+      return res.status(400).json({ error: 'Invalid status. Must be pending or completed' });
+    }
+
+    const occurrence = await ChecklistOccurrence.findById(req.params.id);
+
+    if (!occurrence) {
+      return res.status(404).json({ error: 'Occurrence not found' });
+    }
+
+    const oldStatus = occurrence.status;
+    occurrence.status = status;
+
+    // If changing to pending, clear completion data
+    if (status === 'pending') {
+      occurrence.completedAt = null;
+      occurrence.completedBy = null;
+    }
+
+    await occurrence.save();
+    await occurrence.populate('assignedTo templateId completedBy');
+
+    res.json({
+      success: true,
+      message: `Status updated from ${oldStatus} to ${status}`,
+      occurrence
+    });
+  } catch (error) {
+    console.error('Error updating checklist status:', error);
+    res.status(500).json({ error: 'Server error', message: error.message });
+  }
+});
+
+// Super Admin: Update checklist occurrence due date
+router.patch('/:id/admin-duedate', authenticateToken, isSuperAdmin, async (req, res) => {
+  try {
+    const { dueDate, reason } = req.body;
+
+    if (!dueDate) {
+      return res.status(400).json({ error: 'Due date is required' });
+    }
+
+    const newDueDate = new Date(dueDate);
+    if (isNaN(newDueDate.getTime())) {
+      return res.status(400).json({ error: 'Invalid date format' });
+    }
+
+    const occurrence = await ChecklistOccurrence.findById(req.params.id);
+
+    if (!occurrence) {
+      return res.status(404).json({ error: 'Occurrence not found' });
+    }
+
+    const oldDueDate = occurrence.dueDate;
+    occurrence.dueDate = newDueDate;
+
+    await occurrence.save();
+    await occurrence.populate('assignedTo templateId completedBy');
+
+    res.json({
+      success: true,
+      message: `Due date updated from ${oldDueDate.toISOString().split('T')[0]} to ${newDueDate.toISOString().split('T')[0]}`,
+      occurrence
+    });
+  } catch (error) {
+    console.error('Error updating checklist due date:', error);
     res.status(500).json({ error: 'Server error', message: error.message });
   }
 });

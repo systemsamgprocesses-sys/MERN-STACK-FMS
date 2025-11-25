@@ -5,9 +5,10 @@ import { useAuth } from '../contexts/AuthContext';
 interface ProtectedRouteProps {
   children: React.ReactNode;
   requireAdmin?: boolean;
+  requireSuperAdmin?: boolean;
 }
 
-const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, requireAdmin = false }) => {
+const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, requireAdmin = false, requireSuperAdmin = false }) => {
   const { user, isLoading } = useAuth();
 
   if (isLoading) {
@@ -23,6 +24,11 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, requireAdmin 
 
   if (!user) {
     return <Navigate to="/login" replace />;
+  }
+
+  // Check if super admin role is required
+  if (requireSuperAdmin && user.role !== 'superadmin') {
+    return <Navigate to="/dashboard" replace />;
   }
 
   // Check if admin role is required and user doesn't have admin or superadmin role

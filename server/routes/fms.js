@@ -90,6 +90,9 @@ router.post('/', upload.array('files', 10), async (req, res) => {
 
     // Validate and convert step data
     parsedSteps = parsedSteps.map((step, index) => {
+      // Set stepNo to ensure it's present (this was missing and causing the 500 error)
+      step.stepNo = index + 1;
+
       // Validate required fields
       if (!step.what || !step.how) {
         throw new Error(`Step ${index + 1}: Missing required fields (what/how)`);
@@ -347,6 +350,9 @@ router.put('/:id', authenticateToken, isSuperAdmin, upload.array('files', 10), a
 
       // Validate and convert step data
       parsedSteps = parsedSteps.map((step, index) => {
+        // Set stepNo to ensure it's present (this was missing and causing the 500 error)
+        step.stepNo = index + 1;
+
         // Validate required fields
         if (!step.what || !step.how) {
           throw new Error(`Step ${index + 1}: Missing required fields (what/how)`);

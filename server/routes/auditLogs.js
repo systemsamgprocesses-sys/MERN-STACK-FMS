@@ -16,13 +16,16 @@ router.post('/', async (req, res) => {
   }
 });
 
-// Get all audit logs (super admin only)
+// Get all audit logs
+// For non-admins: filters to their own logs
 router.get('/', async (req, res) => {
   try {
-    const { page = 1, limit = 50, targetType, performedBy, startDate, endDate } = req.query;
+    const { page = 1, limit = 50, targetType, performedBy, userId, startDate, endDate } = req.query;
     
     const query = {};
     if (targetType) query.targetType = targetType;
+    // Support both userId and performedBy for consistency
+    if (userId) query.performedBy = userId;
     if (performedBy) query.performedBy = performedBy;
     if (startDate && endDate) {
       query.timestamp = { $gte: new Date(startDate), $lte: new Date(endDate) };

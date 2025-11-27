@@ -62,10 +62,21 @@ const canManageProfile = (reqUser, targetId) => {
 };
 
 // Get all users
-router.get('/', authenticateToken, requireAdmin, async (req, res) => {
+// For admins/superadmins: returns all users
+// For other users: returns only active users (for assignment purposes)
+router.get('/', authenticateToken, async (req, res) => {
   try {
-    const users = await User.find().select('-password');
-    res.json(users);
+    const isAdmin = req.user && ['admin', 'superadmin'].includes(req.user.role);
+    
+    if (isAdmin) {
+      // Admins can see all users
+      const users = await User.find().select('-password');
+      res.json(users);
+    } else {
+      // Regular users can only see active users (for task assignment)
+      const users = await User.find({ isActive: true }).select('-password -permissions');
+      res.json(users);
+    }
   } catch (error) {
     res.status(500).json({ message: 'Server error', error: error.message });
   }

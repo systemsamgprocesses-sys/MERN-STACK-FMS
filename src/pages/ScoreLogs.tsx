@@ -14,17 +14,34 @@ const ScoreLogs: React.FC = () => {
   const [selectedUser, setSelectedUser] = useState<string>('all');
 
   useEffect(() => {
-    if (user?.role !== 'superadmin') {
-      return;
+    if (!user) return;
+    
+    // For non-superadmin users, automatically filter to their own data
+    if (user.role !== 'superadmin' && selectedUser !== user.id) {
+      setSelectedUser(user.id);
     }
+    
     fetchUsers();
+  }, [user]);
+
+  useEffect(() => {
+    if (!user) return;
     fetchLogs();
   }, [user, selectedUser]);
 
   const fetchUsers = async () => {
     try {
       const response = await axios.get(`${address}/api/users`);
-      setUsers(response.data.filter((u: any) => u.isActive));
+      const activeUsers = response.data.filter((u: any) => u.isActive);
+      setUsers(activeUsers);
+      
+      // If user is not superadmin, only show their own option
+      if (user?.role !== 'superadmin' && user?.id) {
+        const currentUser = activeUsers.find((u: any) => u._id === user.id || u.id === user.id);
+        if (currentUser) {
+          setUsers([currentUser]);
+        }
+      }
     } catch (error) {
       console.error('Error fetching users:', error);
     }
@@ -34,7 +51,11 @@ const ScoreLogs: React.FC = () => {
     try {
       setLoading(true);
       const params: any = {};
-      if (selectedUser !== 'all') {
+      
+      // For non-superadmin users, always filter to their own data
+      if (user?.role !== 'superadmin') {
+        params.userId = user?.id;
+      } else if (selectedUser !== 'all') {
         params.userId = selectedUser;
       }
 
@@ -50,14 +71,6 @@ const ScoreLogs: React.FC = () => {
   const handlePrint = () => {
     window.print();
   };
-
-  if (user?.role !== 'superadmin') {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <p className="text-[var(--color-error)]">Access Denied: Super Admin Only</p>
-      </div>
-    );
-  }
 
   if (loading) {
     return (
@@ -89,19 +102,21 @@ const ScoreLogs: React.FC = () => {
           </button>
         </div>
 
-        <div className="mb-6 flex items-center gap-3 print:hidden">
-          <Filter size={18} style={{ color: 'var(--color-textSecondary)' }} />
-          <select
-            value={selectedUser}
-            onChange={(e) => setSelectedUser(e.target.value)}
-            className="px-4 py-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text)]"
-          >
-            <option value="all">All Users</option>
-            {users.map((u) => (
-              <option key={u._id} value={u._id}>{u.username}</option>
-            ))}
-          </select>
-        </div>
+        {user?.role === 'superadmin' && (
+          <div className="mb-6 flex items-center gap-3 print:hidden">
+            <Filter size={18} style={{ color: 'var(--color-textSecondary)' }} />
+            <select
+              value={selectedUser}
+              onChange={(e) => setSelectedUser(e.target.value)}
+              className="px-4 py-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text)]"
+            >
+              <option value="all">All Users</option>
+              {users.map((u) => (
+                <option key={u._id} value={u._id}>{u.username}</option>
+              ))}
+            </select>
+          </div>
+        )}
 
         <div className="space-y-3">
           {logs.map((log) => (

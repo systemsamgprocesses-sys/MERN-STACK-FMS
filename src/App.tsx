@@ -90,8 +90,8 @@ function App() {
                   <Route path="/stationery-request" element={<ProtectedRoute><StationeryRequestForm /></ProtectedRoute>} />
                   <Route path="/my-stationery-requests" element={<ProtectedRoute><MyStationeryRequests /></ProtectedRoute>} />
                   <Route path="assigned-by-me" element={<ProtectedRoute requiredPermissions={['canAssignTasks']}><AssignedByMe /></ProtectedRoute>} />
-                  <Route path="audit-logs" element={<ProtectedRoute requireSuperAdmin><AuditLogs /></ProtectedRoute>} />
-                  <Route path="score-logs" element={<ProtectedRoute requireSuperAdmin><ScoreLogs /></ProtectedRoute>} />
+                  <Route path="audit-logs" element={<ProtectedRoute><AuditLogs /></ProtectedRoute>} />
+                  <Route path="score-logs" element={<ProtectedRoute><ScoreLogs /></ProtectedRoute>} />
                   <Route path="objection-approvals" element={<ProtectedRoute requiredPermissions={['canApproveObjections']}><ObjectionApprovals /></ProtectedRoute>} />
                   <Route path="objections" element={<ProtectedRoute requiredPermissions={['canViewObjectionMaster']}><ObjectionsHub /></ProtectedRoute>} />
                   <Route path="admin-tasks" element={<ProtectedRoute requireAdmin><AdminTasks /></ProtectedRoute>} />

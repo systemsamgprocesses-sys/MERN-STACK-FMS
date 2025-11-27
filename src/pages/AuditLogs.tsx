@@ -12,9 +12,7 @@ const AuditLogs: React.FC = () => {
   const [filterType, setFilterType] = useState<string>('all');
 
   useEffect(() => {
-    if (user?.role !== 'superadmin') {
-      return;
-    }
+    if (!user) return;
     fetchLogs();
   }, [user, filterType]);
 
@@ -24,6 +22,11 @@ const AuditLogs: React.FC = () => {
       const params: any = {};
       if (filterType !== 'all') {
         params.targetType = filterType;
+      }
+
+      // For non-superadmin users, filter to their own audit logs
+      if (user?.role !== 'superadmin' && user?.id) {
+        params.userId = user.id;
       }
 
       const response = await axios.get(`${address}/api/audit-logs`, { params });
@@ -38,14 +41,6 @@ const AuditLogs: React.FC = () => {
   const handlePrint = () => {
     window.print();
   };
-
-  if (user?.role !== 'superadmin') {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <p className="text-[var(--color-error)]">Access Denied: Super Admin Only</p>
-      </div>
-    );
-  }
 
   if (loading) {
     return (
@@ -65,7 +60,9 @@ const AuditLogs: React.FC = () => {
             </div>
             <div>
               <h1 className="text-3xl font-bold text-[var(--color-text)]">Audit Logs</h1>
-              <p className="text-[var(--color-textSecondary)] text-sm">Super Admin activity tracking</p>
+              <p className="text-[var(--color-textSecondary)] text-sm">
+                {user?.role === 'superadmin' ? 'System activity tracking' : 'Your activity tracking'}
+              </p>
             </div>
           </div>
           <button

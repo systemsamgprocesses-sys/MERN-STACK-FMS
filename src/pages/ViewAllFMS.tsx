@@ -40,19 +40,7 @@ const ViewAllFMS: React.FC = () => {
   const [showCategoryEdit, setShowCategoryEdit] = useState(false);
   const [newCategory, setNewCategory] = useState('');
   const [editingFMS, setEditingFMS] = useState<string | null>(null);
-  const [usersCache, setUsersCache] = useState<any[]>([]);
   const [downloadingPdfs, setDownloadingPdfs] = useState(false);
-
-  const buildUsersMap = () => {
-    const map = new Map<string, any>();
-    usersCache.forEach((user: any) => {
-      const key = user?._id || user?.id;
-      if (key) {
-        map.set(key, user);
-      }
-    });
-    return map;
-  };
 
   const escapeHtml = (value: string | undefined | null) => {
     if (!value) return '';
@@ -74,24 +62,14 @@ const ViewAllFMS: React.FC = () => {
     return `${step.when || 0} ${step.whenUnit || 'days'}`;
   };
 
-  const formatAssigneeNames = (who: any, usersMap: Map<string, any>) => {
+  const formatAssigneeNames = (who: any): string => {
     if (!Array.isArray(who)) return 'N/A';
     const resolved = who
       .map((w: any) => {
         if (typeof w === 'object' && w !== null) {
-          if (w.username) return w.username;
-          if (w.name) return w.name;
-          if (w._id && usersMap.has(w._id)) {
-            const user = usersMap.get(w._id);
-            return user?.username || user?.name || '';
-          }
-          return w._id ? `ID: ${w._id}` : '';
+          return w.username || w.name || w.email || (typeof w.toString === 'function' ? w.toString() : '') || '';
         }
         if (typeof w === 'string') {
-          if (usersMap.has(w)) {
-            const user = usersMap.get(w);
-            return user?.username || user?.name || w;
-          }
           return w;
         }
         return '';
@@ -240,7 +218,7 @@ const ViewAllFMS: React.FC = () => {
     }
   `;
 
-  const buildPrintableBody = (fms: FMSTemplate, usersMap: Map<string, any>) => `
+  const buildPrintableBody = (fms: FMSTemplate) => `
     <div class="header">
       <h1>FMS Template: ${escapeHtml(fms.fmsName)}</h1>
       <p>FMS ID: ${escapeHtml(fms.fmsId)} <span class="category-badge">${escapeHtml(fms.category || 'General')}</span></p>
@@ -264,7 +242,7 @@ const ViewAllFMS: React.FC = () => {
             </div>
             <div class="detail-row">
               <span class="label">WHO:</span>
-              <span class="value">${escapeHtml(formatAssigneeNames(step.who, usersMap))}</span>
+              <span class="value">${escapeHtml(formatAssigneeNames(step.who))}</span>
             </div>
             <div class="detail-row">
               <span class="label">HOW:</span>
@@ -305,7 +283,7 @@ const ViewAllFMS: React.FC = () => {
     </div>
   `;
 
-  const buildPrintableDocument = (fms: FMSTemplate, usersMap: Map<string, any>) => `
+  const buildPrintableDocument = (fms: FMSTemplate) => `
     <!DOCTYPE html>
     <html>
       <head>
@@ -319,7 +297,7 @@ const ViewAllFMS: React.FC = () => {
         </style>
       </head>
       <body>
-        ${buildPrintableBody(fms, usersMap)}
+        ${buildPrintableBody(fms)}
         <script>
           window.onload = function() {
             window.print();
@@ -332,14 +310,14 @@ const ViewAllFMS: React.FC = () => {
     </html>
   `;
 
-  const createHiddenPrintableNode = (fms: FMSTemplate, usersMap: Map<string, any>) => {
+  const createHiddenPrintableNode = (fms: FMSTemplate) => {
     const node = document.createElement('div');
     node.style.position = 'fixed';
     node.style.top = '-10000px';
     node.style.left = '-10000px';
     node.style.width = '794px';
     node.style.background = '#ffffff';
-    node.innerHTML = `<style>${getPrintableStyles()}</style>${buildPrintableBody(fms, usersMap)}`;
+    node.innerHTML = `<style>${getPrintableStyles()}</style>${buildPrintableBody(fms)}`;
     document.body.appendChild(node);
     return node;
   };
@@ -351,17 +329,7 @@ const ViewAllFMS: React.FC = () => {
 
   useEffect(() => {
     fetchFMSTemplates();
-    fetchUsers();
   }, [user, selectedCategory]);
-
-  const fetchUsers = async () => {
-    try {
-      const response = await axios.get(`${address}/api/users`);
-      setUsersCache(response.data.filter((u: any) => u.isActive));
-    } catch (error) {
-      console.error('Error fetching users:', error);
-    }
-  };
 
   const fetchCategories = async (currentFmsList: FMSTemplate[] = []) => {
     try {
@@ -524,8 +492,7 @@ const ViewAllFMS: React.FC = () => {
     const printWindow = window.open('', '_blank');
     if (!printWindow) return;
 
-    const usersMap = buildUsersMap();
-    printWindow.document.write(buildPrintableDocument(fms, usersMap));
+    printWindow.document.write(buildPrintableDocument(fms));
     printWindow.document.close();
   };
 
@@ -533,13 +500,11 @@ const ViewAllFMS: React.FC = () => {
     if (typeof window === 'undefined' || downloadingPdfs || fmsList.length === 0) return;
 
     setDownloadingPdfs(true);
-    const usersMap = buildUsersMap();
-
     try {
       const zip = new JSZip();
 
       for (const fms of fmsList) {
-        const node = createHiddenPrintableNode(fms, usersMap);
+        const node = createHiddenPrintableNode(fms);
 
         try {
           const canvas = await html2canvas(node, {
@@ -570,19 +535,9 @@ const ViewAllFMS: React.FC = () => {
     }
   };
 
-  const generateMermaidDiagram = (steps: any[], usersCache?: any[]) => {
+  const generateMermaidDiagram = (steps: any[]) => {
     // Use LR (left-right) layout for better horizontal flow
     let diagram = 'graph LR\n';
-    const usersMap = new Map();
-
-    // Create a cache of users for faster lookup
-    if (usersCache && Array.isArray(usersCache)) {
-      usersCache.forEach(user => {
-        if (user._id || user.id) {
-          usersMap.set(user._id || user.id, user);
-        }
-      });
-    }
 
     // Style definitions for better appearance
     diagram += '    classDef stepBox fill:#e3f2fd,stroke:#1976d2,stroke-width:2px,color:#000\n';
@@ -593,30 +548,9 @@ const ViewAllFMS: React.FC = () => {
       const nextStepId = index < steps.length - 1 ? `S${steps[index + 1].stepNo}` : null;
 
       // Enhanced assignee resolution - truncate for compact display
-      let assignees = 'N/A';
-      if (Array.isArray(step.who)) {
-        assignees = step.who.map((w: any): string => {
-          if (typeof w === 'object' && w !== null) {
-            if (w.username) return w.username.length > 12 ? w.username.substring(0, 12) + '...' : w.username;
-            if (w.name) return w.name.length > 12 ? w.name.substring(0, 12) + '...' : w.name;
-            if (w._id && usersMap.has(w._id)) {
-              const name = usersMap.get(w._id).username || usersMap.get(w._id).name;
-              return name && name.length > 12 ? name.substring(0, 12) + '...' : name;
-            }
-            return w._id ? w._id.toString().substring(0, 8) : 'Unknown';
-          } else if (typeof w === 'string') {
-            if (usersMap.has(w)) {
-              const name = usersMap.get(w).username || usersMap.get(w).name;
-              return name && name.length > 12 ? name.substring(0, 12) + '...' : name;
-            }
-            return w.substring(0, 8) + '...';
-          }
-          return 'Unknown';
-        }).filter((name: string) => name !== 'Unknown').join(', ');
-
-        if (!assignees) assignees = 'N/A';
-        // Truncate if too long
-        if (assignees.length > 30) assignees = assignees.substring(0, 30) + '...';
+      let assignees = formatAssigneeNames(step.who);
+      if (assignees.length > 30) {
+        assignees = `${assignees.substring(0, 30)}...`;
       }
 
       const duration = step.whenUnit === 'days+hours'
@@ -647,10 +581,7 @@ const ViewAllFMS: React.FC = () => {
   };
 
   // Helper function to format assignee names in the details view
-  const formatAssigneeForDetails = (who: any): string => {
-    const usersMap = buildUsersMap();
-    return formatAssigneeNames(who, usersMap);
-  };
+  const formatAssigneeForDetails = (who: any): string => formatAssigneeNames(who);
 
   if (loading) {
     return (
@@ -1017,7 +948,7 @@ const ViewAllFMS: React.FC = () => {
                                 <div className="p-8 overflow-auto" style={{ maxHeight: 'calc(95vh - 220px)' }}>
                                   <div className="bg-gradient-to-br from-white via-blue-50 to-purple-50 dark:from-gray-800 dark:via-gray-750 dark:to-gray-700 p-8 rounded-2xl border-2 border-gray-200 dark:border-gray-600 shadow-inner">
                                     <div className="min-h-[500px] flex items-center justify-center">
-                                      <MermaidDiagram chart={generateMermaidDiagram(fms.steps, usersCache)} />
+                                      <MermaidDiagram chart={generateMermaidDiagram(fms.steps)} />
                                     </div>
                                   </div>
                                 </div>

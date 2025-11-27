@@ -9,7 +9,7 @@ const Login: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const { user, login, isLoading: authLoading } = useAuth();
+  const { user, login, isLoading: authLoading, error: authError } = useAuth();
   const navigate = useNavigate();
 
   // Show loading state while auth is initializing
@@ -35,7 +35,7 @@ const Login: React.FC = () => {
     setIsLoading(true);
 
     try {
-      const success = await login(username, password);
+      const { success, message } = await login(username, password);
       
       if (success) {
         // Small delay to ensure user state is updated
@@ -43,10 +43,14 @@ const Login: React.FC = () => {
           navigate('/dashboard', { replace: true });
         }, 100);
       } else {
-        setError('Invalid username or password');
+        setError(message || 'Invalid username or password');
       }
     } catch (err) {
-      setError('An unexpected error occurred. Please try again.');
+      const fallbackMessage =
+        err instanceof Error
+          ? err.message || 'An unexpected error occurred. Please try again.'
+          : 'An unexpected error occurred. Please try again.';
+      setError(fallbackMessage);
       console.error('Login error:', err);
     } finally {
       setIsLoading(false);
@@ -109,6 +113,7 @@ const Login: React.FC = () => {
                     color: 'var(--color-text)'
                   }}
                   placeholder="Enter your username"
+                  autoComplete="username"
                 />
               </div>
             </div>
@@ -134,6 +139,7 @@ const Login: React.FC = () => {
                     color: 'var(--color-text)'
                   }}
                   placeholder="Enter your password"
+                  autoComplete="current-password"
                 />
                 <button
                   type="button"
@@ -146,11 +152,11 @@ const Login: React.FC = () => {
               </div>
             </div>
 
-            {error && (
+            {(error || authError) && (
               <div className="p-4 rounded-xl border-l-4 flex items-start gap-3" style={{ backgroundColor: 'rgba(239, 68, 68, 0.05)', borderColor: 'var(--color-error)' }}>
                 <AlertCircle size={20} style={{ color: 'var(--color-error)', flexShrink: 0 }} className="mt-0.5" />
                 <p className="text-sm font-medium" style={{ color: 'var(--color-error)' }}>
-                  {error}
+                  {error || authError}
                 </p>
               </div>
             )}

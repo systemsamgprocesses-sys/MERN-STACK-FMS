@@ -50,7 +50,7 @@ interface User {
 
 interface AuthContextType {
   user: User | null;
-  login: (username: string, password: string) => Promise<boolean>;
+  login: (username: string, password: string) => Promise<{ success: boolean; message?: string }>;
   logout: () => void;
   isLoading: boolean;
   error: string | null;
@@ -130,7 +130,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
   }, []);
 
-  const login = async (username: string, password: string): Promise<boolean> => {
+  const login = async (username: string, password: string): Promise<{ success: boolean; message?: string }> => {
     try {
       setError(null);
       setIsLoading(true);
@@ -147,15 +147,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         localStorage.setItem('token', response.data.token);
         // Set default authorization header for all axios requests
         axios.defaults.headers.common['Authorization'] = `Bearer ${response.data.token}`;
-        return true;
+        return { success: true };
       }
-      setError('Login failed: No user data or token returned');
-      return false;
+      const message = 'Login failed: No user data or token returned';
+      setError(message);
+      return { success: false, message };
     } catch (error: any) {
       const errorMessage = error.response?.data?.message || error.message || 'Login failed';
       setError(errorMessage);
       console.error('Login error:', error);
-      return false;
+      return { success: false, message: errorMessage };
     } finally {
       setIsLoading(false);
     }

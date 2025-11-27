@@ -10,6 +10,7 @@ import TaskCompletionModal from '../components/TaskCompletionModal';
 import { useTaskSettings } from '../hooks/useTaskSettings';
 import { address } from '../../utils/ipAddress';
 import SearchableSelect from '../components/SearchableSelect'; // Import SearchableSelect
+import { formatDate } from '../utils/dateFormat';
 
 interface Attachment {
   filename: string;
@@ -400,22 +401,14 @@ const PendingRecurringTasks: React.FC = () => {
                 <div className="flex justify-between items-center py-2 px-3 bg-[var(--color-accent)]/10 rounded-lg">
                   <span className="text-[var(--color-textSecondary)]">Due date:</span>
                   <span className="font-medium text-[var(--color-accent)]">
-                    {new Date(task.dueDate).toLocaleDateString('en-GB', {
-                      day: '2-digit',
-                      month: 'numeric',
-                      year: 'numeric',
-                    })}
+                    {formatDate(task.dueDate)}
                   </span>
                 </div>
                 {task.lastCompletedDate && (
                   <div className="flex justify-between items-center py-2 px-3 bg-[var(--color-success)]/10 rounded-lg">
                     <span className="text-[var(--color-textSecondary)]">Last completed:</span>
                     <span className="font-medium text-[var(--color-success)]">
-                      {new Date(task.dueDate).toLocaleDateString('en-GB', {
-                      day: '2-digit',
-                      month: 'numeric',
-                      year: 'numeric',
-                    })}
+                      {formatDate(task.dueDate)}
                     </span>
                   </div>
                 )}
@@ -547,11 +540,7 @@ const PendingRecurringTasks: React.FC = () => {
                     })}</div>
                     {task.lastCompletedDate && (
                       <div className="text-xs text-[var(--color-textSecondary)]">
-                        Last: {new Date(task.dueDate).toLocaleDateString('en-GB', {
-                      day: '2-digit',
-                      month: 'numeric',
-                      year: 'numeric',
-                    })}
+                        Last: {formatDate(task.lastCompletedDate)}
                       </div>
                     )}
                   </td>

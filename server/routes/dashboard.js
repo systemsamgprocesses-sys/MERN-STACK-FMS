@@ -2,12 +2,41 @@ import express from 'express';
 import Task from '../models/Task.js';
 import User from '../models/User.js';
 import mongoose from 'mongoose';
+import { authenticateToken } from '../middleware/auth.js';
 // Import Project model for FMS metrics
 import Project from '../models/Project.js';
 // Import ScoreLog model
 import ScoreLog from '../models/ScoreLog.js';
 
 const router = express.Router();
+
+// Require authentication for every dashboard endpoint
+router.use(authenticateToken);
+
+const ADMIN_ROLES = new Set(['admin', 'superadmin']);
+
+const isAdminUser = (user) => user && ADMIN_ROLES.has(user.role);
+
+router.use((req, res, next) => {
+  const isAdmin = isAdminUser(req.user);
+  req.isAdminUser = isAdmin;
+  req.query.isAdmin = isAdmin ? 'true' : 'false';
+
+  if (!isAdmin) {
+    const requesterId = req.user._id.toString();
+
+    if (req.query.userId && req.query.userId !== requesterId) {
+      return res.status(403).json({ message: 'Access denied for requested user scope' });
+    }
+    req.query.userId = requesterId;
+
+    if (req.query.assignedById && req.query.assignedById !== requesterId) {
+      return res.status(403).json({ message: 'Access denied for requested assignment scope' });
+    }
+  }
+
+  next();
+});
 
 // ============================================
 // IN-MEMORY CACHE for Dashboard Analytics

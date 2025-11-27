@@ -9,6 +9,8 @@ interface User {
   username: string;
   email: string;
   role: string;
+  phoneNumber?: string;
+  profilePicture?: string;
   permissions: {
     // Task Permissions
     canViewTasks: boolean;
@@ -52,6 +54,7 @@ interface AuthContextType {
   logout: () => void;
   isLoading: boolean;
   error: string | null;
+  updateUser: (updates: Partial<User>) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -166,8 +169,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     delete axios.defaults.headers.common['Authorization'];
   };
 
+  const updateUser = (updates: Partial<User>) => {
+    setUser((prev) => {
+      if (!prev) {
+        return prev;
+      }
+      const merged = { ...prev, ...updates } as User;
+      localStorage.setItem('user', JSON.stringify(merged));
+      return merged;
+    });
+  };
+
   return (
-    <AuthContext.Provider value={{ user, login, logout, isLoading, error }}>
+    <AuthContext.Provider value={{ user, login, logout, isLoading, error, updateUser }}>
       {children}
     </AuthContext.Provider>
   );

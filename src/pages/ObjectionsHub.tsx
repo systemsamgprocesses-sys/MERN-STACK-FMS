@@ -3,6 +3,7 @@ import { useAuth } from '../contexts/AuthContext';
 import axios from 'axios';
 import { AlertCircle, Clock, CheckCircle, XCircle, Calendar } from 'lucide-react';
 import { address } from '../../utils/ipAddress';
+import { formatDate } from '../utils/dateFormat';
 
 interface Objection {
   type: string;
@@ -10,6 +11,7 @@ interface Objection {
   extraDaysRequested?: number;
   remarks: string;
   requestedAt: string;
+  requestedBy?: { username: string; email: string };
   status: string;
   approvalRemarks?: string;
   approvedBy?: { username: string; email: string };
@@ -25,6 +27,8 @@ interface MyObjection {
   projectId?: string;
   projectName?: string;
   taskIndex?: number;
+  assignedTo?: { username: string; email: string } | Array<{ username: string; email: string }>;
+  assignedBy?: { username: string; email: string };
 }
 
 const ObjectionsHub: React.FC = () => {
@@ -44,19 +48,21 @@ const ObjectionsHub: React.FC = () => {
       setLoading(true);
       if (!user?.id) return;
 
-      // Admin/SuperAdmin can see all objections
-      if (user?.role === 'admin' || user?.role === 'superadmin') {
+      // Admin/SuperAdmin/PC can see all objections with detailed information
+      if (user?.role === 'admin' || user?.role === 'superadmin' || user?.role === 'pc') {
         const token = localStorage.getItem('token');
         const response = await axios.get(`${address}/api/objections/all`, {
           headers: token ? { Authorization: `Bearer ${token}` } : undefined
         });
 
-        // Transform the data to match the expected format
+        // Transform the data to match the expected format with detailed information
         const regularObjections = (response.data.regularTasks || []).map((task: any) => ({
           taskId: task._id,
           taskTitle: task.title,
           taskDueDate: task.dueDate,
-          objections: task.objections
+          objections: task.objections,
+          assignedTo: task.assignedTo,
+          assignedBy: task.assignedBy
         }));
 
         const fmsObjections = (response.data.fmsTasks || []).flatMap((project: any) =>
@@ -68,7 +74,8 @@ const ObjectionsHub: React.FC = () => {
             isFMS: true,
             projectId: project._id,
             projectName: project.projectName,
-            taskIndex: task.taskIndex
+            taskIndex: task.taskIndex,
+            assignedTo: task.who
           }))
         );
 
@@ -144,11 +151,11 @@ const ObjectionsHub: React.FC = () => {
     <div className="min-h-screen bg-[--color-background] p-4">
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-[--color-text] mb-2">
-          {user?.role === 'admin' || user?.role === 'superadmin' ? 'All Objections' : 'My Objections'}
+          {user?.role === 'admin' || user?.role === 'superadmin' || user?.role === 'pc' ? 'All Objections' : 'My Objections'}
         </h1>
         <p className="text-sm text-[--color-textSecondary]">
-          {user?.role === 'admin' || user?.role === 'superadmin'
-            ? 'View all objections raised by all users'
+          {user?.role === 'admin' || user?.role === 'superadmin' || user?.role === 'pc'
+            ? 'View all objections raised by all users with detailed information'
             : 'View objections you have raised'}
         </p>
       </div>
@@ -170,12 +177,32 @@ const ObjectionsHub: React.FC = () => {
                   <div>
                     <h3 className="font-semibold text-[--color-text] mb-1">{item.taskTitle}</h3>
                     <p className="text-sm text-[--color-textSecondary]">
-                      Current Due Date: {new Date(item.taskDueDate).toLocaleDateString('en-GB')}
+                      Current Due Date: {formatDate(item.taskDueDate)}
                     </p>
-                    {item.isFMS && (
-                      <p className="text-sm text-[--color-textSecondary]">
-                        FMS Project: {item.projectName}
-                      </p>
+                    {item.isFMS ? (
+                      <>
+                        <p className="text-sm text-[--color-textSecondary]">
+                          FMS Project: {item.projectName}
+                        </p>
+                        {item.assignedTo && (
+                          <p className="text-sm text-[--color-textSecondary]">
+                            Assigned to: {Array.isArray(item.assignedTo) ? item.assignedTo.map((w: any) => w.username).join(', ') : 'N/A'}
+                          </p>
+                        )}
+                      </>
+                    ) : (
+                      <>
+                        {item.assignedTo && (
+                          <p className="text-sm text-[--color-textSecondary]">
+                            Assigned to: {item.assignedTo?.username || 'Unknown User'}
+                          </p>
+                        )}
+                        {item.assignedBy && (
+                          <p className="text-sm text-[--color-textSecondary]">
+                            Assigned by: {item.assignedBy?.username || 'Unknown User'}
+                          </p>
+                        )}
+                      </>
                     )}
                   </div>
                   <div className="flex items-center space-x-2">
@@ -194,7 +221,7 @@ const ObjectionsHub: React.FC = () => {
                       </p>
                       {objection.requestedDate && (
                         <p className="text-sm text-[--color-textSecondary] mb-1">
-                          Requested Date: {new Date(objection.requestedDate).toLocaleDateString('en-GB')}
+                          Requested Date: {formatDate(objection.requestedDate)}
                           {objection.extraDaysRequested && (
                             <span className="ml-2">({objection.extraDaysRequested} extra days)</span>
                           )}
@@ -205,17 +232,22 @@ const ObjectionsHub: React.FC = () => {
                       </p>
                     </div>
                     <div>
+                      {(user?.role === 'admin' || user?.role === 'superadmin' || user?.role === 'pc') && objection.requestedBy && (
+                        <p className="text-xs text-[--color-textSecondary] mb-1">
+                          Requested by: {objection.requestedBy?.username || 'Unknown User'}
+                        </p>
+                      )}
                       <p className="text-xs text-[--color-textSecondary] mb-1">
-                        Requested on: {new Date(objection.requestedAt).toLocaleDateString('en-GB')}
+                        Requested on: {formatDate(objection.requestedAt)}
                       </p>
                       {objection.approvedBy && (
                         <>
                           <p className="text-xs text-[--color-textSecondary] mb-1">
-                            {objection.status === 'approved' ? 'Approved' : 'Reviewed'} by: {objection.approvedBy.username}
+                            {objection.status === 'approved' ? 'Approved' : objection.status === 'rejected' ? 'Rejected' : 'Reviewed'} by: {objection.approvedBy.username}
                           </p>
                           {objection.approvedAt && (
                             <p className="text-xs text-[--color-textSecondary]">
-                              on: {new Date(objection.approvedAt).toLocaleDateString('en-GB')}
+                              on: {formatDate(objection.approvedAt)}
                             </p>
                           )}
                         </>

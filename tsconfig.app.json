@@ -20,5 +20,5 @@
     "noUnusedParameters": true,
     "noFallthroughCasesInSwitch": true
   },
-  "include": ["src", "utils/ipAddress.ts"]
+  "include": ["src", "utils/ipAddress.ts", "TASKFORMS.TSX", "src/utils/dateFormat.ts"]
 }

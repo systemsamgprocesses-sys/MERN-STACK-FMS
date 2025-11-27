@@ -49,6 +49,19 @@ const upload = multer({
   }
 });
 
+const FMS_ID_REGEX = /^FMS-\d+$/;
+const getNextFmsId = async () => {
+  const latestFms = await FMS.findOne({ fmsId: { $regex: FMS_ID_REGEX } })
+    .sort({ fmsId: -1 })
+    .select('fmsId')
+    .lean();
+
+  const latestNumber = latestFms?.fmsId ? parseInt(latestFms.fmsId.split('-')[1], 10) : 0;
+  const nextNumber = Number.isNaN(latestNumber) ? 1 : latestNumber + 1;
+
+  return `FMS-${nextNumber.toString().padStart(4, '0')}`;
+};
+
 // Create FMS Template
 router.post('/', upload.array('files', 10), async (req, res) => {
   try {
@@ -139,10 +152,6 @@ router.post('/', upload.array('files', 10), async (req, res) => {
       return step;
     });
 
-    // Generate unique FMS ID
-    const count = await FMS.countDocuments();
-    const fmsId = `FMS-${(count + 1).toString().padStart(4, '0')}`;
-
     // Process file uploads
     if (req.files && req.files.length > 0) {
       const fileMap = {};
@@ -166,8 +175,7 @@ router.post('/', upload.array('files', 10), async (req, res) => {
       });
     }
 
-    const fms = new FMS({
-      fmsId,
+    const basePayload = {
       fmsName,
       category: category || 'General',
       steps: parsedSteps,
@@ -175,14 +183,38 @@ router.post('/', upload.array('files', 10), async (req, res) => {
       status: 'Active',
       frequency: frequency || 'one-time',
       frequencySettings: parsedFrequencySettings
-    });
+    };
 
-    await fms.save();
+    const maxAttempts = 5;
+    for (let attempt = 0; attempt < maxAttempts; attempt++) {
+      const fmsId = await getNextFmsId();
 
-    res.json({ success: true, message: 'FMS template created successfully', fmsId });
+      try {
+        const fms = new FMS({
+          ...basePayload,
+          fmsId
+        });
+
+        await fms.save();
+
+        return res.json({ success: true, message: 'FMS template created successfully', fmsId });
+      } catch (saveError) {
+        if (saveError?.code === 11000 && saveError?.keyPattern?.fmsId && attempt < maxAttempts - 1) {
+          // Collision detected, retry with a freshly generated ID
+          continue;
+        }
+        throw saveError;
+      }
+    }
+
+    throw new Error('Unable to allocate unique FMS ID. Please try again.');
   } catch (error) {
     console.error('Create FMS error:', error);
-    res.status(500).json({ success: false, message: 'Server error', error: error.message });
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Server error',
+      error: error.message
+    });
   }
 });
 

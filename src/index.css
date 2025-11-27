@@ -39,6 +39,31 @@ h1, h2, h3, h4, h5, h6 {
   --color-textSecondary: #cbd5e1;
 }
 
+/* Modern Scrollbar Styling */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+/* Firefox scrollbar */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #cbd5e1 transparent;
+}
+
 /* Modern Spinner Animation */
 @keyframes modernSpin {
   0% {
@@ -215,6 +240,16 @@ h1, h2, h3, h4, h5, h6 {
                 linear-gradient(135deg, var(--color-primary), var(--color-accent)) border-box;
     border: 2px solid transparent;
   }
+
+  /* Smooth scroll */
+  .smooth-scroll {
+    scroll-behavior: smooth;
+  }
+
+  /* Text gradient */
+  .text-gradient {
+    @apply bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent;
+  }
 }
 
 /* Print Styles */
@@ -369,4 +404,3 @@ h1, h2, h3, h4, h5, h6 {
   font-weight: 500 !important;
   line-height: 1.4 !important;
 }
-

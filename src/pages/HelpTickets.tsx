@@ -5,6 +5,7 @@ import { HelpCircle, Plus, MessageSquare } from 'lucide-react';
 import axios from 'axios';
 import { address } from '../../utils/ipAddress';
 import { useAuth } from '../contexts/AuthContext';
+import { formatDate, formatDateTime } from '../utils/dateFormat';
 
 interface HelpTicket {
   _id: string;
@@ -180,7 +181,7 @@ const HelpTickets: React.FC = () => {
                     </div>
                   </div>
                   <span className="text-sm text-[--color-textSecondary]">
-                    {new Date(ticket.createdAt).toLocaleDateString()}
+                    {formatDate(ticket.createdAt)}
                   </span>
                 </div>
 
@@ -195,7 +196,7 @@ const HelpTickets: React.FC = () => {
                         <div key={idx} className="bg-[--color-background] p-3 rounded-lg">
                           <p className="text-sm text-[--color-text]">{remark.remark}</p>
                           <p className="text-xs text-[--color-textSecondary] mt-1">
-                            by {remark.by.username} • {new Date(remark.at).toLocaleString()}
+                            by {remark.by.username} • {formatDateTime(remark.at)}
                           </p>
                         </div>
                       ))}

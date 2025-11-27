@@ -20,6 +20,10 @@ const userSchema = new mongoose.Schema({
     sparse: true,
     trim: true
   },
+  profilePicture: {
+    type: String,
+    default: ''
+  },
   password: {
     type: String,
     required: true

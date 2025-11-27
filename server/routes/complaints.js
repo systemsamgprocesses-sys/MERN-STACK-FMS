@@ -4,6 +4,7 @@ import multer from 'multer';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import Complaint from '../models/Complaint.js';
+import { authenticateToken, requireAdmin } from '../middleware/auth.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -36,33 +37,6 @@ const upload = multer({
     }
   }
 });
-
-// Middleware to verify authentication
-const authenticateToken = (req, res, next) => {
-  const authHeader = req.headers['authorization'];
-  const token = authHeader && authHeader.split(' ')[1];
-
-  if (!token) {
-    return res.status(401).json({ message: 'Access token required' });
-  }
-
-  try {
-    // Simple token verification - in production, use proper JWT verification
-    const userData = JSON.parse(Buffer.from(token.split('.')[1], 'base64').toString());
-    req.user = userData;
-    next();
-  } catch (error) {
-    return res.status(403).json({ message: 'Invalid token' });
-  }
-};
-
-// Middleware to verify admin access
-const requireAdmin = (req, res, next) => {
-  if (!req.user || !['admin', 'superadmin'].includes(req.user.role)) {
-    return res.status(403).json({ message: 'Admin access required' });
-  }
-  next();
-};
 
 // GET /api/complaints - Get user's complaints with optional scope
 router.get('/', authenticateToken, async (req, res) => {

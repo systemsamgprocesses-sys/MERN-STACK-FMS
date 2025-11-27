@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { 
-  CheckSquare, 
-  Calendar as CalendarIcon, 
-  Clock, 
-  CheckCircle2, 
+import {
+  CheckSquare,
+  Calendar as CalendarIcon,
+  Clock,
+  CheckCircle2,
   AlertCircle,
   ListTodo,
   Filter
@@ -30,7 +30,7 @@ interface ChecklistOccurrence {
 const PendingChecklists: React.FC = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
-  
+
   const [pendingChecklists, setPendingChecklists] = useState<ChecklistOccurrence[]>([]);
   const [completedChecklists, setCompletedChecklists] = useState<ChecklistOccurrence[]>([]);
   const [loading, setLoading] = useState(false);
@@ -46,26 +46,32 @@ const PendingChecklists: React.FC = () => {
 
   const fetchChecklists = async () => {
     if (!user) return;
-    
+
     try {
       setLoading(true);
       const token = localStorage.getItem('token');
+      const isPC = user.role === 'pc';
+
+      // PC role can see all checklists, others only see their assigned ones
+      const params: any = { status: 'pending' };
+      if (!isPC) {
+        params.assignedTo = user.id;
+      }
 
       // Fetch pending checklists
       const pendingResponse = await axios.get(`${address}/api/checklist-occurrences`, {
-        params: {
-          assignedTo: user.id,
-          status: 'pending'
-        },
+        params,
         headers: { Authorization: `Bearer ${token}` }
       });
 
       // Fetch completed checklists
+      const completedParams: any = { status: 'completed' };
+      if (!isPC) {
+        completedParams.assignedTo = user.id;
+      }
+
       const completedResponse = await axios.get(`${address}/api/checklist-occurrences`, {
-        params: {
-          assignedTo: user.id,
-          status: 'completed'
-        },
+        params: completedParams,
         headers: { Authorization: `Bearer ${token}` }
       });
 
@@ -90,20 +96,27 @@ const PendingChecklists: React.FC = () => {
 
   const getDisplayChecklists = () => {
     let checklists: ChecklistOccurrence[] = [];
-    
+
     if (activeTab === 'today') {
       const today = new Date();
       today.setHours(0, 0, 0, 0);
       const tomorrow = new Date(today);
       tomorrow.setDate(tomorrow.getDate() + 1);
-      
+
       checklists = [...pendingChecklists, ...completedChecklists].filter(c => {
         const dueDate = new Date(c.dueDate);
         dueDate.setHours(0, 0, 0, 0);
         return dueDate.getTime() === today.getTime();
       });
     } else if (activeTab === 'pending') {
-      checklists = pendingChecklists;
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      checklists = pendingChecklists.filter(c => {
+        if (!c.dueDate) return false;
+        const dueDate = new Date(c.dueDate);
+        dueDate.setHours(0, 0, 0, 0);
+        return dueDate <= today;
+      });
     } else if (activeTab === 'completed') {
       checklists = completedChecklists;
     } else {
@@ -116,13 +129,13 @@ const PendingChecklists: React.FC = () => {
     }
 
     // Sort by due date
-    return checklists.sort((a, b) => 
+    return checklists.sort((a, b) =>
       new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime()
     );
   };
 
   const displayChecklists = getDisplayChecklists();
-  
+
   // Calculate today's checklists count
   const today = new Date();
   today.setHours(0, 0, 0, 0);
@@ -180,7 +193,7 @@ const PendingChecklists: React.FC = () => {
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-        <div 
+        <div
           className="p-6 rounded-lg shadow-md cursor-pointer hover:shadow-lg transition-shadow"
           style={{ backgroundColor: 'var(--color-surface)' }}
           onClick={() => setActiveTab('today')}
@@ -201,7 +214,7 @@ const PendingChecklists: React.FC = () => {
           </div>
         </div>
 
-        <div 
+        <div
           className="p-6 rounded-lg shadow-md cursor-pointer hover:shadow-lg transition-shadow"
           style={{ backgroundColor: 'var(--color-surface)' }}
           onClick={() => setActiveTab('pending')}
@@ -219,7 +232,7 @@ const PendingChecklists: React.FC = () => {
           </div>
         </div>
 
-        <div 
+        <div
           className="p-6 rounded-lg shadow-md cursor-pointer hover:shadow-lg transition-shadow"
           style={{ backgroundColor: 'var(--color-surface)' }}
           onClick={() => setActiveTab('completed')}
@@ -237,7 +250,7 @@ const PendingChecklists: React.FC = () => {
           </div>
         </div>
 
-        <div 
+        <div
           className="p-6 rounded-lg shadow-md cursor-pointer hover:shadow-lg transition-shadow"
           style={{ backgroundColor: 'var(--color-surface)' }}
           onClick={() => setActiveTab('all')}
@@ -263,9 +276,8 @@ const PendingChecklists: React.FC = () => {
           <div className="flex gap-2 flex-wrap">
             <button
               onClick={() => setActiveTab('today')}
-              className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-                activeTab === 'today' ? 'shadow-md' : ''
-              }`}
+              className={`px-4 py-2 rounded-lg font-medium transition-colors ${activeTab === 'today' ? 'shadow-md' : ''
+                }`}
               style={{
                 backgroundColor: activeTab === 'today' ? 'var(--color-info)' : 'var(--color-background)',
                 color: activeTab === 'today' ? 'white' : 'var(--color-text)'
@@ -275,9 +287,8 @@ const PendingChecklists: React.FC = () => {
             </button>
             <button
               onClick={() => setActiveTab('pending')}
-              className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-                activeTab === 'pending' ? 'shadow-md' : ''
-              }`}
+              className={`px-4 py-2 rounded-lg font-medium transition-colors ${activeTab === 'pending' ? 'shadow-md' : ''
+                }`}
               style={{
                 backgroundColor: activeTab === 'pending' ? 'var(--color-warning)' : 'var(--color-background)',
                 color: activeTab === 'pending' ? 'white' : 'var(--color-text)'
@@ -287,9 +298,8 @@ const PendingChecklists: React.FC = () => {
             </button>
             <button
               onClick={() => setActiveTab('completed')}
-              className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-                activeTab === 'completed' ? 'shadow-md' : ''
-              }`}
+              className={`px-4 py-2 rounded-lg font-medium transition-colors ${activeTab === 'completed' ? 'shadow-md' : ''
+                }`}
               style={{
                 backgroundColor: activeTab === 'completed' ? 'var(--color-success)' : 'var(--color-background)',
                 color: activeTab === 'completed' ? 'white' : 'var(--color-text)'
@@ -299,9 +309,8 @@ const PendingChecklists: React.FC = () => {
             </button>
             <button
               onClick={() => setActiveTab('all')}
-              className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-                activeTab === 'all' ? 'shadow-md' : ''
-              }`}
+              className={`px-4 py-2 rounded-lg font-medium transition-colors ${activeTab === 'all' ? 'shadow-md' : ''
+                }`}
               style={{
                 backgroundColor: activeTab === 'all' ? 'var(--color-primary)' : 'var(--color-background)',
                 color: activeTab === 'all' ? 'white' : 'var(--color-text)'
@@ -358,7 +367,7 @@ const PendingChecklists: React.FC = () => {
         <div className="space-y-4">
           {displayChecklists.map(checklist => {
             const overdue = checklist.status === 'pending' && isOverdue(checklist.dueDate);
-            
+
             return (
               <div
                 key={checklist._id}
@@ -372,24 +381,24 @@ const PendingChecklists: React.FC = () => {
                       <h3 className="text-xl font-semibold" style={{ color: 'var(--color-text)' }}>
                         {checklist.templateName}
                       </h3>
-                      <span 
+                      <span
                         className="px-3 py-1 rounded-full text-xs font-medium"
                         style={{
-                          backgroundColor: overdue 
-                            ? 'rgba(239, 68, 68, 0.1)' 
+                          backgroundColor: overdue
+                            ? 'rgba(239, 68, 68, 0.1)'
                             : checklist.status === 'completed'
-                            ? 'rgba(16, 185, 129, 0.1)'
-                            : 'rgba(245, 158, 11, 0.1)',
+                              ? 'rgba(16, 185, 129, 0.1)'
+                              : 'rgba(245, 158, 11, 0.1)',
                           color: overdue
                             ? 'var(--color-error)'
                             : checklist.status === 'completed'
-                            ? 'var(--color-success)'
-                            : 'var(--color-warning)'
+                              ? 'var(--color-success)'
+                              : 'var(--color-warning)'
                         }}
                       >
                         {overdue ? 'OVERDUE' : checklist.status.toUpperCase()}
                       </span>
-                      <span 
+                      <span
                         className="px-2 py-1 rounded text-xs"
                         style={{
                           backgroundColor: 'var(--color-background)',
@@ -431,8 +440,8 @@ const PendingChecklists: React.FC = () => {
                             backgroundColor: checklist.status === 'completed'
                               ? 'var(--color-success)'
                               : overdue
-                              ? 'var(--color-error)'
-                              : 'var(--color-primary)'
+                                ? 'var(--color-error)'
+                                : 'var(--color-primary)'
                           }}
                         />
                       </div>

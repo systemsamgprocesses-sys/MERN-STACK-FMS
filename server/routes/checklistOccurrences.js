@@ -41,7 +41,7 @@ router.get('/calendar', authenticateToken, async (req, res) => {
     const { year, month, userId } = req.query;
     const requestingUser = req.user;
     const requestingUserId = requestingUser?._id?.toString();
-    const isAdmin = ['admin', 'superadmin'].includes(requestingUser?.role);
+    const isAdmin = ['admin', 'superadmin', 'pc'].includes(requestingUser?.role);
 
     if (!year || !month) {
       return res.status(400).json({
@@ -283,7 +283,7 @@ router.get('/stats/dashboard', authenticateToken, async (req, res) => {
     const { userId } = req.query;
     const requestingUser = req.user;
     const requestingUserId = requestingUser?._id?.toString();
-    const isAdmin = ['admin', 'superadmin'].includes(requestingUser?.role);
+    const isAdmin = ['admin', 'superadmin', 'pc'].includes(requestingUser?.role);
     const requestedUserId = userId ? userId.toString() : undefined;
 
     if (!isAdmin && !requestedUserId) {

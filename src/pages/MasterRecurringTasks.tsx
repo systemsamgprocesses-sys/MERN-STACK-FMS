@@ -8,6 +8,7 @@ import PriorityBadge from '../components/PriorityBadge';
 import TaskTypeBadge from '../components/TaskTypeBadge';
 import { address } from '../../utils/ipAddress';
 import { toast } from 'react-toastify';
+import { formatDate } from '../utils/dateFormat';
 
 interface Attachment {
   filename: string;
@@ -627,15 +628,7 @@ const MasterRecurringTasks: React.FC = () => {
                 <div className="flex justify-between">
                   <span>Date range:</span>
                   <span className="font-medium">
-                    {new Date(masterTask.tasks[0].dueDate).toLocaleDateString('en-GB', {
-                      day: '2-digit',
-                      month: 'numeric',
-                      year: 'numeric',
-                    })} - {new Date(masterTask.tasks[masterTask.tasks.length - 1].dueDate).toLocaleDateString('en-GB', {
-                      day: '2-digit',
-                      month: 'numeric',
-                      year: 'numeric',
-                    })}
+                    {formatDate(masterTask.tasks[0].dueDate)} - {formatDate(masterTask.tasks[masterTask.tasks.length - 1].dueDate)}
                   </span>
                 </div>
                 {masterTask.parentTaskInfo && (
@@ -752,18 +745,10 @@ const MasterRecurringTasks: React.FC = () => {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="text-sm text-[--color-text]">
-                      {new Date(masterTask.tasks[0].dueDate).toLocaleDateString('en-GB', {
-                        day: '2-digit',
-                        month: 'numeric',
-                        year: 'numeric',
-                      })}
+                      {formatDate(masterTask.tasks[0].dueDate)}
                     </div>
                     <div className="text-xs text-[--color-textSecondary]">
-                      to {new Date(masterTask.tasks[masterTask.tasks.length - 1].dueDate).toLocaleDateString('en-GB', {
-                        day: '2-digit',
-                        month: 'numeric',
-                        year: 'numeric',
-                      })}
+                      to {formatDate(masterTask.tasks[masterTask.tasks.length - 1].dueDate)}
                     </div>
                   </td>
                   {hasMasterTaskActions && (
@@ -872,11 +857,7 @@ const MasterRecurringTasks: React.FC = () => {
               <div className="flex justify-between">
                 <span>Due date:</span>
                 <span className="font-medium">
-                  {new Date(task.dueDate).toLocaleDateString('en-GB', {
-                    day: '2-digit',
-                    month: 'numeric',
-                    year: 'numeric',
-                  })}
+                  {formatDate(task.dueDate)}
                 </span>
               </div>
               {task.completedAt && (
@@ -894,11 +875,7 @@ const MasterRecurringTasks: React.FC = () => {
                     )}
                   </span>
                   <span className="font-medium">
-                    {new Date(task.completedAt).toLocaleDateString('en-GB', {
-                      day: '2-digit',
-                      month: 'numeric',
-                      year: 'numeric',
-                    })}
+                    {formatDate(task.completedAt)}
                   </span>
                 </div>
               )}
@@ -920,11 +897,7 @@ const MasterRecurringTasks: React.FC = () => {
                 <div className="flex justify-between">
                   <span>Last completed:</span>
                   <span className="font-medium">
-                    {new Date(task.lastCompletedDate).toLocaleDateString('en-GB', {
-                      day: '2-digit',
-                      month: 'numeric',
-                      year: 'numeric',
-                    })}
+                    {formatDate(task.lastCompletedDate)}
                   </span>
                 </div>
               )}
@@ -1035,29 +1008,17 @@ const MasterRecurringTasks: React.FC = () => {
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
                   <div className="text-sm text-[--color-text]">
-                    {new Date(task.dueDate).toLocaleDateString('en-GB', {
-                      day: '2-digit',
-                      month: 'numeric',
-                      year: 'numeric',
-                    })}
+                    {formatDate(task.dueDate)}
                   </div>
                   {task.lastCompletedDate && (
                     <div className="text-xs text-[--color-textSecondary]">
-                      Last: {new Date(task.lastCompletedDate).toLocaleDateString('en-GB', {
-                        day: '2-digit',
-                        month: 'numeric',
-                        year: 'numeric',
-                      })}
+                      Last: {formatDate(task.lastCompletedDate)}
                     </div>
                   )}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
                   <div className="text-sm flex items-center text-[--color-text]">
-                    {task.completedAt ? new Date(task.completedAt).toLocaleDateString('en-GB', {
-                      day: '2-digit',
-                      month: 'numeric',
-                      year: 'numeric',
-                    }) : ''}
+                    {task.completedAt ? formatDate(task.completedAt) : ''}
                     {task.completionRemarks && task.completedAt && (
                       <button
                         onClick={() => setShowRemarksModal(task)}
@@ -1501,11 +1462,7 @@ const MasterRecurringTasks: React.FC = () => {
                           </h4>
                           <div className="text-xs text-[--color-textSecondary] space-y-1">
                             <div>Size: {formatFileSize(attachment.size)}</div>
-                            <div>Uploaded: {new Date(attachment.uploadedAt).toLocaleDateString('en-GB', {
-                              day: '2-digit',
-                              month: 'numeric',
-                              year: 'numeric',
-                            })}</div>
+                            <div>Uploaded: {formatDate(attachment.uploadedAt)}</div>
                           </div>
                         </div>
 

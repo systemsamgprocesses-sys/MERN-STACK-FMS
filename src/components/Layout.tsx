@@ -11,7 +11,7 @@ const Layout: React.FC = () => {
       <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
       <div className="flex-1 flex flex-col overflow-hidden min-w-0">
         <Header onMenuClick={() => setSidebarOpen(true)} />
-        <main className="flex-1 overflow-x-hidden overflow-y-auto p-2 md:p-4 lg:p-6" style={{ backgroundColor: 'var(--color-surface)' }}>
+        <main className="flex-1 overflow-x-hidden overflow-y-auto p-1 md:p-2 lg:p-3" style={{ backgroundColor: 'var(--color-surface)' }}>
           <Outlet />
         </main>
       </div>

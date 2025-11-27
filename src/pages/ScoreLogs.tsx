@@ -4,6 +4,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { Award, Filter, User, Printer } from 'lucide-react';
 import axios from 'axios';
 import { address } from '../../utils/ipAddress';
+import { formatDate } from '../utils/dateFormat';
 
 const ScoreLogs: React.FC = () => {
   const { user } = useAuth();
@@ -124,11 +125,11 @@ const ScoreLogs: React.FC = () => {
                     </div>
                     <div>
                       <p className="text-[var(--color-textSecondary)]">Planned On</p>
-                      <p className="font-semibold text-[var(--color-text)]">{log.plannedDate ? new Date(log.plannedDate).toLocaleDateString() : 'N/A'}</p>
+                      <p className="font-semibold text-[var(--color-text)]">{log.plannedDate ? formatDate(log.plannedDate) : 'N/A'}</p>
                     </div>
                     <div>
                       <p className="text-[var(--color-textSecondary)]">Completed On</p>
-                      <p className="font-semibold text-[var(--color-text)]">{log.completedDate ? new Date(log.completedDate).toLocaleDateString() : 'N/A'}</p>
+                      <p className="font-semibold text-[var(--color-text)]">{log.completedDate ? formatDate(log.completedDate) : 'N/A'}</p>
                     </div>
                     <div>
                       <p className="text-[var(--color-textSecondary)]">Planned/Actual Days</p>

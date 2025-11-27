@@ -2,6 +2,7 @@ import express from 'express';
 import jwt from 'jsonwebtoken';
 import User from '../models/User.js';
 import { config } from '../config.js';
+import { authenticateToken } from '../middleware/auth.js';
 
 const router = express.Router();
 
@@ -57,6 +58,8 @@ router.post('/login', async (req, res) => {
       username: user.username,
       email: user.email,
       role: user.role,
+      phoneNumber: user.phoneNumber,
+      profilePicture: user.profilePicture,
       permissions: user.permissions
     };
 
@@ -74,9 +77,17 @@ router.post('/login', async (req, res) => {
 });
 
 // Get current user
-router.get('/me/:userId', async (req, res) => {
+router.get('/me/:userId', authenticateToken, async (req, res) => {
   try {
-    const user = await User.findById(req.params.userId).select('-password');
+    const { userId } = req.params;
+    const requester = req.user;
+
+    const canView = requester.role === 'superadmin' || requester._id.toString() === userId;
+    if (!canView) {
+      return res.status(403).json({ message: 'Access denied' });
+    }
+
+    const user = await User.findById(userId).select('-password');
     if (!user) {
       return res.status(404).json({ message: 'User not found' });
     }

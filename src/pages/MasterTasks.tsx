@@ -11,6 +11,7 @@ import { SuperAdminTaskEditModal } from '../components/SuperAdminTaskEditModal';
 import { address } from '../../utils/ipAddress';
 import { Task } from "../types/Task";
 import ConfirmDeleteModal from '../components/ConfirmDeleteModal';
+import { formatDate } from '../utils/dateFormat';
 
 interface Attachment {
   filename: string;
@@ -343,23 +344,11 @@ const MasterTasks: React.FC = () => {
 
   const getDisplayDateRange = (task: Task): string => {
     if (task.taskType === 'date-range' && task.dateRangeStart && task.dateRangeEnd) {
-      const startDate = new Date(task.dateRangeStart).toLocaleDateString('en-GB', {
-        day: '2-digit',
-        month: 'numeric',
-        year: 'numeric',
-      });
-      const endDate = new Date(task.dateRangeEnd).toLocaleDateString('en-GB', {
-        day: '2-digit',
-        month: 'numeric',
-        year: 'numeric',
-      });
+      const startDate = formatDate(task.dateRangeStart);
+      const endDate = formatDate(task.dateRangeEnd);
       return `${startDate} to ${endDate}`;
     }
-    return task.dueDate ? new Date(task.dueDate).toLocaleDateString('en-GB', {
-      day: '2-digit',
-      month: 'numeric',
-      year: 'numeric',
-    }) : 'N/A';
+    return task.dueDate ? formatDate(task.dueDate) : 'N/A';
   };
 
   const toggleDescriptionExpansion = (taskId: string) => {
@@ -556,11 +545,7 @@ const MasterTasks: React.FC = () => {
                       )}
                     </span>
                     <span className={`font-medium ${isDark ? 'text-purple-100' : 'text-purple-900'}`}>
-                      {new Date(task.completedAt).toLocaleDateString('en-GB', {
-                        day: '2-digit',
-                        month: 'numeric',
-                        year: 'numeric',
-                      })}
+                      {formatDate(task.completedAt)}
                     </span>
                   </div>
                 )}
@@ -764,11 +749,7 @@ const MasterTasks: React.FC = () => {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className={`text-sm flex items-center ${isDark ? 'text-gray-300' : 'text-gray-900'}`}>
-                      {task.completedAt ? new Date(task.completedAt).toLocaleDateString('en-GB', {
-                        day: '2-digit',
-                        month: 'numeric',
-                        year: 'numeric',
-                      }) : ''}
+                      {task.completedAt ? formatDate(task.completedAt) : ''}
                       {task.completionRemarks && task.completedAt && (
                         <button
                           onClick={() => setShowRemarksModal(task)}
@@ -1226,13 +1207,7 @@ const MasterTasks: React.FC = () => {
                             {revision.revisedBy?.username || 'Unknown User'}
                           </div>
                           <div className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
-                            {new Date(revision.revisedAt).toLocaleDateString('en-US', {
-                              year: 'numeric',
-                              month: 'short',
-                              day: 'numeric',
-                              hour: '2-digit',
-                              minute: '2-digit'
-                            })}
+                            {formatDate(revision.revisedAt)}
                           </div>
                         </div>
                       </div>
@@ -1245,11 +1220,7 @@ const MasterTasks: React.FC = () => {
                               Original Date
                             </div>
                             <div className={`font-semibold ${isDark ? 'text-red-100' : 'text-red-900'}`}>
-                              {new Date(revision.oldDate).toLocaleDateString('en-US', {
-                                year: 'numeric',
-                                month: 'short',
-                                day: 'numeric'
-                              })}
+                              {formatDate(revision.oldDate)}
                             </div>
                           </div>
 
@@ -1259,11 +1230,7 @@ const MasterTasks: React.FC = () => {
                               Revised Date
                             </div>
                             <div className={`font-semibold ${isDark ? 'text-green-100' : 'text-green-900'}`}>
-                              {new Date(revision.newDate).toLocaleDateString('en-US', {
-                                year: 'numeric',
-                                month: 'short',
-                                day: 'numeric'
-                              })}
+                              {formatDate(revision.newDate)}
                             </div>
                           </div>
                         </div>
@@ -1371,7 +1338,7 @@ const MasterTasks: React.FC = () => {
                           </h4>
                           <div className="text-xs text-[--color-textSecondary] space-y-1">
                             <div>Size: {formatFileSize(attachment.size)}</div>
-                            <div>Uploaded: {new Date(attachment.uploadedAt).toLocaleDateString()}</div>
+                            <div>Uploaded: {formatDate(attachment.uploadedAt)}</div>
                           </div>
                         </div>
 

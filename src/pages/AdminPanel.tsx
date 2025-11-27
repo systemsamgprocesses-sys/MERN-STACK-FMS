@@ -3,6 +3,7 @@ import { Settings, Users, Plus, Edit, Trash2, Save, X, ChevronDown, ChevronUp, U
 import axios from 'axios';
 import { address } from '../../utils/ipAddress';
 import CategoryManagement from './CategoryManagement';
+import { useAuth } from '../contexts/AuthContext';
 
 interface User {
   _id: string;
@@ -38,6 +39,8 @@ interface TaskCompletionSettings {
 }
 
 const AdminPanel: React.FC = () => {
+  const { user: currentUser } = useAuth();
+  const isSuperAdminUser = currentUser?.role === 'superadmin';
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -1137,6 +1140,7 @@ const AdminPanel: React.FC = () => {
                       <option value="manager">Manager</option>
                       <option value="admin">Admin</option>
                       <option value="pc">PC (Process Coordinator)</option>
+                        {isSuperAdminUser && <option value="superadmin">Super Admin</option>}
                     </select>
                   </div>
                 </div>
@@ -1148,7 +1152,8 @@ const AdminPanel: React.FC = () => {
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     {Object.entries(formData.permissions).map(([key, value]) => {
                       const isAllowed = isPermissionAllowedForRole(key, formData.role);
-                      const isDisabled = !isAllowed;
+                      const isDisabled = !isAllowed && !isSuperAdminUser;
+                      const showRestriction = !isAllowed && !isSuperAdminUser;
 
                       return (
                         <label
@@ -1158,7 +1163,7 @@ const AdminPanel: React.FC = () => {
                           <input
                             type="checkbox"
                             name={`permissions.${key}`}
-                            checked={value && isAllowed}
+                            checked={Boolean(isSuperAdminUser ? value : (value && isAllowed))}
                             onChange={handleInputChange}
                             disabled={isDisabled}
                             className="rounded"
@@ -1166,7 +1171,7 @@ const AdminPanel: React.FC = () => {
                           <span className="text-sm" style={{ color: 'var(--color-text)' }}>
                             {getPermissionDisplayName(key)}
                           </span>
-                          {isDisabled && (
+                          {showRestriction && (
                             <span className="text-xs text-gray-400 ml-2">
                               (Not available for {formData.role})
                             </span>
@@ -1307,6 +1312,7 @@ const AdminPanel: React.FC = () => {
                       <option value="manager">Manager</option>
                       <option value="admin">Admin</option>
                       <option value="pc">PC (Process Coordinator)</option>
+                        {isSuperAdminUser && <option value="superadmin">Super Admin</option>}
                     </select>
                   </div>
                 </div>
@@ -1318,7 +1324,8 @@ const AdminPanel: React.FC = () => {
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     {Object.entries(formData.permissions).map(([key, value]) => {
                       const isAllowed = isPermissionAllowedForRole(key, formData.role);
-                      const isDisabled = !isAllowed;
+                      const isDisabled = !isAllowed && !isSuperAdminUser;
+                      const showRestriction = !isAllowed && !isSuperAdminUser;
 
                       return (
                         <label
@@ -1328,7 +1335,7 @@ const AdminPanel: React.FC = () => {
                           <input
                             type="checkbox"
                             name={`permissions.${key}`}
-                            checked={value && isAllowed}
+                            checked={Boolean(isSuperAdminUser ? value : (value && isAllowed))}
                             onChange={handleInputChange}
                             disabled={isDisabled}
                             className="rounded"
@@ -1336,7 +1343,7 @@ const AdminPanel: React.FC = () => {
                           <span className="text-sm" style={{ color: 'var(--color-text)' }}>
                             {getPermissionDisplayName(key)}
                           </span>
-                          {isDisabled && (
+                          {showRestriction && (
                             <span className="text-xs text-gray-400 ml-2">
                               (Not available for {formData.role})
                             </span>

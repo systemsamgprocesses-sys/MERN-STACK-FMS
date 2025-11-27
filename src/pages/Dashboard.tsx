@@ -15,6 +15,7 @@ import axios from 'axios';
 import { format, startOfMonth, endOfMonth, subMonths } from 'date-fns';
 // import { availableThemes } from '../contexts/ThemeContext';
 import { address } from '../../utils/ipAddress';
+import { formatDate } from '../utils/dateFormat';
 
 // --- Interfaces (updated to include quarterly) ---
 interface DashboardData {
@@ -202,6 +203,13 @@ const Dashboard: React.FC = () => {
   const [loading, setLoading] = useState(!dashboardData || !taskCounts);
   const [selectedMonth] = useState(new Date());
   const [viewMode, setViewMode] = useState<'current' | 'all-time'>('all-time');
+  const avatarSrc = React.useMemo(() => {
+    if (!user?.profilePicture) return null;
+    if (user.profilePicture.startsWith('http')) return user.profilePicture;
+    const normalized = user.profilePicture.startsWith('/') ? user.profilePicture : `/${user.profilePicture}`;
+    return `${address}${normalized}`;
+  }, [user?.profilePicture]);
+  const avatarInitial = user?.username?.charAt(0).toUpperCase() || '?';
 
   // New states for team member selection
   const [selectedTeamMember, setSelectedTeamMember] = useState<string>('all');
@@ -275,14 +283,14 @@ const Dashboard: React.FC = () => {
 
     return (
       <ThemeCard
-        className={`p-3 sm:p-4 lg:p-5 rounded-xl transition-shadow duration-300 hover:shadow-xl ${isMain ? 'col-span-2' : ''}`}
+        className={`p-2 sm:p-3 lg:p-3 rounded-lg transition-shadow duration-300 hover:shadow-xl ${isMain ? 'col-span-2' : ''}`}
         variant="glass"
       >
         {/* Header Section */}
-        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 sm:gap-0 mb-3 sm:mb-4">
-          <div className="flex items-center gap-3 sm:gap-4">
+        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 sm:gap-0 mb-2 sm:mb-2">
+          <div className="flex items-center gap-2 sm:gap-3">
             <div
-              className="p-2 sm:p-3 rounded-xl sm:rounded-2xl ring-1 ring-white/20 shadow-md backdrop-blur-md"
+              className="p-1.5 sm:p-2 rounded-lg sm:rounded-xl ring-1 ring-white/20 shadow-md backdrop-blur-md"
               style={{
                 backgroundColor: `var(--color-primary)15`,
                 boxShadow: `0 6px 20px var(--color-primary)25`
@@ -290,16 +298,16 @@ const Dashboard: React.FC = () => {
             >
               <div
                 style={{ color: 'var(--color-primary)' }}
-                className="w-4 h-4 sm:w-5 sm:h-5 flex items-center justify-center"
+                className="w-3 h-3 sm:w-4 sm:h-4 flex items-center justify-center"
               >
                 {icon}
               </div>
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-xs sm:text-sm font-medium text-[var(--color-textSecondary)] mb-0.5">
+              <p className="text-[10px] sm:text-xs font-medium text-[var(--color-textSecondary)] mb-0.5">
                 {title}
               </p>
-              <p className="text-lg sm:text-xl lg:text-2xl font-bold text-[var(--color-text)] truncate">{value}</p>
+              <p className="text-base sm:text-lg lg:text-xl font-bold text-[var(--color-text)] truncate">{value}</p>
             </div>
           </div>
           <div className="w-full sm:w-auto"></div>
@@ -307,12 +315,12 @@ const Dashboard: React.FC = () => {
 
         {/* Subtitle */}
         {subtitle && (
-          <p className="text-xs sm:text-sm text-[var(--color-textSecondary)] mb-3 sm:mb-4">{subtitle}</p>
+          <p className="text-[10px] sm:text-xs text-[var(--color-textSecondary)] mb-2 sm:mb-2">{subtitle}</p>
         )}
 
         {/* Percentage Display */}
-        <div className="mb-3 sm:mb-4" style={{ display: 'block', opacity: 1, minHeight: '2rem' }}>
-          <div className="flex items-center justify-between mb-2">
+        <div className="mb-2 sm:mb-2" style={{ display: 'block', opacity: 1, minHeight: '1.5rem' }}>
+          <div className="flex items-center justify-between mb-1">
             <span className="text-xs font-semibold" style={{ color: 'var(--color-textSecondary, #6b7280)' }}>
               <div className="flex items-center space-x-1">
                 <Activity size={18} className="text-blue-500" />
@@ -336,7 +344,7 @@ const Dashboard: React.FC = () => {
 
         {/* Pending / Completed Breakdown */}
         {(pendingValue !== undefined || completedValue !== undefined) && (
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between text-xs sm:text-sm text-[var(--color-textSecondary)] mt-2 pt-3 border-t border-[var(--color-border)] gap-2 sm:gap-0">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between text-[10px] sm:text-xs text-[var(--color-textSecondary)] mt-1 pt-2 border-t border-[var(--color-border)] gap-1 sm:gap-0">
             {pendingValue !== undefined && (
               <div className="flex items-center">
                 <Clock size={12} className="mr-1" style={{ color: 'var(--color-warning)' }} />
@@ -382,7 +390,7 @@ const Dashboard: React.FC = () => {
   };
   // Team Member Selector Component
   const TeamMemberSelector = () => {
-    const [teamMembers, setTeamMembers] = useState<Array<{id: string, username: string}>>([]);
+    const [teamMembers, setTeamMembers] = useState<Array<{ id: string, username: string }>>([]);
 
     useEffect(() => {
       const fetchTeamMembers = async () => {
@@ -546,7 +554,7 @@ const Dashboard: React.FC = () => {
     try {
       const userId = selectedTeamMember === 'all' ? undefined : selectedTeamMember;
       const cacheKey = generateCacheKey('analytics', userId, startDate, endDate);
-      
+
       // Check cache first unless force refresh
       if (!forceRefresh) {
         const cachedData = getCachedData(cacheKey);
@@ -568,10 +576,10 @@ const Dashboard: React.FC = () => {
       }
 
       const response = await axios.get(`${address}/api/dashboard/analytics`, { params });
-      
+
       // Cache the response
       setCachedData(cacheKey, response.data);
-      
+
       return response.data;
     } catch (error) {
       console.error('Error fetching dashboard analytics:', error);
@@ -583,7 +591,7 @@ const Dashboard: React.FC = () => {
     try {
       const userId = selectedTeamMember === 'all' ? undefined : selectedTeamMember;
       const cacheKey = generateCacheKey('counts', userId, startDate, endDate);
-      
+
       // Check cache first unless force refresh
       if (!forceRefresh) {
         const cachedData = getCachedData(cacheKey);
@@ -608,10 +616,10 @@ const Dashboard: React.FC = () => {
       }
 
       const response = await axios.get(`${address}/api/dashboard/counts`, { params });
-      
+
       // Cache the response
       setCachedData(cacheKey, response.data);
-      
+
       return response.data;
     } catch (error) {
       console.error('Error fetching task counts:', error);
@@ -655,12 +663,12 @@ const Dashboard: React.FC = () => {
       if (!user?.id) return;
 
       const userId = selectedTeamMember === 'all' ? undefined : selectedTeamMember;
-      const monthKey = viewMode === 'current' 
-        ? `${selectedMonth.getFullYear()}-${selectedMonth.getMonth()}` 
+      const monthKey = viewMode === 'current'
+        ? `${selectedMonth.getFullYear()}-${selectedMonth.getMonth()}`
         : 'all-time';
 
       // Check if parameters actually changed
-      const paramsChanged = 
+      const paramsChanged =
         prevParamsRef.current.userId !== userId ||
         prevParamsRef.current.viewMode !== viewMode ||
         prevParamsRef.current.monthKey !== monthKey;
@@ -713,7 +721,7 @@ const Dashboard: React.FC = () => {
           // Since selectedTeamMember might be ID or username, we need to handle both
           // If it's an ID, we need to find the username from teamPerformance
           let memberUsername = selectedTeamMember;
-          
+
           // Check if selectedTeamMember is an ID (MongoDB ObjectId format) or username
           // If it looks like an ID (24 hex chars), we can't use it for member-trend API
           // The member-trend API expects username, not ID
@@ -902,27 +910,42 @@ const Dashboard: React.FC = () => {
   return (
     <div className="min-h-screen" style={{ backgroundColor: 'var(--color-background)' }}>
       {/* Main Content */}
-      <div className="px-4 sm:px-6 lg:px-8 py-12">
-        <div className="max-w-7xl mx-auto space-y-8">
+      <div className="px-4 sm:px-6 lg:px-8 py-4">
+        <div className="max-w-7xl mx-auto space-y-4">
           {/* Page Header */}
-          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-8 mb-8">
+          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 mb-4">
             {/* Welcome Section */}
-            <div>
-              <div className="flex items-center gap-4 mb-2">
-                <div className="p-3 rounded-2xl" style={{ backgroundColor: 'var(--color-primary)10' }}>
-                  <BarChart3 size={28} style={{ color: 'var(--color-primary)' }} />
+            <div className="w-full">
+              <div className="flex items-center gap-3 mb-2 flex-wrap">
+                <div className="relative">
+                  {avatarSrc ? (
+                    <img
+                      src={avatarSrc}
+                      alt="User avatar"
+                      className="w-12 h-12 rounded-xl object-cover border-2 border-[var(--color-surface)] shadow-lg"
+                    />
+                  ) : (
+                    <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white text-xl font-bold shadow-lg">
+                      {avatarInitial}
+                    </div>
+                  )}
                 </div>
-                <div className="flex-1">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h1 className="text-4xl font-bold tracking-tight" style={{ color: 'var(--color-text)' }}>Dashboard</h1>
-                      <p className="text-[var(--color-textSecondary)] text-sm mt-1">
-                        Welcome back, <span className="font-semibold">{user?.username}</span>!
-                        {(user?.role === 'admin' || user?.role === 'superadmin' || user?.role === 'manager') ? ' 👥 Team Overview' : ' 📊 Your Performance'}
-                      </p>
+                <div className="flex-1 min-w-[220px]">
+                  <div className="flex items-center justify-between gap-3 flex-wrap">
+                    <div className="flex items-center gap-2">
+                      <div className="p-2 rounded-xl" style={{ backgroundColor: 'var(--color-primary)10' }}>
+                        <BarChart3 size={20} style={{ color: 'var(--color-primary)' }} />
+                      </div>
+                      <div>
+                        <h1 className="text-2xl font-bold tracking-tight" style={{ color: 'var(--color-text)' }}>Dashboard</h1>
+                        <p className="text-[var(--color-textSecondary)] text-sm mt-1">
+                          Welcome back, <span className="font-semibold">{user?.username}</span>!
+                          {(user?.role === 'admin' || user?.role === 'superadmin' || user?.role === 'manager') ? ' 👥 Team Overview' : ' 📊 Your Performance'}
+                        </p>
+                      </div>
                     </div>
                     {/* Quick Action Button */}
-                    {(user?.role === 'admin' || user?.role === 'superadmin' || user?.role === 'manager') && (
+                    {(user?.role === 'admin' || user?.role === 'superadmin' || user?.role === 'manager' || user?.role === 'pc') && (
                       <button
                         onClick={() => navigate('/assign-task', { replace: true })}
                         className="flex items-center gap-2 px-4 py-2 bg-[var(--color-primary)] text-white rounded-xl font-semibold hover:shadow-lg transition-all duration-300 hover:scale-105"
@@ -942,11 +965,10 @@ const Dashboard: React.FC = () => {
               <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
                 <button
                   onClick={() => setViewMode('all-time')}
-                  className={`px-4 py-2.5 rounded-xl font-semibold transition-all duration-300 text-sm ${
-                    viewMode === 'all-time'
+                  className={`px-4 py-2.5 rounded-xl font-semibold transition-all duration-300 text-sm ${viewMode === 'all-time'
                       ? 'text-white shadow-lg'
                       : 'text-[var(--color-textSecondary)] hover:text-[var(--color-text)]'
-                  }`}
+                    }`}
                   style={{
                     backgroundColor: viewMode === 'all-time' ? 'var(--color-primary)' : 'transparent'
                   }}
@@ -959,26 +981,26 @@ const Dashboard: React.FC = () => {
 
           {/* Quick Stats Section - Updated with new metrics */}
           <div>
-            <div className="flex items-center justify-between mb-8">
+            <div className="flex items-center justify-between mb-4">
               <div>
-                <h2 className="text-3xl font-bold text-[var(--color-text)]">📊 Quick Stats</h2>
-                <p className="text-sm text-[var(--color-textSecondary)] mt-1">Overview of your tasks and performance</p>
+                <h2 className="text-2xl font-bold text-[var(--color-text)]">📊 Quick Stats</h2>
+                <p className="text-xs text-[var(--color-textSecondary)] mt-0.5">Overview of your tasks and performance</p>
               </div>
               {(user?.role === 'admin' || user?.role === 'superadmin' || user?.role === 'manager') && <TeamMemberSelector />}
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
               <div
                 onClick={() => navigate('/master-tasks', { replace: true })}
                 className="group cursor-pointer"
               >
-                <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-blue-500 to-blue-600 dark:from-blue-950 dark:to-blue-900 p-2 border border-blue-300 dark:border-blue-800 hover:shadow-xl transition-all duration-300 hover:-translate-y-1 min-h-[140px]">
-                  <div className="flex items-start justify-between mb-1">
-                    <div className="p-1.5 rounded-lg bg-white/20">
-                      <CheckSquare size={18} className="text-white" />
+                <div className="relative overflow-hidden rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 dark:from-blue-950 dark:to-blue-900 p-1.5 border border-blue-300 dark:border-blue-800 hover:shadow-xl transition-all duration-300 hover:-translate-y-1 min-h-[100px]">
+                  <div className="flex items-start justify-between mb-0.5">
+                    <div className="p-1 rounded-lg bg-white/20">
+                      <CheckSquare size={16} className="text-white" />
                     </div>
                   </div>
-                  <p className="text-white/80 text-xs font-medium mb-0.5">Total Tasks</p>
-                  <p className="text-xl font-bold text-white">{displayData?.totalTasks || 0}</p>
+                  <p className="text-white/80 text-[10px] font-medium mb-0.5">Total Tasks</p>
+                  <p className="text-lg font-bold text-white">{displayData?.totalTasks || 0}</p>
                   <p className="text-xs text-white/70 mt-0.5 group-hover:text-white transition-colors">Click to view all →</p>
                 </div>
               </div>
@@ -987,14 +1009,14 @@ const Dashboard: React.FC = () => {
                 onClick={() => navigate('/pending-tasks', { replace: true })}
                 className="group cursor-pointer"
               >
-                <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-yellow-500 to-yellow-600 dark:from-yellow-950 dark:to-yellow-900 p-2 border border-yellow-300 dark:border-yellow-800 hover:shadow-xl transition-all duration-300 hover:-translate-y-1 min-h-[140px]">
-                  <div className="flex items-start justify-between mb-1">
-                    <div className="p-1.5 rounded-lg bg-white/20">
-                      <Clock size={18} className="text-white" />
+                <div className="relative overflow-hidden rounded-xl bg-gradient-to-br from-yellow-500 to-yellow-600 dark:from-yellow-950 dark:to-yellow-900 p-1.5 border border-yellow-300 dark:border-yellow-800 hover:shadow-xl transition-all duration-300 hover:-translate-y-1 min-h-[100px]">
+                  <div className="flex items-start justify-between mb-0.5">
+                    <div className="p-1 rounded-lg bg-white/20">
+                      <Clock size={16} className="text-white" />
                     </div>
                   </div>
-                  <p className="text-white/80 text-xs font-medium mb-0.5">Pending (≤ Today)</p>
-                  <p className="text-xl font-bold text-white">{displayData?.pendingTasks || 0}</p>
+                  <p className="text-white/80 text-[10px] font-medium mb-0.5">Pending (≤ Today)</p>
+                  <p className="text-lg font-bold text-white">{displayData?.pendingTasks || 0}</p>
                   <div className="w-full h-1 bg-white/30 rounded-full mt-1 overflow-hidden">
                     <div
                       className="h-full bg-white transition-all duration-500"
@@ -1009,14 +1031,14 @@ const Dashboard: React.FC = () => {
                 onClick={() => navigate('/master-tasks?status=completed', { replace: true })}
                 className="group cursor-pointer"
               >
-                <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-green-500 to-green-600 dark:from-green-950 dark:to-green-900 p-2 border border-green-300 dark:border-green-800 hover:shadow-xl transition-all duration-300 hover:-translate-y-1 min-h-[140px]">
-                  <div className="flex items-start justify-between mb-1">
-                    <div className="p-1.5 rounded-lg bg-white/20">
-                      <CheckCircle size={18} className="text-white" />
+                <div className="relative overflow-hidden rounded-xl bg-gradient-to-br from-green-500 to-green-600 dark:from-green-950 dark:to-green-900 p-1.5 border border-green-300 dark:border-green-800 hover:shadow-xl transition-all duration-300 hover:-translate-y-1 min-h-[100px]">
+                  <div className="flex items-start justify-between mb-0.5">
+                    <div className="p-1 rounded-lg bg-white/20">
+                      <CheckCircle size={16} className="text-white" />
                     </div>
                   </div>
-                  <p className="text-white/80 text-xs font-medium mb-0.5">Completed</p>
-                  <p className="text-xl font-bold text-white">{displayData?.completedTasks || 0}</p>
+                  <p className="text-white/80 text-[10px] font-medium mb-0.5">Completed</p>
+                  <p className="text-lg font-bold text-white">{displayData?.completedTasks || 0}</p>
                   <div className="w-full h-1 bg-white/30 rounded-full mt-1 overflow-hidden">
                     <div
                       className="h-full bg-white transition-all duration-500"
@@ -1031,14 +1053,14 @@ const Dashboard: React.FC = () => {
                 onClick={() => navigate('/pending-tasks', { replace: true })}
                 className="group cursor-pointer"
               >
-                <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-red-500 to-red-600 dark:from-red-950 dark:to-red-900 p-2 border border-red-300 dark:border-red-800 hover:shadow-xl transition-all duration-300 hover:-translate-y-1 min-h-[140px]">
-                  <div className="flex items-start justify-between mb-1">
-                    <div className="p-1.5 rounded-lg bg-white/20">
-                      <AlertTriangle size={18} className="text-white" />
+                <div className="relative overflow-hidden rounded-xl bg-gradient-to-br from-red-500 to-red-600 dark:from-red-950 dark:to-red-900 p-1.5 border border-red-300 dark:border-red-800 hover:shadow-xl transition-all duration-300 hover:-translate-y-1 min-h-[100px]">
+                  <div className="flex items-start justify-between mb-0.5">
+                    <div className="p-1 rounded-lg bg-white/20">
+                      <AlertTriangle size={16} className="text-white" />
                     </div>
                   </div>
-                  <p className="text-white/80 text-xs font-medium mb-0.5">Overdue (&lt; Today)</p>
-                  <p className="text-xl font-bold text-white">{displayData?.overdueTasks || 0}</p>
+                  <p className="text-white/80 text-[10px] font-medium mb-0.5">Overdue (&lt; Today)</p>
+                  <p className="text-lg font-bold text-white">{displayData?.overdueTasks || 0}</p>
                   <p className="text-xs text-white/80 font-medium mt-0.5">⚠️ {displayData?.overduePercentage?.toFixed(1)}% of total</p>
                   <p className="text-xs text-white/70 mt-0.5 group-hover:text-white transition-colors">Click to view all →</p>
                 </div>
@@ -1046,68 +1068,68 @@ const Dashboard: React.FC = () => {
             </div>
 
             {/* Additional Quick Stats Row */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6 mt-6">
-              <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-purple-500 to-purple-600 dark:from-purple-950 dark:to-purple-900 p-2 border border-purple-300 dark:border-purple-800 min-h-[140px]">
-                <div className="flex items-start justify-between mb-1">
-                  <div className="p-1.5 rounded-lg bg-white/20">
-                    <Timer size={18} className="text-white" />
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mt-4">
+              <div className="relative overflow-hidden rounded-xl bg-gradient-to-br from-purple-500 to-purple-600 dark:from-purple-950 dark:to-purple-900 p-1.5 border border-purple-300 dark:border-purple-800 min-h-[100px]">
+                <div className="flex items-start justify-between mb-0.5">
+                  <div className="p-1 rounded-lg bg-white/20">
+                    <Timer size={16} className="text-white" />
                   </div>
                 </div>
-                <p className="text-white/80 text-xs font-medium mb-0.5">Upcoming (&gt; Today)</p>
-                <p className="text-xl font-bold text-white">{displayData?.upcomingTasks || 0}</p>
+                <p className="text-white/80 text-[10px] font-medium mb-0.5">Upcoming (&gt; Today)</p>
+                <p className="text-lg font-bold text-white">{displayData?.upcomingTasks || 0}</p>
               </div>
 
-              <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-orange-500 to-orange-600 dark:from-orange-950 dark:to-orange-900 p-2 border border-orange-300 dark:border-orange-800 min-h-[140px]">
-                <div className="flex items-start justify-between mb-1">
-                  <div className="p-1.5 rounded-lg bg-white/20">
-                    <RotateCcw size={18} className="text-white" />
+              <div className="relative overflow-hidden rounded-xl bg-gradient-to-br from-orange-500 to-orange-600 dark:from-orange-950 dark:to-orange-900 p-1.5 border border-orange-300 dark:border-orange-800 min-h-[100px]">
+                <div className="flex items-start justify-between mb-0.5">
+                  <div className="p-1 rounded-lg bg-white/20">
+                    <RotateCcw size={16} className="text-white" />
                   </div>
                 </div>
-                <p className="text-white/80 text-xs font-medium mb-0.5">In Progress</p>
-                <p className="text-xl font-bold text-white">{displayData?.inProgressTasks || 0}</p>
+                <p className="text-white/80 text-[10px] font-medium mb-0.5">In Progress</p>
+                <p className="text-lg font-bold text-white">{displayData?.inProgressTasks || 0}</p>
               </div>
 
-              <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-emerald-500 to-emerald-600 dark:from-emerald-950 dark:to-emerald-900 p-2 border border-emerald-300 dark:border-emerald-800 min-h-[140px]">
-                <div className="flex items-start justify-between mb-1">
-                  <div className="p-1.5 rounded-lg bg-white/20">
-                    <UserCheck size={18} className="text-white" />
+              <div className="relative overflow-hidden rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-600 dark:from-emerald-950 dark:to-emerald-900 p-1.5 border border-emerald-300 dark:border-emerald-800 min-h-[100px]">
+                <div className="flex items-start justify-between mb-0.5">
+                  <div className="p-1 rounded-lg bg-white/20">
+                    <UserCheck size={16} className="text-white" />
                   </div>
                 </div>
-                <p className="text-white/80 text-xs font-medium mb-0.5">Assigned By Me</p>
-                <p className="text-xl font-bold text-white">{displayData?.assignedByMe?.total || 0}</p>
-                <p className="text-xs text-white/80 font-medium mt-0.5">
+                <p className="text-white/80 text-[10px] font-medium mb-0.5">Assigned By Me</p>
+                <p className="text-lg font-bold text-white">{displayData?.assignedByMe?.total || 0}</p>
+                <p className="text-[10px] text-white/80 font-medium mt-0.5">
                   Pending: {displayData?.assignedByMe?.pending || 0} • Completed: {displayData?.assignedByMe?.completed || 0}
                 </p>
               </div>
 
-              <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-indigo-500 to-indigo-600 dark:from-indigo-950 dark:to-indigo-900 p-2 border border-indigo-300 dark:border-indigo-800 min-h-[140px]">
-                <div className="flex items-start justify-between mb-1">
-                  <div className="p-1.5 rounded-lg bg-white/20">
-                    <Target size={18} className="text-white" />
+              <div className="relative overflow-hidden rounded-xl bg-gradient-to-br from-indigo-500 to-indigo-600 dark:from-indigo-950 dark:to-indigo-900 p-1.5 border border-indigo-300 dark:border-indigo-800 min-h-[100px]">
+                <div className="flex items-start justify-between mb-0.5">
+                  <div className="p-1 rounded-lg bg-white/20">
+                    <Target size={16} className="text-white" />
                   </div>
                 </div>
-                <p className="text-white/80 text-xs font-medium mb-0.5">FMS Tasks</p>
-                <p className="text-xl font-bold text-white">{displayData?.fmsTasks || 0}</p>
+                <p className="text-white/80 text-[10px] font-medium mb-0.5">FMS Tasks</p>
+                <p className="text-lg font-bold text-white">{displayData?.fmsTasks || 0}</p>
               </div>
 
-              <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-teal-500 to-teal-600 dark:from-teal-950 dark:to-teal-900 p-2 border border-teal-300 dark:border-teal-800 min-h-[140px]">
-                <div className="flex items-start justify-between mb-1">
-                  <div className="p-1.5 rounded-lg bg-white/20">
-                    <Activity size={18} className="text-white" />
+              <div className="relative overflow-hidden rounded-xl bg-gradient-to-br from-teal-500 to-teal-600 dark:from-teal-950 dark:to-teal-900 p-1.5 border border-teal-300 dark:border-teal-800 min-h-[100px]">
+                <div className="flex items-start justify-between mb-0.5">
+                  <div className="p-1 rounded-lg bg-white/20">
+                    <Activity size={16} className="text-white" />
                   </div>
                 </div>
-                <p className="text-white/80 text-xs font-medium mb-0.5">FMS In Progress</p>
-                <p className="text-xl font-bold text-white">{displayData?.fmsInProgressTasks || 0}</p>
+                <p className="text-white/80 text-[10px] font-medium mb-0.5">FMS In Progress</p>
+                <p className="text-lg font-bold text-white">{displayData?.fmsInProgressTasks || 0}</p>
               </div>
             </div>
           </div>
 
           {/* PC Role: Tasks by Status Section */}
           {user?.role === 'pc' && (
-            <div className="mt-8">
-              <div className="mb-6">
-                <h2 className="text-2xl font-bold text-[var(--color-text)]">📋 Tasks by Status</h2>
-                <p className="text-sm text-[var(--color-textSecondary)] mt-1">Overview of all tasks grouped by their current status</p>
+            <div className="mt-4">
+              <div className="mb-3">
+                <h2 className="text-xl font-bold text-[var(--color-text)]">📋 Tasks by Status</h2>
+                <p className="text-xs text-[var(--color-textSecondary)] mt-0.5">Overview of all tasks grouped by their current status</p>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 <div className="bg-gradient-to-br from-yellow-50 to-yellow-100 dark:from-yellow-900/20 dark:to-yellow-800/20 border-2 border-yellow-300 dark:border-yellow-700 rounded-xl p-4 shadow-sm">
@@ -1202,7 +1224,7 @@ const Dashboard: React.FC = () => {
           )}
 
           {/* Task Type Distribution - Now includes quarterly and updated to 6 columns */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 xl:grid-cols-6 gap-4 sm:gap-5 lg:gap-6 p-4 sm:p-6 lg:p-8">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 xl:grid-cols-6 gap-3 sm:gap-4 lg:gap-4 p-2 sm:p-3 lg:p-4">
             {taskTypeData.map((type) => (
               <MetricCard
                 key={type.name}
@@ -1225,58 +1247,58 @@ const Dashboard: React.FC = () => {
           </div>
 
           {/* Hierarchical Task Metrics - Treemap-like structure */}
-          <div className="p-4 sm:p-6 lg:p-8">
-            <div className="mb-6">
-              <h2 className="text-2xl font-bold text-[var(--color-text)] mb-2">Task Hierarchy Overview</h2>
-              <p className="text-sm text-[var(--color-textSecondary)]">Total Tasks → One-off Tasks → FMS Tasks</p>
+          <div className="p-2 sm:p-3 lg:p-4">
+            <div className="mb-3">
+              <h2 className="text-xl font-bold text-[var(--color-text)] mb-1">Task Hierarchy Overview</h2>
+              <p className="text-xs text-[var(--color-textSecondary)]">Total Tasks → One-off Tasks → FMS Tasks</p>
             </div>
 
             {/* Total Tasks Level */}
-            <div className="mb-8">
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <ThemeCard className="p-6" variant="glass">
-                  <div className="flex items-center space-x-4 mb-4">
-                    <div className="p-3 rounded-2xl bg-gradient-to-r from-blue-500 to-blue-600 text-white">
-                      <CheckSquare size={24} />
+            <div className="mb-4">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                <ThemeCard className="p-3" variant="glass">
+                  <div className="flex items-center space-x-3 mb-3">
+                    <div className="p-2 rounded-xl bg-gradient-to-r from-blue-500 to-blue-600 text-white">
+                      <CheckSquare size={18} />
                     </div>
                     <div>
-                      <h3 className="text-xl font-bold text-[var(--color-text)]">Total Tasks</h3>
-                      <p className="text-sm text-[var(--color-textSecondary)]">All tasks in the system</p>
+                      <h3 className="text-lg font-bold text-[var(--color-text)]">Total Tasks</h3>
+                      <p className="text-xs text-[var(--color-textSecondary)]">All tasks in the system</p>
                     </div>
                   </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="text-center p-4 rounded-xl bg-[var(--color-surface)] border border-[var(--color-border)]">
-                      <p className="text-2xl font-bold text-[var(--color-primary)]">{displayData?.totalTasks || 0}</p>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="text-center p-3 rounded-lg bg-[var(--color-surface)] border border-[var(--color-border)]">
+                      <p className="text-xl font-bold text-[var(--color-primary)]">{displayData?.totalTasks || 0}</p>
                       <p className="text-xs text-[var(--color-textSecondary)]">Total</p>
                     </div>
-                    <div className="text-center p-4 rounded-xl bg-[var(--color-surface)] border border-[var(--color-border)]">
-                      <p className="text-2xl font-bold text-[var(--color-success)]">{displayData?.completedTasks || 0}</p>
+                    <div className="text-center p-3 rounded-lg bg-[var(--color-surface)] border border-[var(--color-border)]">
+                      <p className="text-xl font-bold text-[var(--color-success)]">{displayData?.completedTasks || 0}</p>
                       <p className="text-xs text-[var(--color-textSecondary)]">Completed</p>
                     </div>
                   </div>
                 </ThemeCard>
 
-                <ThemeCard className="p-6" variant="glass">
-                  <div className="flex items-center space-x-4 mb-4">
-                    <div className="p-3 rounded-2xl bg-gradient-to-r from-green-500 to-green-600 text-white">
-                      <Target size={24} />
+                <ThemeCard className="p-3" variant="glass">
+                  <div className="flex items-center space-x-3 mb-3">
+                    <div className="p-2 rounded-xl bg-gradient-to-r from-green-500 to-green-600 text-white">
+                      <Target size={18} />
                     </div>
                     <div>
-                      <h3 className="text-xl font-bold text-[var(--color-text)]">One-off Tasks</h3>
-                      <p className="text-sm text-[var(--color-textSecondary)]">Non-recurring tasks</p>
+                      <h3 className="text-lg font-bold text-[var(--color-text)]">One-off Tasks</h3>
+                      <p className="text-xs text-[var(--color-textSecondary)]">Non-recurring tasks</p>
                     </div>
                   </div>
-                  <div className="grid grid-cols-3 gap-4">
-                    <div className="text-center p-3 rounded-xl bg-[var(--color-surface)] border border-[var(--color-border)]">
-                      <p className="text-lg font-bold text-[var(--color-primary)]">{displayData?.oneTimeTasks || 0}</p>
+                  <div className="grid grid-cols-3 gap-3">
+                    <div className="text-center p-2 rounded-lg bg-[var(--color-surface)] border border-[var(--color-border)]">
+                      <p className="text-base font-bold text-[var(--color-primary)]">{displayData?.oneTimeTasks || 0}</p>
                       <p className="text-xs text-[var(--color-textSecondary)]">Total</p>
                     </div>
-                    <div className="text-center p-3 rounded-xl bg-[var(--color-surface)] border border-[var(--color-border)]">
-                      <p className="text-lg font-bold text-[var(--color-warning)]">{displayData?.oneTimePending || 0}</p>
+                    <div className="text-center p-2 rounded-lg bg-[var(--color-surface)] border border-[var(--color-border)]">
+                      <p className="text-base font-bold text-[var(--color-warning)]">{displayData?.oneTimePending || 0}</p>
                       <p className="text-xs text-[var(--color-textSecondary)]">Pending</p>
                     </div>
-                    <div className="text-center p-3 rounded-xl bg-[var(--color-surface)] border border-[var(--color-border)]">
-                      <p className="text-lg font-bold text-[var(--color-success)]">{displayData?.oneTimeCompleted || 0}</p>
+                    <div className="text-center p-2 rounded-lg bg-[var(--color-surface)] border border-[var(--color-border)]">
+                      <p className="text-base font-bold text-[var(--color-success)]">{displayData?.oneTimeCompleted || 0}</p>
                       <p className="text-xs text-[var(--color-textSecondary)]">Completed</p>
                     </div>
                   </div>
@@ -1286,31 +1308,31 @@ const Dashboard: React.FC = () => {
 
             {/* FMS Tasks Level */}
             <div>
-              <ThemeCard className="p-6" variant="glass">
-                <div className="flex items-center space-x-4 mb-6">
-                  <div className="p-3 rounded-2xl bg-gradient-to-r from-indigo-500 to-indigo-600 text-white">
-                    <Activity size={24} />
+              <ThemeCard className="p-3" variant="glass">
+                <div className="flex items-center space-x-3 mb-3">
+                  <div className="p-2 rounded-xl bg-gradient-to-r from-indigo-500 to-indigo-600 text-white">
+                    <Activity size={18} />
                   </div>
                   <div>
-                    <h3 className="text-xl font-bold text-[var(--color-text)]">FMS Tasks</h3>
-                    <p className="text-sm text-[var(--color-textSecondary)]">Project-based tasks</p>
+                    <h3 className="text-lg font-bold text-[var(--color-text)]">FMS Tasks</h3>
+                    <p className="text-xs text-[var(--color-textSecondary)]">Project-based tasks</p>
                   </div>
                 </div>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  <div className="text-center p-4 rounded-xl bg-[var(--color-surface)] border border-[var(--color-border)]">
-                    <p className="text-xl font-bold text-[var(--color-primary)]">{displayData?.fmsTasks || 0}</p>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                  <div className="text-center p-3 rounded-lg bg-[var(--color-surface)] border border-[var(--color-border)]">
+                    <p className="text-lg font-bold text-[var(--color-primary)]">{displayData?.fmsTasks || 0}</p>
                     <p className="text-xs text-[var(--color-textSecondary)]">Total FMS</p>
                   </div>
-                  <div className="text-center p-4 rounded-xl bg-[var(--color-surface)] border border-[var(--color-border)]">
-                    <p className="text-xl font-bold text-[var(--color-warning)]">{displayData?.fmsPendingTasks || 0}</p>
+                  <div className="text-center p-3 rounded-lg bg-[var(--color-surface)] border border-[var(--color-border)]">
+                    <p className="text-lg font-bold text-[var(--color-warning)]">{displayData?.fmsPendingTasks || 0}</p>
                     <p className="text-xs text-[var(--color-textSecondary)]">Pending</p>
                   </div>
-                  <div className="text-center p-4 rounded-xl bg-[var(--color-surface)] border border-[var(--color-border)]">
-                    <p className="text-xl font-bold text-[var(--color-success)]">{displayData?.fmsCompletedTasks || 0}</p>
+                  <div className="text-center p-3 rounded-lg bg-[var(--color-surface)] border border-[var(--color-border)]">
+                    <p className="text-lg font-bold text-[var(--color-success)]">{displayData?.fmsCompletedTasks || 0}</p>
                     <p className="text-xs text-[var(--color-textSecondary)]">Completed</p>
                   </div>
-                  <div className="text-center p-4 rounded-xl bg-[var(--color-surface)] border border-[var(--color-border)]">
-                    <p className="text-xl font-bold text-[var(--color-accent)]">{displayData?.fmsInProgressTasks || 0}</p>
+                  <div className="text-center p-3 rounded-lg bg-[var(--color-surface)] border border-[var(--color-border)]">
+                    <p className="text-lg font-bold text-[var(--color-accent)]">{displayData?.fmsInProgressTasks || 0}</p>
                     <p className="text-xs text-[var(--color-textSecondary)]">In Progress</p>
                   </div>
                 </div>
@@ -1320,12 +1342,12 @@ const Dashboard: React.FC = () => {
 
           {/* Overall Score and Current Month Score */}
           {(user?.role === 'admin' || user?.role === 'superadmin') && (
-            <div className="p-4 sm:p-6 lg:p-8">
-              <div className="mb-6">
-                <h2 className="text-2xl font-bold text-[var(--color-text)] mb-2">Performance Scores</h2>
-                <p className="text-sm text-[var(--color-textSecondary)]">Team performance metrics and scoring</p>
+            <div className="p-2 sm:p-3 lg:p-4">
+              <div className="mb-3">
+                <h2 className="text-xl font-bold text-[var(--color-text)] mb-1">Performance Scores</h2>
+                <p className="text-xs text-[var(--color-textSecondary)]">Team performance metrics and scoring</p>
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
                 <MetricCard
                   icon={<Star size={24} className="text-yellow-600" />}
                   title="Overall Score"
@@ -1416,13 +1438,12 @@ const Dashboard: React.FC = () => {
                           </span>
                           <span className="flex items-center gap-1">
                             <Calendar size={14} />
-                            Due: {new Date(task.dueDate).toLocaleDateString()}
+                            Due: {formatDate(task.dueDate)}
                           </span>
-                          <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
-                            task.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
-                            task.status === 'completed' ? 'bg-green-100 text-green-800' :
-                            'bg-gray-100 text-gray-800'
-                          }`}>
+                          <span className={`px-2 py-1 rounded-full text-xs font-semibold ${task.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                              task.status === 'completed' ? 'bg-green-100 text-green-800' :
+                                'bg-gray-100 text-gray-800'
+                            }`}>
                             {task.status}
                           </span>
                         </div>
@@ -1693,46 +1714,46 @@ const Dashboard: React.FC = () => {
                               {teamMembersList
                                 .filter(member => member.username.toLowerCase().includes(teamMemberSearchTerm.toLowerCase()))
                                 .map((member, index) => {
-                                // Find the corresponding team member ID from dashboardData
-                                // Since teamMembersList only has username, we need to match it
-                                // For now, we'll use username as the identifier for this dropdown
-                                // This creates inconsistency but is needed for member-trend API
-                                const isSelected = selectedTeamMember === member.username ||
-                                  (selectedTeamMember !== 'all' && getDisplayName() === member.username);
+                                  // Find the corresponding team member ID from dashboardData
+                                  // Since teamMembersList only has username, we need to match it
+                                  // For now, we'll use username as the identifier for this dropdown
+                                  // This creates inconsistency but is needed for member-trend API
+                                  const isSelected = selectedTeamMember === member.username ||
+                                    (selectedTeamMember !== 'all' && getDisplayName() === member.username);
 
-                                return (
-                                  <button
-                                    key={member.username}
-                                    onClick={() => {
-                                      // Use username here since member-trend API needs it
-                                      // This creates inconsistency with TeamMemberSelector which uses ID
-                                      // TODO: Refactor to use consistent ID-based system
-                                      setSelectedTeamMember(member.username);
-                                      setShowTeamMemberFilter(false);
-                                      setTeamMemberSearchTerm('');
-                                    }}
-                                    className={`w-full text-left px-3 py-3 rounded-xl transition-all duration-200 ${isSelected
-                                      ? 'bg-[var(--color-primary)] text-white shadow-lg'
-                                      : 'hover:bg-[var(--color-border)] text-[var(--color-text)]'
-                                      }`}
-                                  >
-                                    <div className="flex items-center justify-between">
-                                      <div className="flex items-center space-x-3">
-                                        <div className="w-8 h-8 rounded-xl bg-gradient-to-r from-blue-400 to-purple-600 flex items-center justify-center text-white font-bold text-sm">
-                                          {member.username.charAt(0).toUpperCase()}
+                                  return (
+                                    <button
+                                      key={member.username}
+                                      onClick={() => {
+                                        // Use username here since member-trend API needs it
+                                        // This creates inconsistency with TeamMemberSelector which uses ID
+                                        // TODO: Refactor to use consistent ID-based system
+                                        setSelectedTeamMember(member.username);
+                                        setShowTeamMemberFilter(false);
+                                        setTeamMemberSearchTerm('');
+                                      }}
+                                      className={`w-full text-left px-3 py-3 rounded-xl transition-all duration-200 ${isSelected
+                                        ? 'bg-[var(--color-primary)] text-white shadow-lg'
+                                        : 'hover:bg-[var(--color-border)] text-[var(--color-text)]'
+                                        }`}
+                                    >
+                                      <div className="flex items-center justify-between">
+                                        <div className="flex items-center space-x-3">
+                                          <div className="w-8 h-8 rounded-xl bg-gradient-to-r from-blue-400 to-purple-600 flex items-center justify-center text-white font-bold text-sm">
+                                            {member.username.charAt(0).toUpperCase()}
+                                          </div>
+                                          <div>
+                                            <span className="font-semibold">{member.username}</span>
+                                            <p className="text-xs opacity-75">{member.totalTasks} tasks {member.completionRate.toFixed(1)}% completion</p>
+                                          </div>
                                         </div>
-                                        <div>
-                                          <span className="font-semibold">{member.username}</span>
-                                          <p className="text-xs opacity-75">{member.totalTasks} tasks {member.completionRate.toFixed(1)}% completion</p>
+                                        <div className="text-right">
+                                          <div className="text-sm font-bold opacity-75">{index + 1}</div>
                                         </div>
                                       </div>
-                                      <div className="text-right">
-                                        <div className="text-sm font-bold opacity-75">{index + 1}</div>
-                                      </div>
-                                    </div>
-                                  </button>
-                                );
-                              })}
+                                    </button>
+                                  );
+                                })}
                             </div>
                           </ThemeCard>
                         </div>

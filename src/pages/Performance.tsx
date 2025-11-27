@@ -448,8 +448,8 @@ const Performance: React.FC = () => {
     ? Math.max(...dashboardData.teamPerformance.map(m => m.totalTasks || 0), dashboardData.userPerformance?.totalTasks || 0)
     : dashboardData?.userPerformance?.totalTasks || 1;
 
-  // Top 10 users: sort by totalTasks descending, then by completion rate descending
-  const top10Users = dashboardData?.teamPerformance && dashboardData.teamPerformance.length > 0
+  // Sort all users by performance (totalTasks then completion rate)
+  const sortedUsers = dashboardData?.teamPerformance && dashboardData.teamPerformance.length > 0
     ? [...dashboardData.teamPerformance]
       .sort((a, b) => {
         const aCompleted = a.completedTasks || 0;
@@ -469,7 +469,7 @@ const Performance: React.FC = () => {
 
         return bPerformance - aPerformance; // highest first
       })
-      .slice(0, 10)
+      .map((user, idx) => ({ ...user, rank: idx + 1 }))
     : [];
 
 
@@ -588,7 +588,7 @@ const Performance: React.FC = () => {
         <UserPerformanceCard userPerformance={dashboardData.userPerformance} maxTasks={maxTasks} />
       )}
 
-      {(user?.role === 'admin' || user?.role === 'manager') && top10Users.length > 0 && (
+      {(user?.role === 'admin' || user?.role === 'manager') && sortedUsers.length > 0 && (
         <ThemeCard className="p-4 sm:p-8" variant="glass">
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 gap-2">
             <div className="flex items-center space-x-4">
@@ -597,17 +597,17 @@ const Performance: React.FC = () => {
               </div>
               <div>
                 <h3 className="text-xl sm:text-2xl font-bold text-[var(--color-text)]">Team Performance</h3>
-                <p className="text-base text-[var(--color-textSecondary)]">Top 10 users by completion rate (users with fewer assigned tasks are shown last)</p>
+                <p className="text-base text-[var(--color-textSecondary)]">Team performance sorted by completion rate (users with fewer assigned tasks are shown last)</p>
               </div>
             </div>
 
             <div className="text-base px-4 py-2 rounded-full font-bold whitespace-nowrap" style={{ backgroundColor: 'var(--color-warning)20', color: 'var(--color-warning)' }}>
-              Top {top10Users.length}
+              Total {sortedUsers.length}
             </div>
           </div>
           <div className="space-y-4 max-h-[600px] sm:max-h-[650px] overflow-y-auto">
-            {top10Users.map((member, i) => (
-              <TeamMemberCard key={member.username} member={member} rank={i + 1} />
+            {sortedUsers.map((member, i) => (
+              <TeamMemberCard key={`${member.username}-${i}`} member={member} rank={i + 1} />
             ))}
           </div>
         </ThemeCard>

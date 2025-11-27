@@ -15,6 +15,7 @@ import { useTaskSettings } from '../hooks/useTaskSettings';
 import { useTheme } from '../contexts/ThemeContext';
 import { address } from '../../utils/ipAddress';
 import SearchableSelect from '../components/SearchableSelect';
+import { formatDate, formatDateTime } from '../utils/dateFormat';
 
 
 interface Attachment {
@@ -680,7 +681,7 @@ const PendingTasks: React.FC = () => {
         </div>
 
         <div class="summary">
-          <strong>Report Generated:</strong> ${new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+          <strong>Report Generated:</strong> ${formatDateTime(new Date())}
           <br><strong>Total Tasks:</strong> ${tasksToprint.length}
         </div>
 
@@ -718,14 +719,14 @@ const PendingTasks: React.FC = () => {
                 <td>${task.assignedTo?.username || 'Unknown User'}</td>
                 <td><span class="badge badge-${task.priority}">${task.priority.toUpperCase()}</span></td>
                 <td><span class="badge badge-${task.isOnHold ? 'hold' : task.status}">${task.isOnHold ? 'HOLD' : task.status.toUpperCase()}</span></td>
-                <td>${task.dueDate ? new Date(task.dueDate).toLocaleDateString('en-GB') : 'N/A'}</td>
+                <td>${task.dueDate ? formatDate(task.dueDate) : 'N/A'}</td>
               </tr>
             `).join('')}
           </tbody>
         </table>
 
         <div class="footer">
-          <p>Printed on ${new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</p>
+          <p>Printed on ${formatDateTime(new Date())}</p>
           <p>© 2024 Ashok Malhotra Group. All rights reserved.</p>
         </div>
       </body>
@@ -869,11 +870,7 @@ const PendingTasks: React.FC = () => {
                     Due date:
                   </span>
                   <span className={`font-medium ${task.dueDate && isOverdue(task.dueDate) ? 'text-[--color-error]' : task.dueDate && isDueToday(task.dueDate) ? 'text-[--color-accent]' : 'text-[--color-text]'}`}>
-                    {task.dueDate ? new Date(task.dueDate).toLocaleDateString('en-GB', {
-                      day: '2-digit',
-                      month: 'numeric',
-                      year: 'numeric',
-                    }) : 'N/A'}
+                    {task.dueDate ? formatDate(task.dueDate) : 'N/A'}
                   </span>
                 </div>
                 <div className={`flex items-center justify-between p-2 rounded-lg ${theme === 'light' ? 'bg-gray-50' : 'bg-[--color-background]'}`}>
@@ -882,11 +879,7 @@ const PendingTasks: React.FC = () => {
                     Created:
                   </span>
                   <span className="font-medium text-[--color-text]">
-                    {new Date(task.createdAt).toLocaleDateString('en-GB', {
-                      day: '2-digit',
-                      month: 'numeric',
-                      year: 'numeric',
-                    })}
+                    {formatDate(task.createdAt)}
                   </span>
                 </div>
                 <div className={`flex items-center justify-between p-2 rounded-lg ${theme === 'light' ? 'bg-gray-50' : 'bg-[--color-background]'}`}>
@@ -1048,18 +1041,10 @@ const PendingTasks: React.FC = () => {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className={`text-sm font-medium ${task.dueDate && isOverdue(task.dueDate) ? 'text-[--color-error]' : task.dueDate && isDueToday(task.dueDate) ? 'text-[--color-accent]' : 'text-[--color-text]'}`}>
-                      {task.dueDate ? new Date(task.dueDate).toLocaleDateString('en-GB', {
-                        day: '2-digit',
-                        month: 'numeric',
-                        year: 'numeric',
-                      }) : 'N/A'}
+                      {task.dueDate ? formatDate(task.dueDate) : 'N/A'}
                     </div>
                     <div className="text-xs text-[--color-textSecondary]">
-                      Created: {new Date(task.createdAt).toLocaleDateString('en-GB', {
-                        day: '2-digit',
-                        month: 'numeric',
-                        year: 'numeric',
-                      })}
+                      Created: {formatDate(task.createdAt)}
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
@@ -1503,7 +1488,7 @@ const PendingTasks: React.FC = () => {
                 <p className="text-sm text-[--color-textSecondary] mb-2">Project: {fmsTask.projectName}</p>
                 <p className="text-sm text-[--color-textSecondary] mb-2">FMS: {fmsTask.fmsName}</p>
                 <p className="text-sm text-[--color-textSecondary]">
-                  Due: {fmsTask.task.plannedDueDate ? new Date(fmsTask.task.plannedDueDate).toLocaleDateString('en-GB') : 'N/A'}
+                  Due: {fmsTask.task.plannedDueDate ? formatDate(fmsTask.task.plannedDueDate) : 'N/A'}
                 </p>
                 {!fmsTask.canComplete && (
                   <p className="text-xs text-[--color-warning] mt-2">⚠️ Complete previous step first</p>

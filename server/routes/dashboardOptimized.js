@@ -1,8 +1,36 @@
 import express from 'express';
 import Task from '../models/Task.js';
 import mongoose from 'mongoose';
+import { authenticateToken } from '../middleware/auth.js';
 
 const router = express.Router();
+
+router.use(authenticateToken);
+
+const ADMIN_ROLES = new Set(['admin', 'superadmin']);
+
+router.use((req, res, next) => {
+  const isAdmin = req.user && ADMIN_ROLES.has(req.user.role);
+  req.query.isAdmin = isAdmin ? 'true' : 'false';
+
+  if (!isAdmin) {
+    const requesterId = req.user._id.toString();
+
+    if (req.query.userId && req.query.userId !== requesterId) {
+      return res.status(403).json({ message: 'Access denied for requested user scope' });
+    }
+
+    if (req.query.assignedById && req.query.assignedById !== requesterId) {
+      return res.status(403).json({ message: 'Access denied for requested assignment scope' });
+    }
+
+    if (!req.query.userId && !req.query.assignedById) {
+      req.query.userId = requesterId;
+    }
+  }
+
+  next();
+});
 
 // ============================================
 // OPTIMIZED DASHBOARD COUNTS ENDPOINT

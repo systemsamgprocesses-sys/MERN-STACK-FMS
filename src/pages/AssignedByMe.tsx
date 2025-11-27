@@ -1,7 +1,7 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { UserCheck, Calendar, CheckSquare, Clock, Filter, Printer } from 'lucide-react';
+import { UserCheck, Calendar, CheckSquare, Clock, Filter, Printer, ArrowUpDown } from 'lucide-react';
 import axios from 'axios';
 import { address } from '../../utils/ipAddress';
 
@@ -25,11 +25,22 @@ interface Task {
   createdAt: string;
 }
 
+type SortOption = 
+  | 'created-desc' 
+  | 'created-asc' 
+  | 'due-desc' 
+  | 'due-asc' 
+  | 'title-asc' 
+  | 'title-desc' 
+  | 'status' 
+  | 'priority';
+
 const AssignedByMe: React.FC = () => {
   const { user } = useAuth();
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
   const [filterStatus, setFilterStatus] = useState<string>('all');
+  const [sortBy, setSortBy] = useState<SortOption>('created-desc');
 
   useEffect(() => {
     fetchTasks();
@@ -49,11 +60,7 @@ const AssignedByMe: React.FC = () => {
       const response = await axios.get(`${address}/api/tasks/assigned-by-me?limit=10000`, { params });
       
       if (response.data.tasks) {
-        // Sort tasks by creation date descending
-        const sortedTasks = [...response.data.tasks].sort((a: Task, b: Task) => 
-          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-        );
-        setTasks(sortedTasks);
+        setTasks(response.data.tasks);
       } else {
         setTasks([]);
       }
@@ -64,8 +71,63 @@ const AssignedByMe: React.FC = () => {
     }
   };
 
+  // Sort tasks based on selected sort option
+  const sortedTasks = useMemo(() => {
+    const tasksToSort = [...tasks];
+    
+    switch (sortBy) {
+      case 'created-desc':
+        return tasksToSort.sort((a, b) => 
+          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+        );
+      case 'created-asc':
+        return tasksToSort.sort((a, b) => 
+          new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+        );
+      case 'due-desc':
+        return tasksToSort.sort((a, b) => 
+          new Date(b.dueDate).getTime() - new Date(a.dueDate).getTime()
+        );
+      case 'due-asc':
+        return tasksToSort.sort((a, b) => 
+          new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime()
+        );
+      case 'title-asc':
+        return tasksToSort.sort((a, b) => 
+          a.title.localeCompare(b.title)
+        );
+      case 'title-desc':
+        return tasksToSort.sort((a, b) => 
+          b.title.localeCompare(a.title)
+        );
+      case 'status':
+        return tasksToSort.sort((a, b) => 
+          a.status.localeCompare(b.status)
+        );
+      case 'priority':
+        const priorityOrder: Record<string, number> = {
+          'high': 3,
+          'medium': 2,
+          'low': 1
+        };
+        return tasksToSort.sort((a, b) => 
+          (priorityOrder[b.priority] || 0) - (priorityOrder[a.priority] || 0)
+        );
+      default:
+        return tasksToSort;
+    }
+  }, [tasks, sortBy]);
+
   const handlePrint = () => {
     window.print();
+  };
+
+  const formatDate = (dateString: string): string => {
+    const date = new Date(dateString);
+    const day = String(date.getDate()).padStart(2, '0');
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const year = date.getFullYear();
+    return `${day}/${month}/${year}`;
   };
 
   const getStatusColor = (status: string) => {
@@ -109,20 +171,39 @@ const AssignedByMe: React.FC = () => {
           </button>
         </div>
 
-        {/* Filters */}
-        <div className="mb-6 flex items-center gap-3 print:hidden">
-          <Filter size={18} style={{ color: 'var(--color-textSecondary)' }} />
-          <select
-            value={filterStatus}
-            onChange={(e) => setFilterStatus(e.target.value)}
-            className="px-4 py-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text)]"
-          >
-            <option value="all">All Status</option>
-            <option value="pending">Pending</option>
-            <option value="in-progress">In Progress</option>
-            <option value="completed">Completed</option>
-            <option value="overdue">Overdue</option>
-          </select>
+        {/* Filters and Sort */}
+        <div className="mb-6 flex flex-wrap items-center gap-3 print:hidden">
+          <div className="flex items-center gap-2">
+            <Filter size={18} style={{ color: 'var(--color-textSecondary)' }} />
+            <select
+              value={filterStatus}
+              onChange={(e) => setFilterStatus(e.target.value)}
+              className="px-4 py-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text)]"
+            >
+              <option value="all">All Status</option>
+              <option value="pending">Pending</option>
+              <option value="in-progress">In Progress</option>
+              <option value="completed">Completed</option>
+              <option value="overdue">Overdue</option>
+            </select>
+          </div>
+          <div className="flex items-center gap-2">
+            <ArrowUpDown size={18} style={{ color: 'var(--color-textSecondary)' }} />
+            <select
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value as SortOption)}
+              className="px-4 py-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text)]"
+            >
+              <option value="created-desc">Date Created (Newest First)</option>
+              <option value="created-asc">Date Created (Oldest First)</option>
+              <option value="due-desc">Due Date (Latest First)</option>
+              <option value="due-asc">Due Date (Earliest First)</option>
+              <option value="title-asc">Title (A-Z)</option>
+              <option value="title-desc">Title (Z-A)</option>
+              <option value="status">Status</option>
+              <option value="priority">Priority</option>
+            </select>
+          </div>
         </div>
 
         {/* Stats */}
@@ -167,12 +248,12 @@ const AssignedByMe: React.FC = () => {
 
         {/* Tasks List */}
         <div className="space-y-4">
-          {tasks.length === 0 ? (
+          {sortedTasks.length === 0 ? (
             <div className="text-center py-12">
               <p className="text-[var(--color-textSecondary)]">No tasks found</p>
             </div>
           ) : (
-            tasks.map((task) => (
+            sortedTasks.map((task) => (
               <div
                 key={task._id}
                 className="p-5 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] hover:shadow-lg transition-all"
@@ -188,7 +269,7 @@ const AssignedByMe: React.FC = () => {
                       </span>
                       <span className="flex items-center gap-1">
                         <Calendar size={14} />
-                        Due: {new Date(task.dueDate).toLocaleDateString()}
+                        Due: {formatDate(task.dueDate)}
                       </span>
                       <span className={`px-2 py-1 rounded-full text-xs font-semibold ${getStatusColor(task.status)}`}>
                         {task.status}

@@ -1,4 +1,5 @@
 import express from 'express';
+import mongoose from 'mongoose';
 import Project from '../models/Project.js';
 import FMS from '../models/FMS.js';
 import User from '../models/User.js';
@@ -46,6 +47,63 @@ const shiftSundayForward = (date, frequencySettings = {}) => {
   return result;
 };
 
+const buildProjectLookupQuery = (projectIdentifier) => {
+  if (!projectIdentifier) {
+    return { projectId: projectIdentifier };
+  }
+
+  if (mongoose.Types.ObjectId.isValid(projectIdentifier)) {
+    return {
+      $or: [
+        { projectId: projectIdentifier },
+        { _id: projectIdentifier }
+      ]
+    };
+  }
+
+  return { projectId: projectIdentifier };
+};
+
+const PROJECT_ID_REGEX = /^PRJ-\d+$/;
+const normalizeUserId = (value) => {
+  if (!value) {
+    return null;
+  }
+
+  if (typeof value === 'string') {
+    return mongoose.Types.ObjectId.isValid(value) ? value : null;
+  }
+
+  if (typeof value === 'object') {
+    if (value._id && mongoose.Types.ObjectId.isValid(value._id)) {
+      return value._id;
+    }
+    if (value.id && mongoose.Types.ObjectId.isValid(value.id)) {
+      return value.id;
+    }
+  }
+
+  return null;
+};
+
+const createTemplateValidationError = (message) => {
+  const error = new Error(message);
+  error.statusCode = 400;
+  return error;
+};
+
+const getNextProjectId = async () => {
+  const latestProject = await Project.findOne({ projectId: { $regex: PROJECT_ID_REGEX } })
+    .sort({ projectId: -1 })
+    .select('projectId')
+    .lean();
+
+  const latestNumber = latestProject?.projectId ? parseInt(latestProject.projectId.split('-')[1], 10) : 0;
+  const nextNumber = Number.isNaN(latestNumber) ? 1 : latestNumber + 1;
+
+  return `PRJ-${nextNumber.toString().padStart(4, '0')}`;
+};
+
 // Create project from FMS template
 router.post('/', async (req, res) => {
   try {
@@ -57,12 +115,18 @@ router.post('/', async (req, res) => {
       return res.status(404).json({ success: false, message: 'FMS template not found' });
     }
 
-    // Generate unique Project ID
-    const count = await Project.countDocuments();
-    const projectId = `PRJ-${(count + 1).toString().padStart(4, '0')}`;
-
     const start = new Date(startDate);
     const tasks = fms.steps.map((step, index) => {
+      const assignees = (Array.isArray(step.who) ? step.who : [])
+        .map(normalizeUserId)
+        .filter(Boolean);
+
+      if (assignees.length === 0) {
+        throw createTemplateValidationError(
+          `Step ${step.stepNo || index + 1} in "${fms.fmsName}" is missing valid assignees. Please update the template and try again.`
+        );
+      }
+
       let plannedDueDate = null;
       let status = 'Not Started';
 
@@ -96,7 +160,7 @@ router.post('/', async (req, res) => {
       return {
         stepNo: step.stepNo,
         what: step.what,
-        who: (step.who || []).map(u => u._id),
+        who: assignees,
         how: step.how,
         plannedDueDate: normalizedDueDate,
         status,
@@ -114,22 +178,42 @@ router.post('/', async (req, res) => {
       };
     });
 
-    const project = new Project({
-      projectId,
+    const basePayload = {
       fmsId: fms._id,
       projectName,
       startDate: start,
       tasks,
       status: 'Active',
       createdBy
-    });
+    };
 
-    await project.save();
+    const maxAttempts = 5;
+    for (let attempt = 0; attempt < maxAttempts; attempt++) {
+      const projectId = await getNextProjectId();
 
-    res.json({ success: true, message: 'Project created successfully', projectId });
+      try {
+        const project = new Project({
+          ...basePayload,
+          projectId
+        });
+
+        await project.save();
+
+        return res.json({ success: true, message: 'Project created successfully', projectId });
+      } catch (saveError) {
+        if (saveError?.code === 11000 && saveError?.keyPattern?.projectId && attempt < maxAttempts - 1) {
+          continue;
+        }
+        throw saveError;
+      }
+    }
+
+    throw new Error('Unable to allocate unique Project ID. Please try again.');
   } catch (error) {
     console.error('Create project error:', error);
-    res.status(500).json({ success: false, message: 'Server error', error: error.message });
+    const statusCode = error.statusCode || 500;
+    const message = statusCode === 500 ? 'Server error' : error.message;
+    res.status(statusCode).json({ success: false, message, error: error.message });
   }
 });
 
@@ -166,7 +250,7 @@ router.put('/:projectId/tasks/:taskIndex', async (req, res) => {
     const { projectId, taskIndex } = req.params;
     const { status, completedBy, notes, attachments, checklistItems, plannedDueDate, completedOnBehalfBy, pcConfirmationAttachment } = req.body;
 
-    const project = await Project.findOne({ projectId }).populate('fmsId');
+    const project = await Project.findOne(buildProjectLookupQuery(projectId)).populate('fmsId');
     if (!project) {
       return res.status(404).json({ success: false, message: 'Project not found' });
     }
@@ -196,10 +280,15 @@ router.put('/:projectId/tasks/:taskIndex', async (req, res) => {
 
     // Handle ask-on-completion date assignment
     if (plannedDueDate && task.whenType === 'ask-on-completion') {
-      task.plannedDueDate = shiftSundayForward(plannedDueDate, project.fmsId?.frequencySettings);
+      const normalizedDate = shiftSundayForward(plannedDueDate, project.fmsId?.frequencySettings);
+      task.plannedDueDate = normalizedDate;
       task.plannedDateAsked = true;
-      task.status = 'Pending'; // Move to pending once date is set
-      task.originalPlannedDate = task.plannedDueDate;
+      task.originalPlannedDate = normalizedDate;
+
+      // Only move back to pending when we're not simultaneously closing the task
+      if (status !== 'Done') {
+        task.status = 'Pending';
+      }
     }
 
     if (status === 'Done') {
@@ -256,7 +345,7 @@ router.put('/:projectId/tasks/:taskIndex', async (req, res) => {
             const { projectId, taskIndex } = req.params;
             const { completedBy, remarks, completedOnBehalfBy } = req.body;
 
-            const project = await Project.findOne({ projectId }).populate('fmsId');
+        const project = await Project.findOne(buildProjectLookupQuery(projectId)).populate('fmsId');
             if (!project) {
               return res.status(404).json({ success: false, message: 'Project not found' });
             }
@@ -376,9 +465,6 @@ router.put('/:projectId/tasks/:taskIndex', async (req, res) => {
           const triggeredFMS = await FMS.findById(currentStep.triggersFMSId);
           if (triggeredFMS) {
             // Auto-create new project from triggered FMS
-            const count = await Project.countDocuments();
-            const newProjectId = `PRJ-${(count + 1).toString().padStart(4, '0')}`;
-
             const triggerDate = new Date();
             const newTasks = triggeredFMS.steps.map((step, idx) => {
               let plannedDueDate = null;
@@ -431,17 +517,34 @@ router.put('/:projectId/tasks/:taskIndex', async (req, res) => {
               };
             });
 
+        const triggeredPayload = {
+          fmsId: triggeredFMS._id,
+          projectName: `Auto-triggered: ${triggeredFMS.fmsName} (from ${project.projectName})`,
+          startDate: triggerDate,
+          tasks: newTasks,
+          status: 'Active',
+          createdBy: completedBy
+        };
+
+        const maxTriggeredAttempts = 5;
+        for (let attempt = 0; attempt < maxTriggeredAttempts; attempt++) {
+          const newProjectId = await getNextProjectId();
+
+          try {
             const newProject = new Project({
-              projectId: newProjectId,
-              fmsId: triggeredFMS._id,
-              projectName: `Auto-triggered: ${triggeredFMS.fmsName} (from ${project.projectName})`,
-              startDate: triggerDate,
-              tasks: newTasks,
-              status: 'Active',
-              createdBy: completedBy
+              ...triggeredPayload,
+              projectId: newProjectId
             });
 
             await newProject.save();
+            break;
+          } catch (saveError) {
+            if (saveError?.code === 11000 && saveError?.keyPattern?.projectId && attempt < maxTriggeredAttempts - 1) {
+              continue;
+            }
+            throw saveError;
+          }
+        }
           }
         }
       }
@@ -511,7 +614,7 @@ router.delete('/:projectId', async (req, res) => {
 
     const { projectId } = req.params;
 
-    const project = await Project.findOneAndDelete({ projectId });
+    const project = await Project.findOneAndDelete(buildProjectLookupQuery(projectId));
 
     if (!project) {
       return res.status(404).json({ success: false, message: 'Project not found' });
@@ -564,7 +667,7 @@ router.delete('/:projectId/tasks/:taskIndex/completion', authenticateToken, isSu
     const { projectId, taskIndex } = req.params;
     const { reason } = req.body;
 
-    const project = await Project.findOne({ projectId });
+    const project = await Project.findOne(buildProjectLookupQuery(projectId));
     if (!project) {
       return res.status(404).json({ success: false, message: 'Project not found' });
     }
@@ -658,7 +761,7 @@ router.put('/:projectId/tasks/:taskIndex/admin-edit', authenticateToken, isSuper
       reason
     } = req.body;
 
-    const project = await Project.findOne({ projectId });
+    const project = await Project.findOne(buildProjectLookupQuery(projectId));
     if (!project) {
       return res.status(404).json({ success: false, message: 'Project not found' });
     }
@@ -719,7 +822,7 @@ router.delete('/:projectId/tasks/:taskIndex/attachments/:attachmentIndex', authe
     const { projectId, taskIndex, attachmentIndex } = req.params;
     const { reason } = req.body;
 
-    const project = await Project.findOne({ projectId });
+    const project = await Project.findOne(buildProjectLookupQuery(projectId));
     if (!project) {
       return res.status(404).json({ success: false, message: 'Project not found' });
     }
@@ -771,7 +874,7 @@ router.patch('/:projectId/tasks/:taskIndex/admin-status', authenticateToken, isS
       return res.status(400).json({ success: false, message: 'Invalid status' });
     }
 
-    const project = await Project.findOne({ projectId });
+    const project = await Project.findOne(buildProjectLookupQuery(projectId));
     if (!project) {
       return res.status(404).json({ success: false, message: 'Project not found' });
     }
@@ -852,7 +955,7 @@ router.patch('/:projectId/tasks/:taskIndex/admin-duedate', authenticateToken, is
       return res.status(400).json({ success: false, message: 'Invalid date format' });
     }
 
-    const project = await Project.findOne({ projectId });
+    const project = await Project.findOne(buildProjectLookupQuery(projectId));
     if (!project) {
       return res.status(404).json({ success: false, message: 'Project not found' });
     }

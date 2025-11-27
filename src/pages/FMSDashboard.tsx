@@ -475,14 +475,14 @@ const FMSDashboard: React.FC = () => {
     }
 
     return (
-        <div className="min-h-screen p-6 space-y-6" style={{ backgroundColor: 'var(--color-background)' }}>
+        <div className="min-h-screen p-4 space-y-4" style={{ backgroundColor: 'var(--color-background)' }}>
             {/* Header */}
-            <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
+            <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-3">
                 <div>
-                    <h1 className="text-3xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
+                    <h1 className="text-2xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
                         FMS Progress Dashboard
                     </h1>
-                    <p className="text-gray-600 dark:text-gray-400 mt-1">
+                    <p className="text-gray-600 dark:text-gray-400 text-xs mt-0.5">
                         Comprehensive overview of Facility Management System progress
                     </p>
                 </div>
@@ -544,7 +544,7 @@ const FMSDashboard: React.FC = () => {
 
             {/* Filters Panel */}
             {showFilters && (
-                <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 space-y-4">
+                <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-3 space-y-3">
                     <div className="flex justify-between items-center">
                         <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Filters</h3>
                         <button onClick={() => setShowFilters(false)} className="text-gray-500 hover:text-gray-700">
@@ -647,114 +647,114 @@ const FMSDashboard: React.FC = () => {
             )}
 
             {/* KPI Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-3">
                 <button
                     onClick={() => navigate('/fms-progress?view=all')}
-                    className="bg-gradient-to-br from-blue-500 to-blue-700 rounded-xl shadow-lg p-6 text-white text-left transition transform hover:scale-[1.02] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-300"
+                    className="bg-gradient-to-br from-blue-500 to-blue-700 rounded-xl shadow-lg p-3 text-white text-left transition transform hover:scale-[1.02] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-300"
                 >
                     <div className="flex items-center justify-between">
                         <div>
-                            <p className="text-blue-100 text-sm font-medium">Total Tasks</p>
-                            <p className="text-3xl font-bold mt-1">{data?.kpis.totalTasks || 0}</p>
+                            <p className="text-blue-100 text-xs font-medium">Total Tasks</p>
+                            <p className="text-2xl font-bold mt-1">{data?.kpis.totalTasks || 0}</p>
                         </div>
-                        <Package className="w-12 h-12 opacity-50" />
+                        <Package className="w-8 h-8 opacity-50" />
                     </div>
                 </button>
 
                 <button
                     onClick={() => navigate('/fms-progress?view=pending')}
-                    className="bg-gradient-to-br from-gray-500 to-gray-700 rounded-xl shadow-lg p-6 text-white text-left transition transform hover:scale-[1.02] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-300"
+                    className="bg-gradient-to-br from-gray-500 to-gray-700 rounded-xl shadow-lg p-3 text-white text-left transition transform hover:scale-[1.02] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-300"
                 >
                     <div className="flex items-center justify-between">
                         <div>
-                            <p className="text-gray-100 text-sm font-medium">Open Tasks</p>
-                            <p className="text-3xl font-bold mt-1">{data?.kpis.openTasks || 0}</p>
+                            <p className="text-gray-100 text-xs font-medium">Open Tasks</p>
+                            <p className="text-2xl font-bold mt-1">{data?.kpis.openTasks || 0}</p>
                         </div>
-                        <Clock className="w-12 h-12 opacity-50" />
+                        <Clock className="w-8 h-8 opacity-50" />
                     </div>
                 </button>
 
                 <button
                     onClick={() => navigate('/fms-progress?view=in-progress')}
-                    className="bg-gradient-to-br from-indigo-500 to-indigo-700 rounded-xl shadow-lg p-6 text-white text-left transition transform hover:scale-[1.02] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-300"
+                    className="bg-gradient-to-br from-indigo-500 to-indigo-700 rounded-xl shadow-lg p-3 text-white text-left transition transform hover:scale-[1.02] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-300"
                 >
                     <div className="flex items-center justify-between">
                         <div>
-                            <p className="text-indigo-100 text-sm font-medium">In Progress</p>
-                            <p className="text-3xl font-bold mt-1">{data?.kpis.inProgressTasks || 0}</p>
+                            <p className="text-indigo-100 text-xs font-medium">In Progress</p>
+                            <p className="text-2xl font-bold mt-1">{data?.kpis.inProgressTasks || 0}</p>
                         </div>
-                        <PlayCircle className="w-12 h-12 opacity-50" />
+                        <PlayCircle className="w-8 h-8 opacity-50" />
                     </div>
                 </button>
 
                 <button
                     onClick={() => navigate('/fms-progress?view=completed')}
-                    className="bg-gradient-to-br from-green-500 to-green-700 rounded-xl shadow-lg p-6 text-white text-left transition transform hover:scale-[1.02] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-300"
+                    className="bg-gradient-to-br from-green-500 to-green-700 rounded-xl shadow-lg p-3 text-white text-left transition transform hover:scale-[1.02] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-300"
                 >
                     <div className="flex items-center justify-between">
                         <div>
-                            <p className="text-green-100 text-sm font-medium">Completed</p>
-                            <p className="text-3xl font-bold mt-1">{data?.kpis.completedTasks || 0}</p>
+                            <p className="text-green-100 text-xs font-medium">Completed</p>
+                            <p className="text-2xl font-bold mt-1">{data?.kpis.completedTasks || 0}</p>
                         </div>
-                        <CheckCircle className="w-12 h-12 opacity-50" />
+                        <CheckCircle className="w-8 h-8 opacity-50" />
                     </div>
                 </button>
 
                 <button
                     onClick={() => navigate('/fms-progress?view=overdue')}
-                    className="bg-gradient-to-br from-red-500 to-red-700 rounded-xl shadow-lg p-6 text-white text-left transition transform hover:scale-[1.02] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-300"
+                    className="bg-gradient-to-br from-red-500 to-red-700 rounded-xl shadow-lg p-3 text-white text-left transition transform hover:scale-[1.02] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-300"
                 >
                     <div className="flex items-center justify-between">
                         <div>
-                            <p className="text-red-100 text-sm font-medium">Overdue</p>
-                            <p className="text-3xl font-bold mt-1">{data?.kpis.overdueTasks || 0}</p>
+                            <p className="text-red-100 text-xs font-medium">Overdue</p>
+                            <p className="text-2xl font-bold mt-1">{data?.kpis.overdueTasks || 0}</p>
                         </div>
-                        <AlertCircle className="w-12 h-12 opacity-50" />
+                        <AlertCircle className="w-8 h-8 opacity-50" />
                     </div>
                 </button>
             </div>
 
             {/* Project Insights */}
             {projectProgress.length > 0 && (
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 lg:col-span-2">
-                        <div className="bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl shadow-lg p-6 text-white">
-                            <p className="text-sm uppercase tracking-wide opacity-80">Active Projects</p>
-                            <div className="mt-3 flex items-end justify-between">
-                                <h3 className="text-4xl font-bold">{projectSummary.totalProjects}</h3>
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 lg:col-span-2">
+                        <div className="bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl shadow-lg p-3 text-white">
+                            <p className="text-xs uppercase tracking-wide opacity-80">Active Projects</p>
+                            <div className="mt-2 flex items-end justify-between">
+                                <h3 className="text-2xl font-bold">{projectSummary.totalProjects}</h3>
                                 <div className="text-right">
                                     <p className="text-sm opacity-80">On Track</p>
                                     <p className="text-xl font-semibold">{projectSummary.onTrack}</p>
                                 </div>
                             </div>
                         </div>
-                        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
-                            <p className="text-sm font-semibold text-gray-500 dark:text-gray-400">Average Completion</p>
-                            <div className="mt-4 flex items-center gap-4">
+                        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-3">
+                            <p className="text-xs font-semibold text-gray-500 dark:text-gray-400">Average Completion</p>
+                            <div className="mt-2 flex items-center gap-3">
                                 <div className="relative">
-                                    <div className="w-20 h-20 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center">
+                                    <div className="w-16 h-16 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center">
                                         <div
                                             className="absolute inset-0 rounded-full"
                                             style={{
                                                 background: `conic-gradient(#4f46e5 ${projectSummary.avgCompletion}%, rgba(79,70,229,0.2) ${projectSummary.avgCompletion}% 100%)`
                                             }}
                                         ></div>
-                                        <span className="relative z-10 text-2xl font-bold text-indigo-600 dark:text-indigo-400">
+                                        <span className="relative z-10 text-xl font-bold text-indigo-600 dark:text-indigo-400">
                                             {projectSummary.avgCompletion}%
                                         </span>
                                     </div>
                                 </div>
                                 <div>
-                                    <p className="text-sm text-gray-500 dark:text-gray-400">At Risk</p>
-                                    <p className="text-2xl font-semibold text-rose-500">{projectSummary.atRisk}</p>
+                                    <p className="text-xs text-gray-500 dark:text-gray-400">At Risk</p>
+                                    <p className="text-xl font-semibold text-rose-500">{projectSummary.atRisk}</p>
                                     <p className="text-xs text-gray-400 mt-1">Projects with overdue steps</p>
                                 </div>
                             </div>
                         </div>
                     </div>
-                    <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
-                        <div className="flex items-center justify-between mb-4">
-                            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Completion Snapshot</h3>
+                    <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-3">
+                        <div className="flex items-center justify-between mb-3">
+                            <h3 className="text-base font-semibold text-gray-900 dark:text-white">Completion Snapshot</h3>
                             <span className="text-sm text-gray-500 dark:text-gray-400">{projectProgress.length} projects</span>
                         </div>
                         <ResponsiveContainer width="100%" height={200}>

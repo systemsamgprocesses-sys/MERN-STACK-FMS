@@ -45,9 +45,10 @@ const StartProject: React.FC = () => {
   const fetchFMSTemplates = async () => {
     try {
       setFetchingTemplates(true);
+      const canViewAllTemplates = ['admin', 'superadmin', 'manager'].includes(user?.role || '');
       const params = {
         userId: user?.id,
-        isAdmin: (user?.role === 'admin' || user?.role === 'manager') ? 'true' : 'false'
+        isAdmin: canViewAllTemplates ? 'true' : 'false'
       };
       const response = await axios.get(`${address}/api/fms`, { params });
       if (response.data.success) {
@@ -165,6 +166,11 @@ const StartProject: React.FC = () => {
                   )}
                 </select>
                 {errors.fms && <p className="text-[var(--color-error)] text-sm mt-1">{errors.fms}</p>}
+                {['admin', 'superadmin'].includes(user?.role || '') && (
+                  <p className="text-xs text-[var(--color-textSecondary)] mt-1">
+                    Showing every FMS template because you are an {user?.role}.
+                  </p>
+                )}
               </div>
 
               {selectedTemplate && (

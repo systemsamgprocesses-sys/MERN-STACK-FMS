@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { CheckSquare, Plus, Filter, Calendar, User, Users, Clock, Archive, Printer, Download } from 'lucide-react';
+import { CheckSquare, Plus, Filter, Calendar, User, Users, Clock, Archive, Printer, Download, UploadCloud } from 'lucide-react';
 import axios from 'axios';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
@@ -25,6 +25,13 @@ interface Checklist {
   createdAt: string;
 }
 
+interface ImportSummary {
+  imported: number;
+  failed: number;
+  details?: Array<{ name: string; occurrences: number }>;
+  errors?: Array<{ row: number; message: string }>;
+}
+
 const Checklists: React.FC = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -42,6 +49,13 @@ const Checklists: React.FC = () => {
   });
   const [categories, setCategories] = useState<string[]>([]);
   const [departments, setDepartments] = useState<string[]>([]);
+  const canBulkImport = ['admin', 'superadmin'].includes(user?.role || '');
+  const [showImportModal, setShowImportModal] = useState(false);
+  const [csvFile, setCsvFile] = useState<File | null>(null);
+  const [importing, setImporting] = useState(false);
+  const [importSummary, setImportSummary] = useState<ImportSummary | null>(null);
+  const [importError, setImportError] = useState<string | null>(null);
+  const [downloadingSample, setDownloadingSample] = useState(false);
 
   useEffect(() => {
     fetchChecklists();
@@ -53,7 +67,8 @@ const Checklists: React.FC = () => {
     try {
       const token = localStorage.getItem('token');
       const params = new URLSearchParams();
-      
+      const isPC = user?.role === 'pc';
+
       // Add user context to filter checklists where the user is assigned
       if (user?.id) {
         params.append('userId', user.id);
@@ -61,10 +76,12 @@ const Checklists: React.FC = () => {
       if (user?.role) {
         params.append('role', user.role);
       }
-      
-      // Add only assigned to user
-      params.append('assignedTo', user?.id || '');
-      
+
+      // Only filter by assignedTo if user is NOT a PC
+      if (!isPC && user?.id) {
+        params.append('assignedTo', user.id);
+      }
+
       Object.entries(filters).forEach(([key, value]) => {
         if (value && key !== 'assignedTo') { // Don't override assignedTo
           params.append(key, value);
@@ -127,6 +144,62 @@ const Checklists: React.FC = () => {
       case 'Archived': return 'bg-red-100 text-red-800';
       default: return 'bg-gray-100 text-gray-800';
     }
+  };
+
+  const handleSampleDownload = async () => {
+    try {
+      setDownloadingSample(true);
+      const token = localStorage.getItem('token');
+      const response = await axios.get(`${address}/api/checklist-templates/sample-csv`, {
+        headers: { Authorization: `Bearer ${token}` },
+        responseType: 'blob'
+      });
+      saveAs(response.data, 'checklist_import_sample.csv');
+    } catch (error) {
+      console.error('Error downloading sample CSV:', error);
+      alert('Unable to download the sample CSV. Please try again.');
+    } finally {
+      setDownloadingSample(false);
+    }
+  };
+
+  const handleImportSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!csvFile) {
+      setImportError('Please select a CSV file to import.');
+      return;
+    }
+
+    try {
+      setImporting(true);
+      setImportError(null);
+      const token = localStorage.getItem('token');
+      const formData = new FormData();
+      formData.append('file', csvFile);
+
+      const response = await axios.post(`${address}/api/checklist-templates/import`, formData, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'multipart/form-data'
+        }
+      });
+
+      setImportSummary(response.data);
+      fetchChecklists();
+    } catch (error: any) {
+      console.error('Checklist import error:', error);
+      setImportSummary(null);
+      setImportError(error.response?.data?.message || 'Failed to import checklists. Please review your CSV and try again.');
+    } finally {
+      setImporting(false);
+    }
+  };
+
+  const closeImportModal = () => {
+    setShowImportModal(false);
+    setCsvFile(null);
+    setImportSummary(null);
+    setImportError(null);
   };
 
   const handlePrint = () => {
@@ -372,11 +445,11 @@ const Checklists: React.FC = () => {
         </div>
 
         ${checklists.map((checklist, idx) => {
-          const progress = getProgressPercentage(checklist);
-          const completedItems = checklist.items.filter(i => i.isDone).length;
-          const totalItems = checklist.items.length;
-          
-          return `
+      const progress = getProgressPercentage(checklist);
+      const completedItems = checklist.items.filter(i => i.isDone).length;
+      const totalItems = checklist.items.length;
+
+      return `
             <div class="checklist-section">
               <div class="checklist-header">
                 <h2>${idx + 1}. ${checklist.title}</h2>
@@ -419,7 +492,7 @@ const Checklists: React.FC = () => {
               </div>
             </div>
           `;
-        }).join('')}
+    }).join('')}
 
         <div class="footer">
           <p><strong>Checklists Management System</strong></p>
@@ -484,11 +557,11 @@ const Checklists: React.FC = () => {
         </div>
 
         ${checklists.map((checklist, idx) => {
-          const progress = getProgressPercentage(checklist);
-          const completedItems = checklist.items.filter(i => i.isDone).length;
-          const totalItems = checklist.items.length;
+        const progress = getProgressPercentage(checklist);
+        const completedItems = checklist.items.filter(i => i.isDone).length;
+        const totalItems = checklist.items.length;
 
-          return `
+        return `
             <div style="page-break-inside: avoid; margin-bottom: 30px; border: 2px solid #e5e7eb; border-radius: 8px; overflow: hidden;">
               <div style="background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%); color: white; padding: 15px 20px;">
                 <h2 style="font-size: 20px; margin: 0 0 8px 0;">${idx + 1}. ${checklist.title}</h2>
@@ -529,7 +602,7 @@ const Checklists: React.FC = () => {
               </div>
             </div>
           `;
-        }).join('')}
+      }).join('')}
 
         <div style="margin-top: 40px; padding-top: 20px; border-top: 2px solid #e5e7eb; text-align: center; color: #6b7280; font-size: 12px;">
           <p><strong>Checklists Management System</strong></p>
@@ -549,13 +622,13 @@ const Checklists: React.FC = () => {
 
         const imgData = canvas.toDataURL('image/png');
         const pdf = new jsPDF('p', 'mm', 'a4');
-        
+
         // Calculate dimensions for multi-page support
         const pdfWidth = pdf.internal.pageSize.getWidth();
         const pdfHeight = pdf.internal.pageSize.getHeight();
         const imgWidth = pdfWidth;
         const imgHeight = (canvas.height * pdfWidth) / canvas.width;
-        
+
         let heightLeft = imgHeight;
         let position = 0;
 
@@ -597,10 +670,10 @@ const Checklists: React.FC = () => {
         element.style.padding = '40px';
         element.style.backgroundColor = '#ffffff';
         element.style.fontFamily = 'Arial, sans-serif';
-        
+
         const progress = getProgressPercentage(checklist);
         const completedItems = checklist.items.filter(i => i.isDone).length;
-        
+
         element.innerHTML = `
           <div style="margin-bottom: 30px; border-bottom: 3px solid #2563eb; padding-bottom: 20px;">
             <h1 style="color: #2563eb; margin: 0 0 10px 0; font-size: 28px;">${checklist.title}</h1>
@@ -639,24 +712,24 @@ const Checklists: React.FC = () => {
             <p>Generated on ${new Date().toLocaleString()}</p>
           </div>
         `;
-        
+
         document.body.appendChild(element);
-        
+
         try {
           const canvas = await html2canvas(element, {
             scale: 2,
             useCORS: true,
             backgroundColor: '#ffffff'
           });
-          
+
           const imgData = canvas.toDataURL('image/png');
           const pdf = new jsPDF('p', 'mm', 'a4');
           const pdfWidth = pdf.internal.pageSize.getWidth();
           const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
-          
+
           pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
           const blob = pdf.output('blob');
-          
+
           const fileName = `${checklist.title.replace(/[^a-z0-9]/gi, '_')}.pdf`;
           zip.file(fileName, blob);
         } catch (error) {
@@ -665,7 +738,7 @@ const Checklists: React.FC = () => {
           document.body.removeChild(element);
         }
       }
-      
+
       const zipBlob = await zip.generateAsync({ type: 'blob' });
       saveAs(zipBlob, `checklists-${new Date().toISOString().split('T')[0]}.zip`);
     } catch (error) {
@@ -720,6 +793,15 @@ const Checklists: React.FC = () => {
               <Download size={18} />
               Download Separate PDFs
             </button>
+            {canBulkImport && (
+              <button
+                onClick={() => setShowImportModal(true)}
+                className="px-4 py-2 bg-amber-500 text-white rounded-lg hover:bg-amber-600 transition-colors flex items-center gap-2"
+              >
+                <UploadCloud size={18} />
+                Import CSV
+              </button>
+            )}
             <button
               onClick={() => navigate('/checklists/create')}
               className="px-4 py-2 bg-[--color-primary] text-white rounded-lg hover:bg-[--color-primary-dark] transition-colors flex items-center gap-2"
@@ -887,6 +969,111 @@ const Checklists: React.FC = () => {
           </div>
         )}
       </div>
+
+      {showImportModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={closeImportModal}></div>
+          <div className="relative w-full max-w-2xl bg-white rounded-2xl shadow-2xl p-6 overflow-hidden">
+            <div className="flex items-start justify-between">
+              <div>
+                <h3 className="text-xl font-semibold text-gray-900">Import Checklists from CSV</h3>
+                <p className="text-sm text-gray-500 mt-1">
+                  Columns: <span className="font-medium">name, category, frequency, assignedTo, startDate, endDate, items, weeklyDays, monthlyDates</span>
+                </p>
+              </div>
+              <button onClick={closeImportModal} className="text-gray-400 hover:text-gray-600">
+                ✕
+              </button>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4 text-sm text-gray-600">
+              <div>
+                <p className="font-semibold text-gray-700 mb-2">Formatting Tips</p>
+                <ul className="list-disc list-inside space-y-1">
+                  <li>Use usernames or emails in the <strong>assignedTo</strong> column.</li>
+                  <li>Separate checklist items with <code>|</code> and optional descriptions using <code>Item:Description</code>.</li>
+                  <li>Weekly days accept names (e.g., Mon) or numbers (0-6).</li>
+                </ul>
+              </div>
+              <div>
+                <p className="font-semibold text-gray-700 mb-2">Frequency Specifics</p>
+                <ul className="list-disc list-inside space-y-1">
+                  <li><strong>daily</strong>: leave weekly/monthly columns blank.</li>
+                  <li><strong>weekly</strong>: fill <strong>weeklyDays</strong> (e.g., <code>Mon|Thu</code>).</li>
+                  <li><strong>monthly</strong>: fill <strong>monthlyDates</strong> (e.g., <code>1|15|30</code>).</li>
+                </ul>
+              </div>
+            </div>
+
+            <form onSubmit={handleImportSubmit} className="mt-6 space-y-4">
+              <div>
+                <label className="text-sm font-medium text-gray-700">CSV File</label>
+                <input
+                  type="file"
+                  accept=".csv"
+                  onChange={(e) => setCsvFile(e.target.files?.[0] || null)}
+                  className="mt-2 w-full border border-gray-200 rounded-lg px-3 py-2 text-sm"
+                />
+                {csvFile && (
+                  <p className="text-xs text-gray-500 mt-1">Selected: {csvFile.name}</p>
+                )}
+              </div>
+
+              {importError && (
+                <div className="p-3 rounded-lg bg-red-50 border border-red-100 text-sm text-red-700">
+                  {importError}
+                </div>
+              )}
+
+              {importSummary && (
+                <div className="p-3 rounded-lg bg-green-50 border border-green-100 text-sm text-green-700">
+                  <p>
+                    Imported <strong>{importSummary.imported}</strong> template(s).{' '}
+                    {(importSummary.failed ?? 0) > 0 ? `${importSummary.failed} row(s) skipped.` : 'All rows imported successfully.'}
+                  </p>
+                  {importSummary.errors && importSummary.errors.length > 0 && (
+                    <div className="mt-2 text-xs text-yellow-700 space-y-1 max-h-24 overflow-y-auto">
+                      {importSummary.errors.slice(0, 5).map((err, idx) => (
+                        <p key={`${err.row}-${idx}`}>Row {err.row}: {err.message}</p>
+                      ))}
+                      {importSummary.errors.length > 5 && (
+                        <p>+{importSummary.errors.length - 5} more issues...</p>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                <button
+                  type="button"
+                  onClick={handleSampleDownload}
+                  disabled={downloadingSample}
+                  className="px-4 py-2 rounded-lg border border-gray-200 text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+                >
+                  {downloadingSample ? 'Preparing sample...' : 'Download Sample CSV'}
+                </button>
+                <div className="flex gap-3">
+                  <button
+                    type="button"
+                    onClick={closeImportModal}
+                    className="px-4 py-2 rounded-lg border border-gray-200 text-gray-700 hover:bg-gray-50"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={importing}
+                    className="px-4 py-2 rounded-lg bg-[--color-primary] text-white font-semibold hover:bg-[--color-primary-dark] disabled:opacity-50"
+                  >
+                    {importing ? 'Importing...' : 'Import Checklists'}
+                  </button>
+                </div>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

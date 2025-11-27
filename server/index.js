@@ -9,6 +9,7 @@ import multer from 'multer';
 import fs from 'fs';
 import dotenv from 'dotenv';
 import { config, mongoOptions } from './config.js';
+import { authenticateToken } from './middleware/auth.js';
 
 // Import routes
 import authRoutes from './routes/auth.js';
@@ -141,16 +142,30 @@ const storage = multer.diskStorage({
   }
 });
 
+const allowedUploadMimeTypes = new Set([
+  'image/jpeg',
+  'image/png',
+  'image/webp',
+  'image/gif',
+  'application/pdf',
+  'application/msword',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  'text/plain'
+]);
+
 const upload = multer({
-  storage: storage,
+  storage,
   limits: { fileSize: config.maxFileSize },
   fileFilter: function (req, file, cb) {
-    cb(null, true);
+    if (allowedUploadMimeTypes.has(file.mimetype)) {
+      return cb(null, true);
+    }
+    cb(new Error('Unsupported file type'));
   }
 });
 
-// File upload endpoint
-app.post('/api/upload', upload.array('files', 10), (req, res) => {
+// File upload endpoint (authenticated + limited mime types)
+app.post('/api/upload', authenticateToken, upload.array('files', 10), (req, res) => {
   try {
     if (!req.files || req.files.length === 0) {
       return res.status(400).json({ message: 'No files uploaded' });
@@ -225,60 +240,64 @@ mongoose.connect(config.mongoURI, mongoOptions)
   .then(() => {
     console.log('✅ Connected to MongoDB');
 
-    // Create default admin if not exists
-    const User = mongoose.model('User');
-    User.findOne({ email: 'admin@taskmanagement.com' })
-      .then(existingAdmin => {
-        if (!existingAdmin) {
-          const admin = new User({
-            username: 'Admin',
-            email: 'admin@taskmanagement.com',
-            password: '123456',
-            role: 'admin',
-            permissions: {
-              canViewTasks: true,
-              canViewAllTeamTasks: true,
-              canAssignTasks: true,
-              canDeleteTasks: true,
-              canEditTasks: true,
-              canManageUsers: true,
-              canEditRecurringTaskSchedules: true
-            }
-          });
-          admin.save()
-            .then(() => console.log('✅ Admin user created with default credentials'))
-            .catch(err => console.error('Error creating admin user:', err));
-        } else {
-          console.log('ℹ️ Admin user already exists');
-        }
-      })
-      .catch(err => console.error('Error checking for admin user:', err));
+    if (config.nodeEnv !== 'production') {
+      // Create default admin if not exists (development only)
+      const User = mongoose.model('User');
+      User.findOne({ email: 'admin@taskmanagement.com' })
+        .then(existingAdmin => {
+          if (!existingAdmin) {
+            const admin = new User({
+              username: 'Admin',
+              email: 'admin@taskmanagement.com',
+              password: '123456',
+              role: 'admin',
+              permissions: {
+                canViewTasks: true,
+                canViewAllTeamTasks: true,
+                canAssignTasks: true,
+                canDeleteTasks: true,
+                canEditTasks: true,
+                canManageUsers: true,
+                canEditRecurringTaskSchedules: true
+              }
+            });
+            admin.save()
+              .then(() => console.log('✅ Admin user created with default credentials'))
+              .catch(err => console.error('Error creating admin user:', err));
+          } else {
+            console.log('ℹ️ Admin user already exists');
+          }
+        })
+        .catch(err => console.error('Error checking for admin user:', err));
 
-    User.findOne({ role: 'superadmin' })
-      .then(existingSuperAdmin => {
-        if (!existingSuperAdmin) {
-          const superAdmin = new User({
-            username: 'Super Admin',
-            email: 'superadmin@taskmanagement.com',
-            password: 'Super123!',
-            role: 'superadmin',
-            permissions: {
-              canViewTasks: true,
-              canViewAllTeamTasks: true,
-              canAssignTasks: true,
-              canDeleteTasks: true,
-              canEditTasks: true,
-              canManageUsers: true,
-              canEditRecurringTaskSchedules: true,
-              canCompleteTasksOnBehalf: true
-            }
-          });
-          superAdmin.save()
-            .then(() => console.log('✅ Super admin user created with default credentials'))
-            .catch(err => console.error('Error creating super admin user:', err));
-        }
-      })
-      .catch(err => console.error('Error checking for super admin user:', err));
+      User.findOne({ role: 'superadmin' })
+        .then(existingSuperAdmin => {
+          if (!existingSuperAdmin) {
+            const superAdmin = new User({
+              username: 'Super Admin',
+              email: 'superadmin@taskmanagement.com',
+              password: 'Super123!',
+              role: 'superadmin',
+              permissions: {
+                canViewTasks: true,
+                canViewAllTeamTasks: true,
+                canAssignTasks: true,
+                canDeleteTasks: true,
+                canEditTasks: true,
+                canManageUsers: true,
+                canEditRecurringTaskSchedules: true,
+                canCompleteTasksOnBehalf: true
+              }
+            });
+            superAdmin.save()
+              .then(() => console.log('✅ Super admin user created with default credentials'))
+              .catch(err => console.error('Error creating super admin user:', err));
+          }
+        })
+        .catch(err => console.error('Error checking for super admin user:', err));
+    } else {
+      console.log('⚠️ Skipping default admin creation in production');
+    }
 
     // Start server
     app.listen(PORT, '0.0.0.0', () => {

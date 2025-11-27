@@ -11,7 +11,6 @@ import {
   RotateCcw,
   UserPlus,
   Settings,
-  X,
   ChevronLeft,
   ChevronRight,
   Zap,
@@ -26,40 +25,34 @@ import {
   BarChart2,
   MessageSquare,
   Calendar,
-  Activity,
   ListTodo,
-  Star
+  Star,
+  X
 } from 'lucide-react';
 
-// Clean and Professional AMG Logo Component
+// Modern AMG Logo Component with Glassmorphism
 const AMGLogo = ({ isCollapsed }: { isCollapsed: boolean }) => (
-  <div className="flex items-center">
-    <div className="relative mr-3">
-      {/* Logo Image Container */}
+  <div className="flex items-center gap-3">
+    <div className="relative">
+      <div className="absolute inset-0 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl blur-sm opacity-40"></div>
       <img
         src="/assets/AMG LOGO.webp"
         alt="AMG Logo"
-        className="h-8 w-8 object-contain rounded-lg"
-        style={{
-          boxShadow: '0 2px 8px rgba(37, 99, 235, 0.25)'
-        }}
+        className="relative h-10 w-10 object-contain rounded-xl p-1.5 bg-white shadow-lg"
       />
     </div>
     {!isCollapsed && (
-      <span
-        className="text-sm font-bold tracking-tight transition-opacity duration-200"
-        style={{
-          color: '#277ef8ff',
-          fontFamily: 'system-ui, -apple-system, sans-serif'
-        }}
-      >
-        Ashok Malhotra Group
-      </span>
+      <div className="flex flex-col">
+        <span className="text-sm font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+          Ashok Malhotra
+        </span>
+        <span className="text-xs text-gray-500 font-medium">Group</span>
+      </div>
     )}
   </div>
 );
 
-// Tooltip Component
+// Enhanced Tooltip Component
 interface TooltipProps {
   children: React.ReactNode;
   content: React.ReactNode;
@@ -70,25 +63,10 @@ const Tooltip: React.FC<TooltipProps> = ({ children, content, show }) => (
   <div className="relative group">
     {children}
     {show && (
-      <div className="absolute left-full ml-2 top-1/2 transform -translate-y-1/2 z-50 opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none">
-        <div
-          className="px-3 py-2 text-sm rounded-lg shadow-lg whitespace-nowrap"
-          style={{
-            backgroundColor: 'var(--color-text)',
-            color: 'var(--color-background)'
-          }}
-        >
+      <div className="absolute left-full ml-3 top-1/2 transform -translate-y-1/2 z-50 opacity-0 group-hover:opacity-100 transition-all duration-200 pointer-events-none">
+        <div className="px-3 py-2 text-xs font-medium rounded-lg shadow-xl whitespace-nowrap bg-gray-900 text-white border border-gray-700">
           {content}
-          <div
-            className="absolute top-1/2 left-0 transform -translate-y-1/2 -translate-x-1"
-            style={{
-              width: 0,
-              height: 0,
-              borderTop: '4px solid transparent',
-              borderBottom: '4px solid transparent',
-              borderRight: '4px solid var(--color-text)'
-            }}
-          />
+          <div className="absolute top-1/2 left-0 transform -translate-y-1/2 -translate-x-1 w-0 h-0 border-t-4 border-b-4 border-r-4 border-transparent border-r-gray-900"></div>
         </div>
       </div>
     )}
@@ -102,7 +80,7 @@ interface SidebarProps {
 
 const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
   const { user } = useAuth();
-  const [isCollapsed, setIsCollapsed] = useState(false); // Default expanded state
+  const [isCollapsed, setIsCollapsed] = useState(false);
   const [counts, setCounts] = useState({
     pendingTasks: 0,
     masterTasks: 0,
@@ -131,11 +109,11 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
     { section: 'Checklists', icon: Settings, label: 'Manage Checklist Categories', path: '/checklist-categories', requireAdmin: true, highlight: true },
 
     // Tasks Section
-    { section: '⭐ Tasks', icon: Star, label: 'My Tasks', path: '/admin-tasks', countKey: 'myTasks', highlight: true },
-    { section: '⭐ Tasks', icon: CheckSquare, label: 'Pending Tasks', path: '/pending-tasks', permission: 'canViewTasks', countKey: 'pendingTasks', highlight: true },
-    { section: '⭐ Tasks', icon: Archive, label: 'Master Tasks', path: '/master-tasks', permission: 'canViewAllTeamTasks', countKey: 'masterTasks', highlight: true },
-    { section: '⭐ Tasks', icon: RotateCcw, label: 'Master Repetitive', path: '/master-recurring', permission: 'canViewAllTeamTasks', countKey: 'masterRepetitive', highlight: true },
-    { section: '⭐ Tasks', icon: Calendar, label: 'Upcoming Tasks', path: '/upcoming-tasks', permission: 'canViewTasks', highlight: true },
+    { section: 'Tasks', icon: Star, label: 'My Tasks', path: '/admin-tasks', countKey: 'myTasks', highlight: true, requireAdmin: true },
+    { section: 'Tasks', icon: CheckSquare, label: 'Pending Tasks', path: '/pending-tasks', permission: 'canViewTasks', countKey: 'pendingTasks', highlight: true },
+    { section: 'Tasks', icon: Archive, label: 'Master Tasks', path: '/master-tasks', permission: 'canViewAllTeamTasks', countKey: 'masterTasks', highlight: true },
+    { section: 'Tasks', icon: RotateCcw, label: 'Master Repetitive', path: '/master-recurring', permission: 'canViewAllTeamTasks', countKey: 'masterRepetitive', highlight: true },
+    { section: 'Tasks', icon: Calendar, label: 'Upcoming Tasks', path: '/upcoming-tasks', permission: 'canViewTasks', highlight: true },
 
     // Assign Task Section
     { section: 'Assign Task', icon: UserPlus, label: 'Assign Task', path: '/assign-task', permission: 'canAssignTasks', highlight: true },
@@ -145,12 +123,10 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
     { section: 'Management', icon: LayoutDashboard, label: 'Dashboard', path: '/dashboard' },
     { section: 'Management', icon: Zap, label: 'Performance', path: '/performance' },
     { section: 'Management', icon: Settings, label: 'Admin Panel', path: '/admin', permission: 'canManageUsers' },
-    { section: 'Management', icon: Activity, label: 'Admin HR Panel', path: '/admin-hr-panel', permission: 'canManageUsers' },
 
     // Workflow Section
     { section: 'Workflow', icon: AlertCircle, label: 'Objections Hub', path: '/objections', countKey: 'myObjections' },
     { section: 'Workflow', icon: AlertCircle, label: 'Objection Approvals', path: '/objection-approvals', countKey: 'objections' },
-    { section: 'Workflow', icon: AlertCircle, label: 'All Objections', path: '/all-objections', requireRole: 'pc' },
     { section: 'Workflow', icon: MessageSquare, label: 'Complaints', path: '/complaints', permission: 'canRaiseComplaints', countKey: 'complaintsInbox' },
     { section: 'Workflow', icon: AlertCircle, label: 'Complaints Dashboard', path: '/complaints-dashboard', permission: 'canViewAllComplaints' },
     { section: 'Workflow', icon: HelpCircle, label: 'Help Tickets', path: '/help-tickets', countKey: 'helpTickets' },
@@ -171,11 +147,8 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
   useEffect(() => {
     if (user?.id) {
       fetchCounts();
-      // Optimized: Increased from 30s to 90s to reduce server load and prevent CPU spikes
-      // This reduces API calls by 66% while still keeping data reasonably fresh
       const interval = setInterval(fetchCounts, 90000);
 
-      // Listen for task deletion/update events to refresh counts immediately
       const handleTaskUpdate = () => {
         fetchCounts();
       };
@@ -193,31 +166,24 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
 
   const fetchCounts = async () => {
     try {
-      // Fetch dashboard counts which includes all the logic for totals
       const countsParams = new URLSearchParams();
-      // Always send userId (or assignedById as fallback) - endpoint accepts both
       if (user?.id) {
         countsParams.append('userId', user.id);
-        // Also send assignedById for compatibility
         countsParams.append('assignedById', user.id);
       }
       if (user?.role === 'admin' || user?.role === 'superadmin' || user?.role === 'manager') {
         countsParams.append('isAdmin', 'true');
       }
 
-      // Use optimized counts endpoint (single aggregation query instead of 50+ queries)
       const countsResponse = await axios.get(`${address}/api/dashboard/counts-optimized?${countsParams}`);
       const countsData = countsResponse.data;
 
-      // Fetch objection approvals count
       let objectionsCount = 0;
       try {
         const objectionsResponse = await axios.get(`${address}/api/objections/pending/${user?.id}`);
-        // Count pending objections in regular tasks
         const regularObjectionsCount = objectionsResponse.data.regularTasks?.reduce((acc: number, task: any) => {
           return acc + (task.objections?.filter((obj: any) => obj.status === 'pending').length || 0);
         }, 0) || 0;
-        // Count pending objections in FMS tasks
         const fmsObjectionsCount = objectionsResponse.data.fmsTasks?.reduce((acc: number, project: any) => {
           return acc + (project.tasks?.reduce((taskAcc: number, task: any) => {
             return taskAcc + (task.objections?.filter((obj: any) => obj.status === 'pending').length || 0);
@@ -228,7 +194,6 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
         console.error('Error fetching objections:', e);
       }
 
-      // Fetch help tickets count
       let helpTicketsCount = 0;
       try {
         const helpTicketsResponse = await axios.get(`${address}/api/help-tickets?userId=${user?.id}&role=${user?.role}`);
@@ -260,9 +225,9 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
 
       setCounts({
         pendingTasks: countsData.pendingTasks || 0,
-        masterTasks: countsData.totalTasks || 0, // Use totalTasks as master tasks
+        masterTasks: countsData.totalTasks || 0,
         masterRepetitive: countsData.recurringTasks || 0,
-        myTasks: countsData.totalTasks || 0, // For admin, show total tasks
+        myTasks: countsData.totalTasks || 0,
         assignedByMe: countsData.assignedByMe?.total || 0,
         objections: objectionsCount,
         myObjections,
@@ -275,32 +240,26 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
   };
 
   const filteredMenuItems = menuItems.filter(item => {
-    // Super admin can see everything
     if (user?.role === 'superadmin') return true;
-
-    // Hide items that require super admin (for non-superadmins)
     if (item.requireSuperAdmin && user?.role !== 'superadmin') return false;
-
-    // Admin can see admin panel and below (legacy check)
     if (item.requireAdmin && !['admin', 'superadmin'].includes(user?.role || '')) return false;
-
-    // Check for specific role requirement
     if (item.requireRole && user?.role !== item.requireRole) return false;
-
-    // Check for specific permissions - this is the primary access control
     if (item.permission) {
       const hasPermission = user?.permissions?.[item.permission as keyof typeof user.permissions];
-      // If no permission, but user is admin/superadmin, allow access (for backward compatibility)
+      // Allow PC role to access specific permission items
+      const pcAllowedPermissions = ['canAssignTasks', 'canViewTasks', 'canViewAllChecklists', 'canViewAllTeamTasks'];
+
       if (!hasPermission && !['admin', 'superadmin'].includes(user?.role || '')) {
+        // PC role gets special access to specific permissions
+        if (user?.role === 'pc' && pcAllowedPermissions.includes(item.permission)) {
+          return true;
+        }
         return false;
       }
     }
-
-    // Regular users see the rest
     return true;
   });
 
-  // Group menu items by section
   const groupedMenuItems = filteredMenuItems.reduce((acc, item) => {
     const section = item.section || 'Other';
     if (!acc[section]) acc[section] = [];
@@ -314,109 +273,102 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
 
   return (
     <>
-      {/* Mobile overlay */}
+      {/* Mobile overlay with blur */}
       {isOpen && (
         <div
-          className="fixed inset-0 z-20 transition-opacity bg-black opacity-50 lg:hidden"
+          className="fixed inset-0 z-20 bg-black/50 backdrop-blur-sm lg:hidden transition-opacity duration-300"
           onClick={onClose}
         ></div>
       )}
 
-
-
       {/* Sidebar */}
-      <div
-        className={`fixed inset-y-0 left-0 z-30 flex flex-col transition-all duration-300 ease-in-out transform lg:translate-x-0 lg:static lg:inset-0 ${isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
-          } border-r backdrop-blur-xl`}
+      <aside
+        className={`fixed inset-y-0 left-0 z-30 flex flex-col transition-all duration-300 ease-in-out transform lg:translate-x-0 lg:static ${isOpen ? 'translate-x-0' : '-translate-x-full'
+          }`}
         style={{
-          backgroundColor: 'rgba(var(--color-surface-rgb, 255, 255, 255), 0.95)',
-          borderColor: 'var(--color-border)',
-          width: isCollapsed ? '5rem' : '14rem',
-          minWidth: isCollapsed ? '5rem' : '14rem',
-          maxWidth: isCollapsed ? '5rem' : '14rem',
-          boxShadow: '0 10px 30px -10px rgba(0, 0, 0, 0.1)'
+          width: isCollapsed ? '4.5rem' : '16rem',
+          minWidth: isCollapsed ? '4.5rem' : '16rem',
+          maxWidth: isCollapsed ? '4.5rem' : '16rem',
         }}
       >
-        {/* Header */}
-        <div className="flex items-center justify-between flex-shrink-0 p-4 border-b" style={{ borderColor: 'var(--color-border)' }}>
-          <AMGLogo isCollapsed={isCollapsed} />
+        {/* Glassmorphism Background */}
+        <div className="absolute inset-0 bg-gradient-to-br from-white/95 via-white/90 to-gray-50/95 backdrop-blur-xl border-r border-gray-200/50 shadow-2xl"></div>
 
-          {/* Desktop toggle button */}
-          <button
-            onClick={toggleCollapse}
-            className="hidden lg:flex p-1.5 rounded-lg hover:bg-opacity-10 transition-all duration-200 hover:scale-110"
-            style={{ color: 'var(--color-primary)' }}
-          >
-            {isCollapsed ? <ChevronRight size={18} /> : <ChevronLeft size={18} />}
-          </button>
+        {/* Content */}
+        <div className="relative flex flex-col h-full">
+          {/* Header */}
+          <div className="flex items-center justify-between px-4 py-5 border-b border-gray-200/50">
+            <AMGLogo isCollapsed={isCollapsed} />
 
-          {/* Mobile close button */}
-          <button
-            onClick={onClose}
-            className="p-1.5 rounded-lg lg:hidden hover:scale-110 transition-all duration-200"
-            style={{ backgroundColor: 'var(--color-primary)', color: 'var(--color-background)' }}
-          >
-            <X size={16} />
-          </button>
-        </div>
-
-        {/* Navigation */}
-        <nav className="flex-1 overflow-y-auto overflow-x-hidden" style={{ scrollbarWidth: 'thin' }}>
-          {Object.entries(groupedMenuItems).map(([section, items]) => (
-            <div
-              key={section}
-              className="px-3 py-4 border-t first:border-t-0"
-              style={{ borderColor: 'var(--color-border)' }}
+            {/* Desktop toggle */}
+            <button
+              onClick={toggleCollapse}
+              className="hidden lg:flex items-center justify-center w-8 h-8 rounded-lg bg-gradient-to-br from-blue-50 to-purple-50 hover:from-blue-100 hover:to-purple-100 text-blue-600 transition-all duration-200 hover:scale-110 shadow-sm"
+              aria-label="Toggle sidebar"
             >
-              {!isCollapsed && (
-                <h3 className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--color-textSecondary)] mb-3">
-                  {section}
-                </h3>
-              )}
-              <div className="space-y-1.5">
-                {items.map((item) => (
-                  <Tooltip key={item.path} content={item.label} show={isCollapsed}>
-                    <NavLink
-                      to={item.path}
-                      onClick={onClose}
-                      className={({ isActive }) =>
-                        `group flex items-center rounded-2xl border text-sm font-medium transition-all ${isCollapsed ? 'justify-center px-0' : 'px-3'} ${isActive
-                          ? 'border-[var(--color-primary)] bg-[var(--color-primary)]/15 text-[var(--color-primary)] shadow-sm'
-                          : 'border-transparent text-[var(--color-text)] hover:border-[var(--color-border)] hover:bg-[var(--color-border)]/40'
-                        } ${isCollapsed ? 'py-3' : 'py-2.5'}`
-                      }
-                    >
-                      {({ isActive }) => (
-                        <>
-                          <span
-                            className={`flex items-center justify-center ${isCollapsed ? 'w-9 h-9' : 'w-8 h-8 mr-3'} rounded-xl transition-colors ${isActive
-                              ? 'bg-[var(--color-primary)]/20 text-[var(--color-primary)]'
-                              : 'bg-[var(--color-border)] text-[var(--color-textSecondary)] group-hover:bg-[var(--color-primary)]/10 group-hover:text-[var(--color-primary)]'
-                              }`}
-                          >
-                            <item.icon size={16} />
-                          </span>
-                          {!isCollapsed && (
-                            <span className="flex-1 text-left">
-                              {item.label}
+              {isCollapsed ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
+            </button>
+
+            {/* Mobile close */}
+            <button
+              onClick={onClose}
+              className="flex lg:hidden items-center justify-center w-8 h-8 rounded-lg bg-gradient-to-br from-red-50 to-pink-50 hover:from-red-100 hover:to-pink-100 text-red-600 transition-all duration-200"
+              aria-label="Close sidebar"
+            >
+              <X size={16} />
+            </button>
+          </div>
+
+          {/* Navigation */}
+          <nav className="flex-1 overflow-y-auto overflow-x-hidden px-3 py-4 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-transparent">
+            {Object.entries(groupedMenuItems).map(([section, items], sectionIndex) => (
+              <div
+                key={section}
+                className={`${sectionIndex > 0 ? 'mt-6' : ''}`}
+              >
+                {!isCollapsed && (
+                  <h3 className="px-3 mb-2 text-[10px] font-bold uppercase tracking-wider text-gray-500">
+                    {section}
+                  </h3>
+                )}
+                <div className="space-y-1">
+                  {items.map((item) => (
+                    <Tooltip key={item.path} content={item.label} show={isCollapsed}>
+                      <NavLink
+                        to={item.path}
+                        onClick={onClose}
+                        className={({ isActive }) =>
+                          `group flex items-center gap-3 rounded-xl text-sm font-medium transition-all duration-200 ${isCollapsed ? 'justify-center px-0 py-3' : 'px-3 py-2'
+                          } ${isActive
+                            ? 'bg-gradient-to-r from-blue-500 to-purple-600 text-white shadow-lg shadow-blue-500/30'
+                            : 'text-gray-700 hover:bg-gradient-to-r hover:from-gray-100 hover:to-gray-50 hover:text-gray-900'
+                          }`
+                        }
+                      >
+                        {({ isActive }) => (
+                          <>
+                            <span
+                              className={`flex items-center justify-center ${isCollapsed ? 'w-6 h-6' : 'w-5 h-5'
+                                } transition-transform duration-200 ${!isActive && 'group-hover:scale-110'
+                                }`}
+                            >
+                              <item.icon size={isCollapsed ? 20 : 18} strokeWidth={isActive ? 2.5 : 2} />
                             </span>
-                          )}
-                          {/* Count badges hidden as per user request */}
-                          {/* {item.countKey && counts[item.countKey as keyof typeof counts] > 0 && (
-                            <span className="ml-auto text-xs font-semibold px-2 py-0.5 rounded-full bg-[var(--color-border)] text-[var(--color-textSecondary)]">
-                              {counts[item.countKey as keyof typeof counts]}
-                            </span>
-                          )} */}
-                        </>
-                      )}
-                    </NavLink>
-                  </Tooltip>
-                ))}
+                            {!isCollapsed && (
+                              <span className="flex-1 truncate">{item.label}</span>
+                            )}
+                          </>
+                        )}
+                      </NavLink>
+                    </Tooltip>
+                  ))}
+                </div>
               </div>
-            </div>
-          ))}
-        </nav>
-      </div>
+            ))}
+          </nav>
+
+        </div>
+      </aside>
     </>
   );
 };

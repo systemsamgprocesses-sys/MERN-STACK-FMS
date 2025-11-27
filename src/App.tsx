@@ -10,7 +10,6 @@ import MasterTasks from './pages/MasterTasks';
 import MasterRecurringTasks from './pages/MasterRecurringTasks';
 import AssignTask from './pages/AssignTask';
 import AdminPanel from './pages/AdminPanel';
-import AdminHRPanel from './pages/AdminHRPanel';
 import ProtectedRoute from './components/ProtectedRoute';
 import Performance from './pages/Performance';
 import CreateFMS from './pages/CreateFMS';
@@ -23,7 +22,6 @@ import ScoreLogs from './pages/ScoreLogs';
 import AdminTasks from './pages/AdminTasks';
 import ObjectionApprovals from './pages/ObjectionApprovals';
 import ObjectionsHub from './pages/ObjectionsHub';
-import AllObjections from './pages/AllObjections';
 import ErrorBoundary from './components/ErrorBoundary';
 import Checklists from './pages/Checklists';
 import CreateChecklist from './pages/CreateChecklist';
@@ -44,6 +42,7 @@ import ChecklistOccurrenceDetail from './pages/ChecklistOccurrenceDetail';
 import PendingChecklists from './pages/PendingChecklists';
 import FMSDashboard from './pages/FMSDashboard';
 import SuperAdminManagement from './pages/SuperAdminManagement';
+import Profile from './pages/Profile';
 
 function App() {
   return (
@@ -73,6 +72,7 @@ function App() {
                   <Route path="start-project" element={<ProtectedRoute><StartProject /></ProtectedRoute>} />
                   <Route path="fms-progress" element={<ProtectedRoute><ViewFMSProgress /></ProtectedRoute>} />
                   <Route path="fms-dashboard" element={<ProtectedRoute><FMSDashboard /></ProtectedRoute>} />
+                  <Route path="profile" element={<Profile />} />
                   <Route path="/checklists" element={<ProtectedRoute><Checklists /></ProtectedRoute>} />
                   <Route path="/checklists/create" element={<ProtectedRoute><CreateChecklist /></ProtectedRoute>} />
                   <Route path="/checklists/:id" element={<ProtectedRoute><ChecklistDetail /></ProtectedRoute>} />
@@ -94,10 +94,8 @@ function App() {
                   <Route path="score-logs" element={<ProtectedRoute><ScoreLogs /></ProtectedRoute>} />
                   <Route path="objection-approvals" element={<ProtectedRoute><ObjectionApprovals /></ProtectedRoute>} />
                   <Route path="objections" element={<ProtectedRoute><ObjectionsHub /></ProtectedRoute>} />
-                  <Route path="all-objections" element={<ProtectedRoute><AllObjections /></ProtectedRoute>} />
                   <Route path="admin-tasks" element={<ProtectedRoute requireAdmin><AdminTasks /></ProtectedRoute>} />
                   <Route path="admin" element={<ProtectedRoute requireAdmin><AdminPanel /></ProtectedRoute>} />
-                  <Route path="admin-hr-panel" element={<ProtectedRoute requireAdmin><AdminHRPanel /></ProtectedRoute>} />
                   <Route path="fms-categories" element={<ProtectedRoute requireAdmin><CategoryManagement type="fms" /></ProtectedRoute>} />
                   <Route path="checklist-categories" element={<ProtectedRoute requireAdmin><CategoryManagement type="checklist" /></ProtectedRoute>} />
                   <Route path="super-admin-management" element={<ProtectedRoute requireSuperAdmin><SuperAdminManagement /></ProtectedRoute>} />

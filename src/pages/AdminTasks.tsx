@@ -6,6 +6,7 @@ import axios from 'axios';
 import { address } from '../../utils/ipAddress';
 import TaskCompletionModal from '../components/TaskCompletionModal';
 import { useTaskSettings } from '../hooks/useTaskSettings';
+import { formatDate } from '../utils/dateFormat';
 
 interface Task {
   _id: string;
@@ -294,7 +295,7 @@ const AdminTasks: React.FC = () => {
                     Due Date:
                   </span>
                   <span className="font-medium text-[var(--color-text)]">
-                    {task.dueDate ? new Date(task.dueDate).toLocaleDateString() : 'N/A'}
+                    {task.dueDate ? formatDate(task.dueDate) : 'N/A'}
                   </span>
                 </div>
                 <div className="flex items-center justify-between">

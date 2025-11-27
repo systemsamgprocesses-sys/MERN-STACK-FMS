@@ -5,6 +5,7 @@ import { CheckSquare, Clock, AlertCircle, Upload, RotateCcw, Printer, ArrowRight
 import axios from 'axios';
 import { address } from '../../utils/ipAddress';
 import { useLocation, useNavigate } from 'react-router-dom';
+import { formatDate } from '../utils/dateFormat';
 
 interface Project {
   _id: string;
@@ -73,6 +74,9 @@ const ViewFMSProgress: React.FC = () => {
   const [users, setUsers] = useState<any[]>([]);
   const [showForwardModal, setShowForwardModal] = useState(false);
   const [forwarding, setForwarding] = useState(false);
+  const [showMultiLevelActionModal, setShowMultiLevelActionModal] = useState(false);
+  const [completionRemarks, setCompletionRemarks] = useState('');
+  const [completingTask, setCompletingTask] = useState(false);
   const [taskFilter, setTaskFilter] = useState<TaskFilter>(initialFilter);
 
   useEffect(() => {
@@ -87,6 +91,14 @@ const ViewFMSProgress: React.FC = () => {
     fetchMultiLevelTasks();
     fetchUsers();
   }, []);
+
+  useEffect(() => {
+    if (!selectedProject) return;
+    const refreshedProject = projects.find(project => project.projectId === selectedProject.projectId);
+    if (refreshedProject && refreshedProject !== selectedProject) {
+      setSelectedProject(refreshedProject);
+    }
+  }, [projects, selectedProject?.projectId]);
 
   const fetchUsers = async () => {
     try {
@@ -164,6 +176,39 @@ const ViewFMSProgress: React.FC = () => {
     }
   };
 
+  const handleCompleteMultiLevelTask = async () => {
+    if (!selectedMultiLevelTask) return;
+
+    if (!completionRemarks.trim()) {
+      alert('Please provide remarks before closing this task.');
+      return;
+    }
+
+    setCompletingTask(true);
+    try {
+      const response = await axios.post(
+        `${address}/api/tasks/${selectedMultiLevelTask._id}/complete`,
+        {
+          completionRemarks: completionRemarks.trim(),
+          completedBy: user?.id
+        }
+      );
+
+      if (response.data) {
+        alert('Task marked as completed!');
+        setShowMultiLevelActionModal(false);
+        setCompletionRemarks('');
+        setSelectedMultiLevelTask(null);
+        fetchMultiLevelTasks();
+      }
+    } catch (error: any) {
+      console.error('Error completing multi-level task:', error);
+      alert(error.response?.data?.message || 'Failed to complete task');
+    } finally {
+      setCompletingTask(false);
+    }
+  };
+
   const handleTaskUpdate = async () => {
     if (!selectedTask || !selectedProject) return;
 
@@ -176,7 +221,16 @@ const ViewFMSProgress: React.FC = () => {
       }
     }
 
-    if (selectedTask.status === 'Awaiting Date' && !taskPlannedDate) {
+    const normalizedWhenType = selectedTask.whenType?.toLowerCase();
+    const needsPlannedDate =
+      normalizedWhenType === 'ask-on-completion' &&
+      (
+        selectedTask.status === 'Awaiting Date' ||
+        taskStatus === 'Done' ||
+        !selectedTask.plannedDueDate
+      );
+
+    if (needsPlannedDate && !taskPlannedDate) {
       alert('Please select a planned date before proceeding.');
       return;
     }
@@ -271,10 +325,21 @@ const ViewFMSProgress: React.FC = () => {
   const matchesFilter = (task: any, filter: TaskFilter) => {
     if (!task) return false;
     const status = (task.status || '').toLowerCase();
-    const isOverdue = task.plannedDueDate && new Date(task.plannedDueDate) < new Date() && status !== 'done';
+    const plannedDate = task.plannedDueDate ? new Date(task.plannedDueDate) : null;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const isOverdue = plannedDate && plannedDate < today && status !== 'done';
+
+    const isPendingStatus = ['pending', 'not started', 'awaiting date'].includes(status);
+    const hasValidDueDate = Boolean(plannedDate);
+    const isPastOrToday = plannedDate ? plannedDate <= today : false;
+
     switch (filter) {
       case 'pending':
-        return ['pending', 'not started', 'awaiting date'].includes(status);
+        if (status === 'awaiting date') {
+          return hasValidDueDate ? isPastOrToday : false;
+        }
+        return isPendingStatus && hasValidDueDate && isPastOrToday;
       case 'in-progress':
         return status === 'in progress';
       case 'completed':
@@ -433,6 +498,16 @@ const ViewFMSProgress: React.FC = () => {
     navigate({ pathname: location.pathname, search: searchParams.toString() }, { replace: true });
   };
 
+  const normalizedSelectedWhenType = selectedTask?.whenType?.toLowerCase();
+  const shouldShowPlannedDateInput =
+    !!selectedTask &&
+    normalizedSelectedWhenType === 'ask-on-completion' &&
+    (
+      selectedTask.status === 'Awaiting Date' ||
+      !selectedTask.plannedDueDate ||
+      taskStatus === 'Done'
+    );
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -442,17 +517,17 @@ const ViewFMSProgress: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen p-4 sm:p-6 lg:p-8" style={{ backgroundColor: 'var(--color-background)' }}>
+    <div className="min-h-screen p-2 sm:p-3 lg:p-4" style={{ backgroundColor: 'var(--color-background)' }}>
       <div className="max-w-7xl mx-auto">
         {/* Header Section */}
-        <div className="mb-8 flex flex-wrap items-center justify-between gap-4">
-          <div className="flex items-center gap-4">
-            <div className="p-3 rounded-2xl" style={{ backgroundColor: 'var(--color-primary)10' }}>
-              <RotateCcw size={28} style={{ color: 'var(--color-primary)' }} />
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <div className="p-2 rounded-xl" style={{ backgroundColor: 'var(--color-primary)10' }}>
+              <RotateCcw size={20} style={{ color: 'var(--color-primary)' }} />
             </div>
             <div>
-              <h1 className="text-4xl font-bold text-[var(--color-text)]">Task Progress Management</h1>
-              <p className="text-[var(--color-textSecondary)] text-sm mt-1">Track FMS projects and multi-level tasks</p>
+              <h1 className="text-2xl font-bold text-[var(--color-text)]">Task Progress Management</h1>
+              <p className="text-[var(--color-textSecondary)] text-xs mt-0.5">Track FMS projects and multi-level tasks</p>
             </div>
           </div>
           <button
@@ -465,29 +540,29 @@ const ViewFMSProgress: React.FC = () => {
         </div>
 
         {/* Summary Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
           {[
             { label: 'Total Projects', value: fmsStats.totalProjects, accent: 'from-blue-500 to-indigo-600' },
             { label: 'Pending Steps', value: fmsStats.pending, accent: 'from-yellow-500 to-amber-500' },
             { label: 'In Progress', value: fmsStats.inProgress, accent: 'from-purple-500 to-fuchsia-500' },
             { label: 'Overdue', value: fmsStats.overdue, accent: 'from-red-500 to-rose-500' },
           ].map(card => (
-            <div key={card.label} className={`p-5 rounded-2xl text-white bg-gradient-to-br ${card.accent} shadow-lg`}>
-              <p className="text-sm uppercase tracking-wide opacity-80">{card.label}</p>
-              <p className="text-3xl font-bold mt-2">{card.value}</p>
+            <div key={card.label} className={`p-3 rounded-xl text-white bg-gradient-to-br ${card.accent} shadow-lg`}>
+              <p className="text-xs uppercase tracking-wide opacity-80">{card.label}</p>
+              <p className="text-2xl font-bold mt-1">{card.value}</p>
             </div>
           ))}
         </div>
 
         {/* Filter Pills */}
-        <div className="mb-6 grid grid-cols-1 md:grid-cols-3 xl:grid-cols-5 gap-4">
+        <div className="mb-4 grid grid-cols-1 md:grid-cols-3 xl:grid-cols-5 gap-3">
           {filterOptions.map(option => {
             const active = taskFilter === option.value;
             return (
               <button
                 key={option.value}
                 onClick={() => handleFilterChange(option.value)}
-                className={`relative w-full rounded-2xl border transition-all p-4 text-left overflow-hidden group ${
+                className={`relative w-full rounded-xl border transition-all p-3 text-left overflow-hidden group ${
                   active
                     ? `bg-gradient-to-br ${option.gradient} text-white border-transparent shadow-xl`
                     : 'bg-[var(--color-surface)] border-[var(--color-border)] text-[var(--color-text)] hover:border-[var(--color-primary)]/60 hover:shadow-lg'
@@ -521,8 +596,8 @@ const ViewFMSProgress: React.FC = () => {
 
         {/* Pending Steps Snapshot */}
         {myPendingSteps.length > 0 && (
-          <div className="mb-8 p-5 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-sm">
-            <div className="flex items-center justify-between mb-4">
+          <div className="mb-4 p-3 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-sm">
+            <div className="flex items-center justify-between mb-3">
               <div>
                 <h2 className="text-lg font-bold text-[var(--color-text)]">My Pending Steps</h2>
                 <p className="text-sm text-[var(--color-textSecondary)]">Steps assigned to you that still need attention</p>
@@ -545,7 +620,7 @@ const ViewFMSProgress: React.FC = () => {
                   <p className="text-xs text-[var(--color-textSecondary)] truncate mb-1">{item.projectName}</p>
                   {item.task.plannedDueDate && (
                     <p className="text-xs text-[var(--color-textSecondary)] flex items-center gap-1">
-                      <Clock size={12} /> Due {new Date(item.task.plannedDueDate).toLocaleDateString()}
+                      <Clock size={12} /> Due {formatDate(item.task.plannedDueDate)}
                     </p>
                   )}
                 </div>
@@ -698,7 +773,7 @@ const ViewFMSProgress: React.FC = () => {
                           {selectedProject.projectName}
                         </h2>
                         <div className="flex items-center space-x-3 text-sm text-[var(--color-textSecondary)]">
-                          <span className="flex items-center"><Clock size={14} className="mr-1" /> Started: {new Date(selectedProject.startDate).toLocaleDateString()}</span>
+                          <span className="flex items-center"><Clock size={14} className="mr-1" /> Started: {formatDate(selectedProject.startDate)}</span>
                           <span>•</span>
                           <span className="flex items-center">Started By: <strong className="ml-1 text-[var(--color-text)]">{selectedProject.createdBy?.username || 'Unknown'}</strong></span>
                           <span>•</span>
@@ -772,7 +847,7 @@ const ViewFMSProgress: React.FC = () => {
                                   <>
                                     <span>•</span>
                                     <span className="flex items-center gap-1">
-                                      <Clock size={14} /> Due: {new Date(task.plannedDueDate).toLocaleDateString()}
+                                      <Clock size={14} /> Due: {formatDate(task.plannedDueDate)}
                                     </span>
                                   </>
                                 )}
@@ -825,7 +900,7 @@ const ViewFMSProgress: React.FC = () => {
                           {task.actualCompletedOn && (
                             <div className="mt-3 p-3 rounded-lg bg-green-50 dark:bg-green-500/10 border border-green-200 dark:border-green-500/30 text-sm text-green-700 dark:text-green-400 flex items-center">
                               <CheckSquare size={16} className="mr-2" />
-                              Completed on {new Date(task.actualCompletedOn).toLocaleDateString()} by {task.completedBy?.username}
+                              Completed on {formatDate(task.actualCompletedOn)} by {task.completedBy?.username}
                             </div>
                           )}
                         </div>
@@ -862,8 +937,17 @@ const ViewFMSProgress: React.FC = () => {
             ) : (
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 {multiLevelTasks.map((task) => {
-                  const isOverdue = new Date(task.dueDate) < new Date() && task.status !== 'completed';
-                  const isMyTask = (task.assignedTo as any)._id === user?.id || (task.assignedTo as any)._id?.toString() === user?.id;
+                  const normalizedTaskStatus = (task.status || '').toLowerCase();
+                  const isOverdue =
+                    task.dueDate
+                      ? new Date(task.dueDate) < new Date() && normalizedTaskStatus !== 'completed'
+                      : false;
+                  const assignedToId =
+                    typeof task.assignedTo === 'string'
+                      ? task.assignedTo
+                      : (task.assignedTo as any)?._id;
+                  const isMyTask = assignedToId?.toString() === user?.id;
+                  const canManageTask = isMyTask || ['admin', 'superadmin', 'manager'].includes(user?.role || '');
                   
                   return (
                     <div
@@ -902,7 +986,7 @@ const ViewFMSProgress: React.FC = () => {
                       <div className="space-y-2 text-sm">
                         <div className="flex items-center gap-2 text-[var(--color-textSecondary)]">
                           <Clock size={14} />
-                          <span>Due: {new Date(task.dueDate).toLocaleDateString()}</span>
+                          <span>Due: {formatDate(task.dueDate)}</span>
                         </div>
                         <div className="flex items-center gap-2 text-[var(--color-textSecondary)]">
                           <Users size={14} />
@@ -916,7 +1000,7 @@ const ViewFMSProgress: React.FC = () => {
                         {task.forwardedAt && (
                           <div className="flex items-center gap-2 text-xs text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 px-2 py-1 rounded">
                             <ArrowRight size={12} />
-                            <span>Forwarded on: {new Date(task.forwardedAt).toLocaleDateString()}</span>
+                            <span>Forwarded on: {formatDate(task.forwardedAt)}</span>
                           </div>
                         )}
                         {task.requiresChecklist && (
@@ -944,20 +1028,18 @@ const ViewFMSProgress: React.FC = () => {
                         </div>
                       )}
 
-                      {isMyTask && task.status !== 'completed' && (
+                      {canManageTask && normalizedTaskStatus !== 'completed' && (
                         <div className="mt-4 flex gap-2">
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
                               setSelectedMultiLevelTask(task);
-                              setForwardTo('');
-                              setForwardDate('');
-                              setForwardRemarks('');
-                              setShowForwardModal(true);
+                              setCompletionRemarks('');
+                              setShowMultiLevelActionModal(true);
                             }}
                             className="px-4 py-2 bg-[var(--color-primary)] text-white rounded-lg hover:opacity-90 text-sm font-medium flex-1"
                           >
-                            Forward Task
+                            Update Task
                           </button>
                         </div>
                       )}
@@ -966,6 +1048,74 @@ const ViewFMSProgress: React.FC = () => {
                 })}
               </div>
             )}
+          </div>
+        )}
+
+        {/* Multi Level Task Action Modal */}
+        {showMultiLevelActionModal && selectedMultiLevelTask && (
+          <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-4">
+            <div className="bg-[var(--color-surface)] rounded-lg p-6 max-w-lg w-full max-h-[90vh] overflow-y-auto">
+              <h3 className="text-xl font-bold text-[var(--color-text)] mb-2">
+                Finish Task: {selectedMultiLevelTask.title}
+              </h3>
+              <p className="text-sm text-[var(--color-textSecondary)] mb-4">
+                Would you like to completely close this task or assign it to another team member for further work?
+              </p>
+
+              <div className="space-y-3">
+                <div>
+                  <label className="block text-sm font-medium text-[var(--color-text)] mb-2">
+                    Completion Remarks <span className="text-red-500">*</span>
+                  </label>
+                  <textarea
+                    value={completionRemarks}
+                    onChange={(e) => setCompletionRemarks(e.target.value)}
+                    rows={4}
+                    placeholder="Add important updates or outcomes before closing the task"
+                    className="w-full px-4 py-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] text-[var(--color-text)] resize-none"
+                  />
+                </div>
+              </div>
+
+              <div className="flex flex-col gap-3 mt-6">
+                <button
+                  onClick={() => {
+                    setShowMultiLevelActionModal(false);
+                    setForwardTo('');
+                    setForwardDate('');
+                    setForwardRemarks('');
+                    setShowForwardModal(true);
+                  }}
+                  className="px-4 py-2 border border-[var(--color-border)] text-[var(--color-text)] rounded-lg hover:bg-[var(--color-background)] text-sm font-medium"
+                >
+                  Assign to New Assignee
+                </button>
+                <button
+                  onClick={handleCompleteMultiLevelTask}
+                  disabled={completingTask}
+                  className="px-4 py-2 bg-[var(--color-primary)] text-white rounded-lg hover:opacity-90 text-sm font-medium disabled:opacity-60 flex items-center justify-center gap-2"
+                >
+                  {completingTask ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                      Closing Task...
+                    </>
+                  ) : (
+                    'Close Task'
+                  )}
+                </button>
+                <button
+                  onClick={() => {
+                    setShowMultiLevelActionModal(false);
+                    setCompletionRemarks('');
+                    setSelectedMultiLevelTask(null);
+                  }}
+                  className="px-4 py-2 text-[var(--color-textSecondary)] text-sm font-medium hover:text-[var(--color-text)]"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
           </div>
         )}
 
@@ -1117,7 +1267,7 @@ const ViewFMSProgress: React.FC = () => {
                   </select>
                 </div>
 
-                {selectedTask.whenType === 'ask-on-completion' && selectedTask.status === 'Awaiting Date' && (
+                {shouldShowPlannedDateInput && (
                   <div>
                     <label className="block text-sm font-medium text-[var(--color-text)] mb-2">
                       Planned Date <span className="text-[var(--color-error)]">*</span>
@@ -1130,7 +1280,7 @@ const ViewFMSProgress: React.FC = () => {
                       min={new Date().toISOString().split('T')[0]}
                     />
                     <p className="text-xs text-[var(--color-textSecondary)] mt-1">
-                      Select the new target date for this step. Sundays will automatically shift to Monday.
+                      Select the target date for this step. Sundays will automatically shift to Monday.
                     </p>
                   </div>
                 )}

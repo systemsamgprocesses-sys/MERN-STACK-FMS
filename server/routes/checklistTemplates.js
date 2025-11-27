@@ -2,8 +2,71 @@ import express from 'express';
 import ChecklistTemplate from '../models/ChecklistTemplate.js';
 import ChecklistOccurrence from '../models/ChecklistOccurrence.js';
 import { authenticateToken } from '../middleware/auth.js';
+import User from '../models/User.js';
+import multer from 'multer';
+import csv from 'csv-parser';
+import { Readable } from 'stream';
 
 const router = express.Router();
+
+const csvUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 2 * 1024 * 1024 },
+  fileFilter: (req, file, cb) => {
+    if (file.mimetype === 'text/csv' || file.originalname.toLowerCase().endsWith('.csv')) {
+      return cb(null, true);
+    }
+    cb(new Error('Only CSV files are allowed'));
+  }
+});
+
+const weekdayMap = {
+  sunday: 0,
+  monday: 1,
+  tuesday: 2,
+  wednesday: 3,
+  thursday: 4,
+  friday: 5,
+  saturday: 6
+};
+
+const parseCsvRows = async (buffer) => {
+  const rows = [];
+  const readable = Readable.from(buffer.toString('utf-8'));
+
+  await new Promise((resolve, reject) => {
+    readable
+      .pipe(csv())
+      .on('data', (row) => rows.push(row))
+      .on('end', resolve)
+      .on('error', reject);
+  });
+
+  return rows;
+};
+
+const normalizeWeeklyDays = (value = '') => {
+  return value
+    .split(/[,|]/)
+    .map((entry) => entry.trim())
+    .filter(Boolean)
+    .map((entry) => {
+      const numeric = Number(entry);
+      if (!isNaN(numeric) && numeric >= 0 && numeric <= 6) {
+        return numeric;
+      }
+      const mapped = weekdayMap[entry.toLowerCase()];
+      return typeof mapped === 'number' ? mapped : null;
+    })
+    .filter((day) => day !== null);
+};
+
+const normalizeMonthlyDates = (value = '') => {
+  return value
+    .split(/[,|]/)
+    .map((entry) => parseInt(entry.trim(), 10))
+    .filter((num) => !isNaN(num) && num >= 1 && num <= 31);
+};
 
 // Helper function to generate occurrences based on frequency and date range
 async function generateOccurrences(template) {
@@ -139,6 +202,24 @@ router.get('/', authenticateToken, async (req, res) => {
     console.error('Error fetching checklist templates:', error);
     res.status(500).json({ error: 'Server error', message: error.message });
   }
+});
+
+// Provide downloadable CSV example
+router.get('/sample-csv', authenticateToken, (req, res) => {
+  if (!['admin', 'superadmin'].includes(req.user.role)) {
+    return res.status(403).json({ success: false, message: 'Only Admins can download the sample.' });
+  }
+
+  const sample = [
+    'name,category,frequency,assignedTo,startDate,endDate,items,weeklyDays,monthlyDates',
+    'Daily Site Audit,Operations,daily,john.doe,2025-01-01,2025-03-31,"Entrance Check:Doors locked|Lobby Cleanliness:No dust","",',
+    'Weekly Fire Safety,Compliance,weekly,jane.smith,2025-01-01,2025-03-31,"Extinguisher Pressure|Alarm Test",Mon|Thu,',
+    'Monthly Asset Review,Finance,monthly,super.admin,2025-01-01,2025-06-30,"Verify Asset Tag|Capture Photos","",1|15'
+  ].join('\n');
+
+  res.setHeader('Content-Type', 'text/csv');
+  res.setHeader('Content-Disposition', 'attachment; filename="checklist_import_sample.csv"');
+  return res.send(sample);
 });
 
 // Get template by ID
@@ -350,5 +431,130 @@ router.post('/:id/regenerate', authenticateToken, async (req, res) => {
   }
 });
 
+// Bulk import checklist templates via CSV
+router.post('/import', authenticateToken, csvUpload.single('file'), async (req, res) => {
+  try {
+    if (!['admin', 'superadmin'].includes(req.user.role)) {
+      return res.status(403).json({ success: false, message: 'Only Admins can import checklists.' });
+    }
+
+    if (!req.file) {
+      return res.status(400).json({ success: false, message: 'CSV file is required.' });
+    }
+
+    const rows = await parseCsvRows(req.file.buffer);
+    if (!rows.length) {
+      return res.status(400).json({ success: false, message: 'Uploaded file is empty.' });
+    }
+
+    const importSummary = [];
+    const importErrors = [];
+
+    for (const [index, row] of rows.entries()) {
+      try {
+        const name = row.name?.trim();
+        if (!name) throw new Error('Checklist name is required.');
+
+        const assignedIdentifier = row.assignedTo?.trim();
+        if (!assignedIdentifier) throw new Error('assignedTo column is required (username or email).');
+
+        const assignee = await User.findOne({
+          $or: [{ username: assignedIdentifier }, { email: assignedIdentifier }]
+        });
+
+        if (!assignee) throw new Error(`Unable to find user "${assignedIdentifier}".`);
+
+        const frequency = (row.frequency || 'daily').toLowerCase();
+        if (!['daily', 'weekly', 'monthly'].includes(frequency)) {
+          throw new Error('frequency must be daily, weekly, or monthly.');
+        }
+
+        const startDate = row.startDate ? new Date(row.startDate) : new Date();
+        const endDate = row.endDate ? new Date(row.endDate) : new Date(startDate);
+
+        if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
+          throw new Error('Invalid startDate or endDate.');
+        }
+
+        if (startDate > endDate) {
+          throw new Error('startDate must be before endDate.');
+        }
+
+        const parsedItems = (row.items || '')
+          .split('|')
+          .map((item, itemIndex) => {
+            const [label, description] = item.split(':');
+            return {
+              label: (label || `Item ${itemIndex + 1}`).trim(),
+              description: (description || '').trim()
+            };
+          })
+          .filter((item) => item.label);
+
+        if (parsedItems.length === 0) {
+          throw new Error('Each row must contain at least one item separated by "|".');
+        }
+
+        const templatePayload = {
+          name,
+          category: row.category?.trim() || 'General',
+          frequency,
+          assignedTo: assignee._id,
+          createdBy: req.user._id,
+          items: parsedItems,
+          dateRange: {
+            startDate,
+            endDate
+          },
+          weeklyDays: [],
+          monthlyDates: []
+        };
+
+        if (frequency === 'weekly') {
+          const weeklyDays = normalizeWeeklyDays(row.weeklyDays || row.weekdays || '');
+          if (!weeklyDays.length) {
+            throw new Error('weeklyDays column is required for weekly frequency.');
+          }
+          templatePayload.weeklyDays = weeklyDays;
+        }
+
+        if (frequency === 'monthly') {
+          const monthlyDates = normalizeMonthlyDates(row.monthlyDates || '');
+          if (!monthlyDates.length) {
+            throw new Error('monthlyDates column is required for monthly frequency.');
+          }
+          templatePayload.monthlyDates = monthlyDates;
+        }
+
+        const template = new ChecklistTemplate(templatePayload);
+        await template.save();
+        const occurrenceCount = await generateOccurrences(template);
+
+        importSummary.push({
+          name: template.name,
+          occurrences: occurrenceCount
+        });
+      } catch (error) {
+        importErrors.push({
+          row: index + 2, // considering header row
+          message: error.message || 'Unknown error'
+        });
+      }
+    }
+
+    res.json({
+      success: true,
+      imported: importSummary.length,
+      failed: importErrors.length,
+      details: importSummary,
+      errors: importErrors
+    });
+  } catch (error) {
+    console.error('Checklist import error:', error);
+    res.status(500).json({ success: false, message: 'Failed to import checklists.', error: error.message });
+  }
+});
+
+// Download sample CSV
 export default router;
 

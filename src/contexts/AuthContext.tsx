@@ -99,25 +99,34 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     initializeAuth();
 
-    // Add axios interceptor to handle 401/403 errors
+    // Add axios interceptor to handle auth errors
     const interceptor = axios.interceptors.response.use(
       (response) => response,
       (error) => {
-        if (error.response && (error.response.status === 401 || error.response.status === 403)) {
-          // Don't redirect if we're already on the login page or if it's a login request
-          const isLoginRequest = error.config?.url?.includes('/api/auth/login');
-          const isOnLoginPage = window.location.pathname === '/login';
-          
-          if (!isLoginRequest && !isOnLoginPage) {
-            // Token is invalid or expired
-            console.error('Authentication error:', error.response.data?.message);
-            // Clear auth data
-            setUser(null);
-            localStorage.removeItem('user');
-            localStorage.removeItem('token');
-            delete axios.defaults.headers.common['Authorization'];
-            // Redirect to login
-            window.location.href = '/login';
+        if (error.response) {
+          const status = error.response.status;
+          const message = (error.response.data?.message || '').toString().toLowerCase();
+          const isAuthFailure =
+            status === 401 ||
+            (status === 403 && message.includes('invalid token'));
+
+          if (isAuthFailure) {
+            // Don't redirect if we're already on the login page or if it's a login request
+            const isLoginRequest = error.config?.url?.includes('/api/auth/login');
+            const isOnLoginPage = window.location.pathname === '/login';
+
+            if (!isLoginRequest && !isOnLoginPage) {
+              console.error('Authentication error:', error.response.data?.message);
+              // Clear auth data
+              setUser(null);
+              localStorage.removeItem('user');
+              localStorage.removeItem('token');
+              delete axios.defaults.headers.common['Authorization'];
+              // Redirect to login
+              window.location.href = '/login';
+            }
+          } else if (status === 403) {
+            console.warn('Authorization denied:', error.response.data?.message);
           }
         }
         return Promise.reject(error);

@@ -62,38 +62,38 @@ function App() {
                   <Route index element={<Navigate to="/dashboard" replace />} />
                   <Route path="dashboard" element={<Dashboard />} />
                   <Route path="performance" element={<ProtectedRoute><Performance /></ProtectedRoute>} />
-                  <Route path="pending-tasks" element={<PendingTasks />} />
-                  <Route path="upcoming-tasks" element={<UpcomingTasks />} />
-                  <Route path="master-tasks" element={<MasterTasks />} />
-                  <Route path="master-recurring" element={<MasterRecurringTasks />} />
-                  <Route path="assign-task" element={<AssignTask />} />
-                  <Route path="fms-templates" element={<ProtectedRoute><ViewAllFMS /></ProtectedRoute>} />
-                  <Route path="create-fms" element={<ProtectedRoute><CreateFMS /></ProtectedRoute>} />
-                  <Route path="start-project" element={<ProtectedRoute><StartProject /></ProtectedRoute>} />
-                  <Route path="fms-progress" element={<ProtectedRoute><ViewFMSProgress /></ProtectedRoute>} />
-                  <Route path="fms-dashboard" element={<ProtectedRoute><FMSDashboard /></ProtectedRoute>} />
+                  <Route path="pending-tasks" element={<ProtectedRoute requiredPermissions={['canViewTasks']}><PendingTasks /></ProtectedRoute>} />
+                  <Route path="upcoming-tasks" element={<ProtectedRoute requiredPermissions={['canViewTasks']}><UpcomingTasks /></ProtectedRoute>} />
+                  <Route path="master-tasks" element={<ProtectedRoute requiredPermissions={['canViewAllTeamTasks']}><MasterTasks /></ProtectedRoute>} />
+                  <Route path="master-recurring" element={<ProtectedRoute requiredPermissions={['canViewAllTeamTasks']}><MasterRecurringTasks /></ProtectedRoute>} />
+                  <Route path="assign-task" element={<ProtectedRoute requiredPermissions={['canAssignTasks']}><AssignTask /></ProtectedRoute>} />
+                  <Route path="fms-templates" element={<ProtectedRoute requiredPermissions={['canAssignTasks']}><ViewAllFMS /></ProtectedRoute>} />
+                  <Route path="create-fms" element={<ProtectedRoute requiredPermissions={['canAssignTasks']}><CreateFMS /></ProtectedRoute>} />
+                  <Route path="start-project" element={<ProtectedRoute requiredPermissions={['canAssignTasks']}><StartProject /></ProtectedRoute>} />
+                  <Route path="fms-progress" element={<ProtectedRoute requiredPermissions={['canAssignTasks']}><ViewFMSProgress /></ProtectedRoute>} />
+                  <Route path="fms-dashboard" element={<ProtectedRoute requiredPermissions={['canAssignTasks']}><FMSDashboard /></ProtectedRoute>} />
                   <Route path="profile" element={<Profile />} />
                   <Route path="/checklists" element={<ProtectedRoute><Checklists /></ProtectedRoute>} />
                   <Route path="/checklists/create" element={<ProtectedRoute><CreateChecklist /></ProtectedRoute>} />
                   <Route path="/checklists/:id" element={<ProtectedRoute><ChecklistDetail /></ProtectedRoute>} />
-                  <Route path="/checklist-dashboard" element={<ProtectedRoute><ChecklistDashboard /></ProtectedRoute>} />
+                  <Route path="/checklist-dashboard" element={<ProtectedRoute requiredPermissions={['canViewAllChecklists']}><ChecklistDashboard /></ProtectedRoute>} />
                   <Route path="/checklist-calendar" element={<ProtectedRoute><ChecklistCalendar /></ProtectedRoute>} />
                   <Route path="/checklist-template/create" element={<ProtectedRoute><ChecklistTemplateForm /></ProtectedRoute>} />
                   <Route path="/checklist-occurrence/:id" element={<ProtectedRoute><ChecklistOccurrenceDetail /></ProtectedRoute>} />
                   <Route path="/pending-checklists" element={<ProtectedRoute><PendingChecklists /></ProtectedRoute>} />
                   <Route path="/help-tickets" element={<ProtectedRoute><HelpTickets /></ProtectedRoute>} />
-                  <Route path="/admin-help-tickets" element={<ProtectedRoute><AdminHelpTickets /></ProtectedRoute>} />
-                  <Route path="/complaints" element={<ProtectedRoute><Complaints /></ProtectedRoute>} />
-                  <Route path="/complaints-dashboard" element={<ProtectedRoute><ComplaintsDashboard /></ProtectedRoute>} />
-                  <Route path="/purchase-dashboard" element={<ProtectedRoute><PurchaseDashboard /></ProtectedRoute>} />
-                  <Route path="/sales-dashboard" element={<ProtectedRoute><SalesDashboard /></ProtectedRoute>} />
+                  <Route path="/admin-help-tickets" element={<ProtectedRoute requiredPermissions={['canViewAllComplaints']}><AdminHelpTickets /></ProtectedRoute>} />
+                  <Route path="/complaints" element={<ProtectedRoute requiredPermissions={['canRaiseComplaints']}><Complaints /></ProtectedRoute>} />
+                  <Route path="/complaints-dashboard" element={<ProtectedRoute requiredPermissions={['canViewAllComplaints']}><ComplaintsDashboard /></ProtectedRoute>} />
+                  <Route path="/purchase-dashboard" element={<ProtectedRoute requireAdmin><PurchaseDashboard /></ProtectedRoute>} />
+                  <Route path="/sales-dashboard" element={<ProtectedRoute requireAdmin><SalesDashboard /></ProtectedRoute>} />
                   <Route path="/stationery-request" element={<ProtectedRoute><StationeryRequestForm /></ProtectedRoute>} />
                   <Route path="/my-stationery-requests" element={<ProtectedRoute><MyStationeryRequests /></ProtectedRoute>} />
-                  <Route path="assigned-by-me" element={<ProtectedRoute><AssignedByMe /></ProtectedRoute>} />
-                  <Route path="audit-logs" element={<ProtectedRoute><AuditLogs /></ProtectedRoute>} />
-                  <Route path="score-logs" element={<ProtectedRoute><ScoreLogs /></ProtectedRoute>} />
-                  <Route path="objection-approvals" element={<ProtectedRoute><ObjectionApprovals /></ProtectedRoute>} />
-                  <Route path="objections" element={<ProtectedRoute><ObjectionsHub /></ProtectedRoute>} />
+                  <Route path="assigned-by-me" element={<ProtectedRoute requiredPermissions={['canAssignTasks']}><AssignedByMe /></ProtectedRoute>} />
+                  <Route path="audit-logs" element={<ProtectedRoute requireSuperAdmin><AuditLogs /></ProtectedRoute>} />
+                  <Route path="score-logs" element={<ProtectedRoute requireSuperAdmin><ScoreLogs /></ProtectedRoute>} />
+                  <Route path="objection-approvals" element={<ProtectedRoute requiredPermissions={['canApproveObjections']}><ObjectionApprovals /></ProtectedRoute>} />
+                  <Route path="objections" element={<ProtectedRoute requiredPermissions={['canViewObjectionMaster']}><ObjectionsHub /></ProtectedRoute>} />
                   <Route path="admin-tasks" element={<ProtectedRoute requireAdmin><AdminTasks /></ProtectedRoute>} />
                   <Route path="admin" element={<ProtectedRoute requireAdmin><AdminPanel /></ProtectedRoute>} />
                   <Route path="fms-categories" element={<ProtectedRoute requireAdmin><CategoryManagement type="fms" /></ProtectedRoute>} />

@@ -187,9 +187,15 @@ app.post('/api/upload', authenticateToken, upload.array('files', 10), (req, res)
 // Serve uploaded files statically
 app.use('/uploads', express.static(uploadsDir));
 
-// Serve assets folder for branding (logo, favicon)
-const assetsDir = path.join(__dirname, '..', 'assets');
-app.use('/assets', express.static(assetsDir));
+// Serve static assets (prioritize built files in production)
+const brandAssetsDir = path.join(__dirname, '..', 'assets');
+if (config.nodeEnv === 'production') {
+  const distAssetsDir = path.join(__dirname, '..', 'dist', 'assets');
+  if (fs.existsSync(distAssetsDir)) {
+    app.use('/assets', express.static(distAssetsDir));
+  }
+}
+app.use('/assets', express.static(brandAssetsDir));
 
 // Health check endpoint
 app.get('/health', (req, res) => {

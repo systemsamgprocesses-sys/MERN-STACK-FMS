@@ -263,41 +263,93 @@ router.put('/:id', authenticateToken, requireAdmin, async (req, res) => {
       return res.status(404).json({ message: 'User not found' });
     }
 
+    // Build update object with only provided fields
+    const updateData = {};
+    if (username !== undefined) updateData.username = username;
+    if (email !== undefined) updateData.email = email;
+    if (role !== undefined) updateData.role = role;
+    if (permissions !== undefined) updateData.permissions = permissions;
+    if (isActive !== undefined) {
+      // Handle both string and boolean values
+      updateData.isActive = isActive === 'true' || isActive === true;
+    }
+    if (phoneNumber !== undefined) updateData.phoneNumber = phoneNumber;
+
+    // Validate required fields if being updated
+    if (updateData.username !== undefined && !updateData.username.trim()) {
+      return res.status(400).json({ message: 'Username cannot be empty' });
+    }
+    if (updateData.email !== undefined && !updateData.email.trim()) {
+      return res.status(400).json({ message: 'Email cannot be empty' });
+    }
+
     const user = await User.findByIdAndUpdate(
       req.params.id,
-      { username, email, role, permissions, isActive, phoneNumber },
-      { new: true }
+      updateData,
+      { new: true, runValidators: true }
     ).select('-password');
+
+    if (!user) {
+      return res.status(404).json({ message: 'User not found after update' });
+    }
 
     // Log the changes
     const updatedBy = req.user?._id;
     if (updatedBy) {
       try {
         const changes = [];
-        if (oldUser.username !== username) changes.push(`username: "${oldUser.username}" → "${username}"`);
-        if (oldUser.email !== email) changes.push(`email: "${oldUser.email}" → "${email}"`);
-        if (oldUser.role !== role) changes.push(`role: "${oldUser.role}" → "${role}"`);
-        if (oldUser.phoneNumber !== phoneNumber) changes.push(`phone: "${oldUser.phoneNumber || 'N/A'}" → "${phoneNumber || 'N/A'}"`);
-        if (oldUser.isActive !== isActive) changes.push(`status: ${oldUser.isActive ? 'Active' : 'Inactive'} → ${isActive ? 'Active' : 'Inactive'}`);
+        if (updateData.username !== undefined && oldUser.username !== user.username) {
+          changes.push(`username: "${oldUser.username}" → "${user.username}"`);
+        }
+        if (updateData.email !== undefined && oldUser.email !== user.email) {
+          changes.push(`email: "${oldUser.email}" → "${user.email}"`);
+        }
+        if (updateData.role !== undefined && oldUser.role !== user.role) {
+          changes.push(`role: "${oldUser.role}" → "${user.role}"`);
+        }
+        if (updateData.phoneNumber !== undefined && oldUser.phoneNumber !== user.phoneNumber) {
+          changes.push(`phone: "${oldUser.phoneNumber || 'N/A'}" → "${user.phoneNumber || 'N/A'}"`);
+        }
+        if (updateData.isActive !== undefined && oldUser.isActive !== user.isActive) {
+          changes.push(`status: ${oldUser.isActive ? 'Active' : 'Inactive'} → ${user.isActive ? 'Active' : 'Inactive'}`);
+        }
         
         if (changes.length > 0) {
           await createAdjustmentLog({
             adjustedBy: updatedBy,
             affectedUser: user._id,
-            adjustmentType: oldUser.role !== role ? 'role_changed' : oldUser.isActive !== isActive ? 'status_changed' : 'user_updated',
+            adjustmentType: updateData.role !== undefined && oldUser.role !== user.role ? 'role_changed' : 
+                           updateData.isActive !== undefined && oldUser.isActive !== user.isActive ? 'status_changed' : 
+                           'user_updated',
             description: `User "${user.username}" updated: ${changes.join(', ')}`,
-            oldValue: { username: oldUser.username, email: oldUser.email, role: oldUser.role, permissions: oldUser.permissions, isActive: oldUser.isActive, phoneNumber: oldUser.phoneNumber },
-            newValue: { username, email, role, permissions, isActive, phoneNumber },
+            oldValue: { 
+              username: oldUser.username, 
+              email: oldUser.email, 
+              role: oldUser.role, 
+              permissions: oldUser.permissions || {}, 
+              isActive: oldUser.isActive, 
+              phoneNumber: oldUser.phoneNumber 
+            },
+            newValue: { 
+              username: user.username, 
+              email: user.email, 
+              role: user.role, 
+              permissions: user.permissions || {}, 
+              isActive: user.isActive, 
+              phoneNumber: user.phoneNumber 
+            },
             ipAddress: req.ip
           });
         }
       } catch (logError) {
         console.error('Failed to log user update:', logError);
+        // Don't fail the request if logging fails
       }
     }
 
     res.json(user);
   } catch (error) {
+    console.error('Error updating user:', error);
     res.status(500).json({ message: 'Server error', error: error.message });
   }
 });

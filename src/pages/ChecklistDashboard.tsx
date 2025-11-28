@@ -78,7 +78,16 @@ const ChecklistDashboard: React.FC = () => {
       const response = await axios.get(`${address}/api/users`, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      setUsers(response.data);
+      
+      // Filter users based on RBAC: employees only see themselves, admin/superadmin/pc see all
+      const canSeeAll = ['admin', 'superadmin', 'pc'].includes(user?.role || '');
+      if (canSeeAll) {
+        setUsers(response.data);
+      } else {
+        // Employee: only show themselves
+        const currentUser = response.data.find((u: any) => u._id === user?.id || u.id === user?.id);
+        setUsers(currentUser ? [currentUser] : []);
+      }
     } catch (error) {
       console.error('Error fetching users:', error);
       setError('Failed to fetch users');
@@ -510,19 +519,21 @@ const ChecklistDashboard: React.FC = () => {
               </button>
             </div>
 
-            {/* User Filter */}
-            <div>
-              <select
-                value={selectedPerson}
-                onChange={(e) => setSelectedPerson(e.target.value)}
-                className="w-full px-4 py-2 border border-[--color-border] rounded-lg bg-[--color-surface] text-[--color-text] text-sm"
-              >
-                <option value="">All Users</option>
-                {users.map(user => (
-                  <option key={user._id} value={user._id}>{user.username}</option>
-                ))}
-              </select>
-            </div>
+            {/* User Filter - Only show for admin/superadmin/pc */}
+            {['admin', 'superadmin', 'pc'].includes(user?.role || '') && (
+              <div>
+                <select
+                  value={selectedPerson}
+                  onChange={(e) => setSelectedPerson(e.target.value)}
+                  className="w-full px-4 py-2 border border-[--color-border] rounded-lg bg-[--color-surface] text-[--color-text] text-sm"
+                >
+                  <option value="">All Users</option>
+                  {users.map(user => (
+                    <option key={user._id || user.id} value={user._id || user.id}>{user.username}</option>
+                  ))}
+                </select>
+              </div>
+            )}
           </div>
         </div>
 

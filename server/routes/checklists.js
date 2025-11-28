@@ -13,11 +13,11 @@ router.get('/', auth, async (req, res) => {
         const userRole = req.user.role;
         const { status, priority, dueDate } = req.query;
 
-        // Build filter - PC role can see all checklists
+        // Build filter - Admin, Superadmin, and PC roles can see all checklists
         const filter = {};
 
-        // Only filter by assignedTo if user is NOT a PC
-        if (userRole !== 'pc') {
+        // Only filter by assignedTo if user is NOT an admin, superadmin, or PC
+        if (!['admin', 'superadmin', 'pc'].includes(userRole)) {
             filter.assignedTo = userId;
         }
 
@@ -60,14 +60,14 @@ router.get('/pending', auth, async (req, res) => {
         const today = new Date();
         today.setHours(0, 0, 0, 0);
 
-        // Build filter - PC role can see all pending checklists
+        // Build filter - Admin, Superadmin, and PC roles can see all pending checklists
         const filter = {
             status: { $in: ['pending', 'in-progress'] },
             dueDate: { $lte: today }
         };
 
-        // Only filter by assignedTo if user is NOT a PC
-        if (userRole !== 'pc') {
+        // Only filter by assignedTo if user is NOT an admin, superadmin, or PC
+        if (!['admin', 'superadmin', 'pc'].includes(userRole)) {
             filter.assignedTo = userId;
         }
 
@@ -92,14 +92,14 @@ router.get('/upcoming', auth, async (req, res) => {
         const today = new Date();
         today.setHours(23, 59, 59, 999);
 
-        // Build filter - PC role can see all upcoming checklists
+        // Build filter - Admin, Superadmin, and PC roles can see all upcoming checklists
         const filter = {
             status: { $in: ['pending', 'in-progress'] },
             dueDate: { $gt: today }
         };
 
-        // Only filter by assignedTo if user is NOT a PC
-        if (userRole !== 'pc') {
+        // Only filter by assignedTo if user is NOT an admin, superadmin, or PC
+        if (!['admin', 'superadmin', 'pc'].includes(userRole)) {
             filter.assignedTo = userId;
         }
 
@@ -112,6 +112,144 @@ router.get('/upcoming', auth, async (req, res) => {
         res.json(upcomingChecklists);
     } catch (error) {
         console.error('Error fetching upcoming checklists:', error);
+        res.status(500).json({ message: 'Server error', error: error.message });
+    }
+});
+
+// Get dashboard statistics
+router.get('/dashboard', auth, async (req, res) => {
+    try {
+        const { assignedTo, role, userId } = req.query;
+        const requestingUser = req.user;
+        const requestingUserId = requestingUser?._id?.toString();
+        const userRole = requestingUser?.role;
+        
+        // Determine if user can see all checklists (admin, superadmin, pc)
+        const canSeeAll = ['admin', 'superadmin', 'pc'].includes(userRole);
+        
+        // Build base filter
+        let filter = {};
+        
+        // If assignedTo is provided and user has permission, use it
+        if (assignedTo) {
+            // Only allow filtering by assignedTo if user can see all OR it's their own ID
+            if (canSeeAll || assignedTo === requestingUserId) {
+                filter.assignedTo = assignedTo;
+            } else {
+                // Employee trying to see someone else's data - deny access
+                return res.status(403).json({ message: 'Access denied' });
+            }
+        } else if (!canSeeAll) {
+            // Employee without assignedTo filter - show only their own
+            filter.assignedTo = requestingUserId;
+        }
+        // If canSeeAll and no assignedTo, filter is empty (show all)
+
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const tomorrow = new Date(today);
+        tomorrow.setDate(tomorrow.getDate() + 1);
+
+        // Get all checklists matching the filter
+        const allChecklists = await ChecklistOccurrence.find(filter)
+            .populate('templateId', 'name description category department frequency')
+            .populate('assignedTo', 'username email')
+            .populate('assignedBy', 'username email')
+            .sort({ dueDate: -1 });
+
+        // Calculate statistics
+        const total = allChecklists.length;
+        const completed = allChecklists.filter(c => c.status === 'completed').length;
+        const pending = allChecklists.filter(c => c.status === 'pending' || c.status === 'in-progress').length;
+        const overdue = allChecklists.filter(c => {
+            if (c.status === 'completed') return false;
+            const dueDate = new Date(c.dueDate);
+            return dueDate < today;
+        }).length;
+
+        // Group by recurrence
+        const byRecurrence = {};
+        allChecklists.forEach(checklist => {
+            const recurrenceType = checklist.templateId?.frequency || 'none';
+            byRecurrence[recurrenceType] = (byRecurrence[recurrenceType] || 0) + 1;
+        });
+
+        // Group by category
+        const byCategory = {};
+        allChecklists.forEach(checklist => {
+            const category = checklist.templateId?.category || 'General';
+            byCategory[category] = (byCategory[category] || 0) + 1;
+        });
+
+        // Group by department
+        const byDepartment = {};
+        allChecklists.forEach(checklist => {
+            const department = checklist.templateId?.department || 'General';
+            byDepartment[department] = (byDepartment[department] || 0) + 1;
+        });
+
+        // Today's submissions by category
+        const todayByCategory = {};
+        const todayChecklists = allChecklists.filter(c => {
+            const updatedAt = new Date(c.updatedAt || c.createdAt);
+            return updatedAt >= today && updatedAt < tomorrow;
+        });
+        todayChecklists.forEach(checklist => {
+            const category = checklist.templateId?.category || 'General';
+            todayByCategory[category] = (todayByCategory[category] || 0) + 1;
+        });
+
+        // Today's submissions by frequency
+        const todayByFrequency = {};
+        todayChecklists.forEach(checklist => {
+            const frequency = checklist.templateId?.frequency || 'none';
+            todayByFrequency[frequency] = (todayByFrequency[frequency] || 0) + 1;
+        });
+
+        // Recent submissions (last 30 days, limit to 50)
+        const thirtyDaysAgo = new Date();
+        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+        
+        const recentSubmissions = allChecklists
+            .filter(c => new Date(c.updatedAt || c.createdAt) >= thirtyDaysAgo)
+            .slice(0, 50)
+            .map(checklist => {
+                const items = checklist.items || [];
+                const totalItems = items.length;
+                const itemsSubmitted = items.filter((item) => item.checked || item.isDone).length;
+                
+                return {
+                    _id: checklist._id.toString(),
+                    title: checklist.templateId?.name || 'Untitled Checklist',
+                    updatedAt: checklist.updatedAt || checklist.createdAt,
+                    status: checklist.status,
+                    totalItems,
+                    itemsSubmitted,
+                    itemsPercentage: totalItems > 0 ? Math.round((itemsSubmitted / totalItems) * 100) : 0,
+                    category: checklist.templateId?.category,
+                    recurrence: checklist.templateId?.frequency ? { type: checklist.templateId.frequency } : undefined,
+                    items: items.map((item) => ({
+                        _id: item._id?.toString() || Math.random().toString(),
+                        title: item.title || item.label || 'Untitled Item',
+                        isDone: item.checked || item.isDone || false
+                    }))
+                };
+            });
+
+        res.json({
+            total,
+            completed,
+            pending,
+            overdue,
+            byRecurrence,
+            byCategory,
+            byDepartment,
+            todayByCategory,
+            todayByFrequency,
+            recentSubmissions
+        });
+    } catch (error) {
+        console.error('Error fetching dashboard stats:', error);
         res.status(500).json({ message: 'Server error', error: error.message });
     }
 });

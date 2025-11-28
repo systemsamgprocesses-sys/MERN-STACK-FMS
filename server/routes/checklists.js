@@ -151,59 +151,114 @@ router.get('/dashboard', auth, async (req, res) => {
         tomorrow.setDate(tomorrow.getDate() + 1);
 
         // Get all checklists matching the filter
+        // Use lean() for better performance and to avoid Mongoose document issues
         const allChecklists = await ChecklistOccurrence.find(filter)
-            .populate('templateId', 'name description category department frequency')
+            .populate('templateId', 'name category frequency')
             .populate('assignedTo', 'username email')
-            .populate('assignedBy', 'username email')
+            .lean()
             .sort({ dueDate: -1 });
 
-        // Calculate statistics
+        // Calculate statistics with safe null checks
         const total = allChecklists.length;
-        const completed = allChecklists.filter(c => c.status === 'completed').length;
-        const pending = allChecklists.filter(c => c.status === 'pending' || c.status === 'in-progress').length;
+        const completed = allChecklists.filter(c => c && c.status === 'completed').length;
+        const pending = allChecklists.filter(c => c && c.status === 'pending').length;
         const overdue = allChecklists.filter(c => {
+            if (!c) return false;
             if (c.status === 'completed') return false;
-            const dueDate = new Date(c.dueDate);
-            return dueDate < today;
+            if (!c.dueDate) return false;
+            try {
+                const dueDate = new Date(c.dueDate);
+                return dueDate < today;
+            } catch (e) {
+                return false;
+            }
         }).length;
 
-        // Group by recurrence
+        // Group by recurrence (from template or default to 'none')
         const byRecurrence = {};
         allChecklists.forEach(checklist => {
-            const recurrenceType = checklist.templateId?.frequency || 'none';
-            byRecurrence[recurrenceType] = (byRecurrence[recurrenceType] || 0) + 1;
+            if (!checklist) return;
+            try {
+                const template = checklist.templateId;
+                let recurrenceType = 'none';
+                if (template && typeof template === 'object' && template.frequency) {
+                    recurrenceType = template.frequency;
+                } else if (checklist.category) {
+                    recurrenceType = checklist.category;
+                }
+                byRecurrence[recurrenceType] = (byRecurrence[recurrenceType] || 0) + 1;
+            } catch (e) {
+                byRecurrence['none'] = (byRecurrence['none'] || 0) + 1;
+            }
         });
 
-        // Group by category
+        // Group by category (use denormalized category field or template category)
         const byCategory = {};
         allChecklists.forEach(checklist => {
-            const category = checklist.templateId?.category || 'General';
-            byCategory[category] = (byCategory[category] || 0) + 1;
+            if (!checklist) return;
+            try {
+                const template = checklist.templateId;
+                const category = checklist.category || 
+                               (template && typeof template === 'object' ? template.category : null) || 
+                               'General';
+                byCategory[category] = (byCategory[category] || 0) + 1;
+            } catch (e) {
+                byCategory['General'] = (byCategory['General'] || 0) + 1;
+            }
         });
 
-        // Group by department
+        // Group by department (use category as fallback since template doesn't have department)
         const byDepartment = {};
         allChecklists.forEach(checklist => {
-            const department = checklist.templateId?.department || 'General';
-            byDepartment[department] = (byDepartment[department] || 0) + 1;
+            if (!checklist) return;
+            try {
+                const template = checklist.templateId;
+                const category = checklist.category || 
+                               (template && typeof template === 'object' ? template.category : null) || 
+                               'General';
+                // Use category as department since template doesn't have department field
+                byDepartment[category] = (byDepartment[category] || 0) + 1;
+            } catch (e) {
+                byDepartment['General'] = (byDepartment['General'] || 0) + 1;
+            }
         });
 
         // Today's submissions by category
         const todayByCategory = {};
         const todayChecklists = allChecklists.filter(c => {
-            const updatedAt = new Date(c.updatedAt || c.createdAt);
-            return updatedAt >= today && updatedAt < tomorrow;
+            if (!c) return false;
+            if (!c.updatedAt && !c.createdAt) return false;
+            try {
+                const updatedAt = new Date(c.updatedAt || c.createdAt);
+                return updatedAt >= today && updatedAt < tomorrow;
+            } catch (e) {
+                return false;
+            }
         });
         todayChecklists.forEach(checklist => {
-            const category = checklist.templateId?.category || 'General';
-            todayByCategory[category] = (todayByCategory[category] || 0) + 1;
+            if (!checklist) return;
+            try {
+                const template = checklist.templateId;
+                const category = checklist.category || 
+                               (template && typeof template === 'object' ? template.category : null) || 
+                               'General';
+                todayByCategory[category] = (todayByCategory[category] || 0) + 1;
+            } catch (e) {
+                // Skip invalid entries
+            }
         });
 
         // Today's submissions by frequency
         const todayByFrequency = {};
         todayChecklists.forEach(checklist => {
-            const frequency = checklist.templateId?.frequency || 'none';
-            todayByFrequency[frequency] = (todayByFrequency[frequency] || 0) + 1;
+            if (!checklist) return;
+            try {
+                const template = checklist.templateId;
+                const frequency = (template && typeof template === 'object' ? template.frequency : null) || 'none';
+                todayByFrequency[frequency] = (todayByFrequency[frequency] || 0) + 1;
+            } catch (e) {
+                // Skip invalid entries
+            }
         });
 
         // Recent submissions (last 30 days, limit to 50)
@@ -211,29 +266,59 @@ router.get('/dashboard', auth, async (req, res) => {
         thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
         
         const recentSubmissions = allChecklists
-            .filter(c => new Date(c.updatedAt || c.createdAt) >= thirtyDaysAgo)
+            .filter(c => {
+                if (!c) return false;
+                if (!c.updatedAt && !c.createdAt) return false;
+                try {
+                    const updatedAt = new Date(c.updatedAt || c.createdAt);
+                    return updatedAt >= thirtyDaysAgo;
+                } catch (e) {
+                    return false;
+                }
+            })
             .slice(0, 50)
             .map(checklist => {
-                const items = checklist.items || [];
-                const totalItems = items.length;
-                const itemsSubmitted = items.filter((item) => item.checked || item.isDone).length;
-                
-                return {
-                    _id: checklist._id.toString(),
-                    title: checklist.templateId?.name || 'Untitled Checklist',
-                    updatedAt: checklist.updatedAt || checklist.createdAt,
-                    status: checklist.status,
-                    totalItems,
-                    itemsSubmitted,
-                    itemsPercentage: totalItems > 0 ? Math.round((itemsSubmitted / totalItems) * 100) : 0,
-                    category: checklist.templateId?.category,
-                    recurrence: checklist.templateId?.frequency ? { type: checklist.templateId.frequency } : undefined,
-                    items: items.map((item) => ({
-                        _id: item._id?.toString() || Math.random().toString(),
-                        title: item.title || item.label || 'Untitled Item',
-                        isDone: item.checked || item.isDone || false
-                    }))
-                };
+                try {
+                    const items = checklist.items || [];
+                    const totalItems = items.length;
+                    const itemsSubmitted = items.filter((item) => item && item.checked).length;
+                    const template = checklist.templateId;
+                    
+                    return {
+                        _id: checklist._id ? checklist._id.toString() : Math.random().toString(),
+                        title: checklist.templateName || 
+                              (template && typeof template === 'object' ? template.name : null) || 
+                              'Untitled Checklist',
+                        updatedAt: checklist.updatedAt || checklist.createdAt || new Date(),
+                        status: checklist.status || 'pending',
+                        totalItems,
+                        itemsSubmitted,
+                        itemsPercentage: totalItems > 0 ? Math.round((itemsSubmitted / totalItems) * 100) : 0,
+                        category: checklist.category || 
+                                 (template && typeof template === 'object' ? template.category : null) || 
+                                 'General',
+                        recurrence: (template && typeof template === 'object' && template.frequency) ? 
+                                   { type: template.frequency } : undefined,
+                        items: items.map((item) => ({
+                            _id: (item && item._id) ? item._id.toString() : Math.random().toString(),
+                            title: (item && item.label) || 'Untitled Item',
+                            isDone: (item && item.checked) || false
+                        }))
+                    };
+                } catch (e) {
+                    // Return a safe default if mapping fails
+                    return {
+                        _id: checklist._id ? checklist._id.toString() : Math.random().toString(),
+                        title: 'Untitled Checklist',
+                        updatedAt: new Date(),
+                        status: 'pending',
+                        totalItems: 0,
+                        itemsSubmitted: 0,
+                        itemsPercentage: 0,
+                        category: 'General',
+                        items: []
+                    };
+                }
             });
 
         res.json({
@@ -250,7 +335,12 @@ router.get('/dashboard', auth, async (req, res) => {
         });
     } catch (error) {
         console.error('Error fetching dashboard stats:', error);
-        res.status(500).json({ message: 'Server error', error: error.message });
+        console.error('Error stack:', error.stack);
+        res.status(500).json({ 
+            message: 'Server error', 
+            error: error.message,
+            stack: process.env.NODE_ENV !== 'production' ? error.stack : undefined
+        });
     }
 });
 

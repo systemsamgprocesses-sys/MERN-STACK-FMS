@@ -265,22 +265,38 @@ router.put('/:id', authenticateToken, requireAdmin, async (req, res) => {
 
     // Build update object with only provided fields
     const updateData = {};
-    if (username !== undefined) updateData.username = username;
-    if (email !== undefined) updateData.email = email;
-    if (role !== undefined) updateData.role = role;
-    if (permissions !== undefined) updateData.permissions = permissions;
-    if (isActive !== undefined) {
+    if (username !== undefined && username !== null) {
+      updateData.username = username;
+    }
+    if (email !== undefined && email !== null) {
+      updateData.email = email;
+    }
+    if (role !== undefined && role !== null) {
+      updateData.role = role;
+    }
+    if (permissions !== undefined && permissions !== null) {
+      // Ensure permissions is an object
+      updateData.permissions = typeof permissions === 'object' ? permissions : (permissions || {});
+    }
+    if (isActive !== undefined && isActive !== null) {
       // Handle both string and boolean values
       updateData.isActive = isActive === 'true' || isActive === true;
     }
-    if (phoneNumber !== undefined) updateData.phoneNumber = phoneNumber;
+    if (phoneNumber !== undefined && phoneNumber !== null) {
+      updateData.phoneNumber = phoneNumber;
+    }
 
     // Validate required fields if being updated
-    if (updateData.username !== undefined && !updateData.username.trim()) {
+    if (updateData.username !== undefined && (!updateData.username || !updateData.username.trim())) {
       return res.status(400).json({ message: 'Username cannot be empty' });
     }
-    if (updateData.email !== undefined && !updateData.email.trim()) {
+    if (updateData.email !== undefined && (!updateData.email || !updateData.email.trim())) {
       return res.status(400).json({ message: 'Email cannot be empty' });
+    }
+    
+    // If no fields to update, return current user
+    if (Object.keys(updateData).length === 0) {
+      return res.json(oldUser);
     }
 
     const user = await User.findByIdAndUpdate(

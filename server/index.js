@@ -63,6 +63,10 @@ const allowedOrigins = [
   .filter(Boolean)
   .map(normalizeOrigin);
 
+// Log allowed origins on startup
+console.log('✅ CORS Allowed Origins:', allowedOrigins);
+
+// CORS middleware - must be before other middleware
 app.use(cors({
   origin: function (origin, callback) {
     // Allow requests with no origin (like mobile apps or curl requests)
@@ -72,14 +76,18 @@ app.use(cors({
 
     const normalizedOrigin = normalizeOrigin(origin);
     
+    // Debug logging for all CORS requests
+    console.log(`[CORS] Request from origin: ${origin} | Normalized: ${normalizedOrigin}`);
+    
     // Check if the origin is in the allowed list
     if (allowedOrigins.includes(normalizedOrigin)) {
       // Return the actual origin (not just true) to set the Access-Control-Allow-Origin header correctly
+      console.log(`[CORS] ✅ Allowed: ${normalizedOrigin}`);
       return callback(null, normalizedOrigin);
     }
 
-    console.log('Blocked by CORS:', origin, '| Normalized:', normalizedOrigin);
-    console.log('Allowed origins:', allowedOrigins);
+    console.log('❌ [CORS] Blocked:', origin, '| Normalized:', normalizedOrigin);
+    console.log('   Allowed origins:', allowedOrigins);
     return callback(new Error(`Not allowed by CORS: ${origin}`));
   },
   credentials: true,
@@ -114,8 +122,8 @@ const apiLimiter = rateLimit({
   legacyHeaders: false, // Disable the `X-RateLimit-*` headers
   // Skip rate limiting for certain routes if needed
   skip: (req) => {
-    // Don't rate limit health checks or static files
-    return req.path === '/health' || req.path.startsWith('/uploads/');
+    // Don't rate limit OPTIONS requests (CORS preflight), health checks, or static files
+    return req.method === 'OPTIONS' || req.path === '/health' || req.path.startsWith('/uploads/');
   }
 });
 
@@ -126,7 +134,9 @@ app.use('/api/', apiLimiter);
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 20, // Only 20 login attempts per 15 minutes
-  message: 'Too many login attempts, please try again later.'
+  message: 'Too many login attempts, please try again later.',
+  // Skip rate limiting for OPTIONS requests (CORS preflight)
+  skip: (req) => req.method === 'OPTIONS'
 });
 app.use('/api/auth/login', authLimiter);
 

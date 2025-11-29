@@ -45,14 +45,22 @@ const PORT = config.port;
 
 // Middleware
 const replitDomain = process.env.REPLIT_DEV_DOMAIN;
-const normalizeOrigin = (origin) => origin?.replace(/\/$/, '');
-const allowedOrigins = [
+const normalizeOrigin = (origin) => {
+  if (!origin) return null;
+  // Remove trailing slashes and normalize
+  return origin.replace(/\/+$/, '').trim();
+};
+
+// Build allowed origins list and remove duplicates using Set
+const originList = [
   'http://localhost:5173', // Employee App (Dev)
   'http://localhost:5174', // HR Portal (Dev)
   'http://localhost:5000', // Legacy local server
   'https://hub.amgrealty.in', // Main App (Production)
-  'https://task.amgrealty.in', // Legacy/alternate
-  'https://tasks.amgrealty.in', // Legacy/alternate
+  'http://task.amgrealty.in', // Task domain (HTTP)
+  'https://task.amgrealty.in', // Task domain (HTTPS)
+  'http://tasks.amgrealty.in', // Tasks domain (HTTP)
+  'https://tasks.amgrealty.in', // Tasks domain (HTTPS)
   'http://human-resource.amgrealty.in', // HR Portal (Production HTTP)
   'https://human-resource.amgrealty.in', // HR Portal (Production HTTPS)
   process.env.HR_PORTAL_URL,
@@ -61,7 +69,11 @@ const allowedOrigins = [
   config.corsOrigin
 ]
   .filter(Boolean)
-  .map(normalizeOrigin);
+  .map(normalizeOrigin)
+  .filter(Boolean); // Remove any null values after normalization
+
+// Remove duplicates using Set
+const allowedOrigins = [...new Set(originList)];
 
 // Log allowed origins on startup
 console.log('✅ CORS Allowed Origins:', allowedOrigins);
@@ -69,33 +81,54 @@ console.log('✅ CORS Allowed Origins:', allowedOrigins);
 // CORS middleware - must be before other middleware
 app.use(cors({
   origin: function (origin, callback) {
-    // Allow requests with no origin (like mobile apps or curl requests)
+    // Allow requests with no origin (like mobile apps, curl requests, or same-origin requests)
     if (!origin) {
       return callback(null, true);
     }
 
     const normalizedOrigin = normalizeOrigin(origin);
     
-    // Debug logging for all CORS requests
-    console.log(`[CORS] Request from origin: ${origin} | Normalized: ${normalizedOrigin}`);
+    // Debug logging for all CORS requests (can be reduced in production)
+    if (config.nodeEnv !== 'production') {
+      console.log(`[CORS] Request from origin: ${origin} | Normalized: ${normalizedOrigin}`);
+    }
     
     // Check if the origin is in the allowed list
-    if (allowedOrigins.includes(normalizedOrigin)) {
-      // Return the actual origin (not just true) to set the Access-Control-Allow-Origin header correctly
-      console.log(`[CORS] ✅ Allowed: ${normalizedOrigin}`);
+    if (normalizedOrigin && allowedOrigins.includes(normalizedOrigin)) {
+      // Return the actual origin to set the Access-Control-Allow-Origin header correctly
+      if (config.nodeEnv !== 'production') {
+        console.log(`[CORS] ✅ Allowed: ${normalizedOrigin}`);
+      }
       return callback(null, normalizedOrigin);
     }
 
-    console.log('❌ [CORS] Blocked:', origin, '| Normalized:', normalizedOrigin);
-    console.log('   Allowed origins:', allowedOrigins);
-    return callback(new Error(`Not allowed by CORS: ${origin}`));
+    // Log blocked requests for debugging
+    console.error('❌ [CORS] Blocked:', origin);
+    console.error('   Normalized:', normalizedOrigin);
+    console.error('   Allowed origins:', allowedOrigins);
+    
+    // In production, provide a generic error message for security
+    const errorMsg = config.nodeEnv === 'production' 
+      ? 'CORS: Origin not allowed'
+      : `CORS: Origin '${origin}' is not allowed by CORS policy`;
+    
+    return callback(new Error(errorMsg));
   },
   credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
-  exposedHeaders: ['Content-Type', 'Authorization'],
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS', 'HEAD'],
+  allowedHeaders: [
+    'Content-Type',
+    'Authorization',
+    'X-Requested-With',
+    'Accept',
+    'Origin',
+    'Access-Control-Request-Method',
+    'Access-Control-Request-Headers'
+  ],
+  exposedHeaders: ['Content-Type', 'Authorization', 'X-Total-Count'],
   optionsSuccessStatus: 204,
-  preflightContinue: false
+  preflightContinue: false,
+  maxAge: 86400 // Cache preflight requests for 24 hours
 }));
 
 // ============================================
@@ -258,6 +291,26 @@ if (config.nodeEnv === 'production') {
     res.sendFile(path.join(distPath, 'index.html'));
   });
 }
+
+// Error handling middleware - must be after all routes
+app.use((err, req, res, next) => {
+  // Handle CORS errors
+  if (err.message && err.message.includes('CORS')) {
+    console.error('❌ CORS Error:', err.message);
+    return res.status(403).json({
+      error: 'CORS Error',
+      message: err.message,
+      allowedOrigins: config.nodeEnv !== 'production' ? allowedOrigins : undefined
+    });
+  }
+
+  // Handle other errors
+  console.error('❌ Server Error:', err);
+  res.status(err.status || 500).json({
+    error: err.message || 'Internal Server Error',
+    ...(config.nodeEnv !== 'production' && { stack: err.stack })
+  });
+});
 
 // MongoDB connection
 mongoose.connect(config.mongoURI, mongoOptions)

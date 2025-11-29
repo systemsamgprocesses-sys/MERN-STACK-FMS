@@ -3,6 +3,7 @@ import mongoose from 'mongoose';
 import auth from '../middleware/auth.js';
 import ChecklistOccurrence from '../models/ChecklistOccurrence.js';
 import ChecklistTemplate from '../models/ChecklistTemplate.js';
+import Checklist from '../models/Checklist.js';
 
 const router = express.Router();
 
@@ -344,7 +345,7 @@ router.get('/dashboard', auth, async (req, res) => {
     }
 });
 
-// Get calendar data for a specific month
+// Get checklist calendar data
 router.get('/calendar', auth, async (req, res) => {
     try {
         const { year, month, userId } = req.query;
@@ -352,128 +353,69 @@ router.get('/calendar', auth, async (req, res) => {
         const requestingUserId = requestingUser?._id?.toString();
         const userRole = requestingUser?.role;
         
-        // Determine if user can see all checklists (admin, superadmin, pc)
-        const canSeeAll = ['admin', 'superadmin', 'pc'].includes(userRole);
+        const targetYear = parseInt(year) || new Date().getFullYear();
+        const targetMonth = parseInt(month) || new Date().getMonth();
         
-        if (!year || !month) {
-            return res.status(400).json({
-                error: 'year and month are required'
-            });
-        }
-
-        const targetYear = parseInt(year);
-        const targetMonth = parseInt(month); // 0-based (0 = January)
-
-        if (Number.isNaN(targetYear) || Number.isNaN(targetMonth) || targetMonth < 0 || targetMonth > 11) {
-            return res.status(400).json({
-                error: 'Invalid year or month'
-            });
-        }
-
-        // Build filter based on user permissions
-        let filter = {};
-        
-        // If userId is provided and user has permission, use it
-        if (userId) {
-            if (canSeeAll || userId === requestingUserId) {
-                filter.assignedTo = userId;
-            } else {
-                // Employee trying to see someone else's data - deny access
-                return res.status(403).json({
-                    error: 'Access denied'
-                });
+        let query = {
+            startDate: {
+                $gte: new Date(targetYear, targetMonth, 1),
+                $lte: new Date(targetYear, targetMonth + 1, 0, 23, 59, 59)
             }
-        } else if (!canSeeAll) {
-            // Employee without userId filter - show only their own
-            filter.assignedTo = requestingUserId;
-        }
-        // If canSeeAll and no userId, filter is empty (show all)
-
-        // Get first and last day of the month
-        const firstDay = new Date(targetYear, targetMonth, 1);
-        const lastDay = new Date(targetYear, targetMonth + 1, 0, 23, 59, 59, 999);
-
-        // Add date range to filter
-        filter.dueDate = {
-            $gte: firstDay,
-            $lte: lastDay
         };
-
-        // Fetch all checklists (occurrences) for this user/role in this month
-        const occurrences = await ChecklistOccurrence.find(filter)
-            .populate('templateId', 'name category frequency')
-            .populate('assignedTo', 'username email')
-            .sort({ dueDate: 1 });
-
-        // Group occurrences by date and calculate levels
+        
+        // RBAC: employees see only their checklists
+        if (userRole === 'employee') {
+            query.assignedTo = userId || requestingUserId;
+        } else if (userId) {
+            // Admin/superadmin/pc can filter by userId
+            query.assignedTo = userId;
+        }
+        
+        const checklists = await Checklist.find(query)
+            .populate('assignedTo', 'username')
+            .sort({ startDate: 1 });
+        
+        // Generate calendar structure
+        const firstDay = new Date(targetYear, targetMonth, 1).getDay();
         const daysInMonth = new Date(targetYear, targetMonth + 1, 0).getDate();
         const calendar = [];
-
+        
         for (let day = 1; day <= daysInMonth; day++) {
             const date = new Date(targetYear, targetMonth, day);
-            const dateString = date.toISOString().split('T')[0];
-
-            // Find all occurrences for this day
-            const dayOccurrences = occurrences.filter(occ => {
-                if (!occ || !occ.dueDate) return false;
-                try {
-                    const occDate = new Date(occ.dueDate);
-                    return occDate.getDate() === day &&
-                        occDate.getMonth() === targetMonth &&
-                        occDate.getFullYear() === targetYear;
-                } catch (e) {
-                    return false;
-                }
+            const dayChecklists = checklists.filter(cl => {
+                const clDate = new Date(cl.startDate);
+                return clDate.getDate() === day &&
+                       clDate.getMonth() === targetMonth &&
+                       clDate.getFullYear() === targetYear;
             });
-
-            const total = dayOccurrences.length;
-            const completed = dayOccurrences.filter(occ => occ && occ.status === 'completed').length;
             
-            // Calculate level (0-4) based on completion percentage
-            // Similar to GitHub contribution graph
+            const completedCount = dayChecklists.filter(cl => cl.status === 'Submitted').length;
+            const totalCount = dayChecklists.length;
+            
+            // Calculate activity level (0-4 scale)
             let level = 0;
-            if (total > 0) {
-                const completionPercentage = completed / total;
-                if (completionPercentage === 1.0) {
-                    level = 4; // All completed
-                } else if (completionPercentage >= 0.75) {
-                    level = 3; // Mostly completed
-                } else if (completionPercentage >= 0.50) {
-                    level = 2; // Half completed
-                } else if (completionPercentage > 0) {
-                    level = 1; // Some completed
-                } else {
-                    level = 0; // None completed
-                }
+            if (totalCount > 0) {
+                const completionRate = completedCount / totalCount;
+                level = completionRate >= 1 ? 4 : completionRate >= 0.75 ? 3 : completionRate >= 0.5 ? 2 : completionRate > 0 ? 1 : 0;
             }
-
+            
             calendar.push({
-                date: dateString,
-                checklists: dayOccurrences.map(occ => ({
-                    _id: occ._id,
-                    title: occ.templateName || (occ.templateId && typeof occ.templateId === 'object' ? occ.templateId.name : null) || 'Untitled',
-                    status: occ.status || 'pending',
-                    completed: occ.status === 'completed'
-                })),
-                completed,
-                total,
-                level
+                date: date.toISOString().split('T')[0],
+                checklists: dayChecklists,
+                completed: completedCount,
+                total: totalCount,
+                level: level
             });
         }
-
+        
         res.json({
             year: targetYear,
             month: targetMonth,
-            calendar
+            calendar: calendar
         });
     } catch (error) {
         console.error('Error fetching calendar data:', error);
-        console.error('Error stack:', error.stack);
-        res.status(500).json({ 
-            error: 'Server error', 
-            message: error.message,
-            stack: process.env.NODE_ENV !== 'production' ? error.stack : undefined
-        });
+        res.status(500).json({ error: 'Server error', message: error.message });
     }
 });
 

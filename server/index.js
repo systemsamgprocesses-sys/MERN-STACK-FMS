@@ -65,19 +65,27 @@ const allowedOrigins = [
 
 app.use(cors({
   origin: function (origin, callback) {
-    if (!origin) return callback(null, true);
-
-    const normalizedOrigin = normalizeOrigin(origin);
-    if (allowedOrigins.includes(normalizedOrigin)) {
+    // Allow requests with no origin (like mobile apps or curl requests)
+    if (!origin) {
       return callback(null, true);
     }
 
-    console.log('Blocked by CORS:', origin);
-    return callback(new Error('Not allowed by CORS'));
+    const normalizedOrigin = normalizeOrigin(origin);
+    
+    // Check if the origin is in the allowed list
+    if (allowedOrigins.includes(normalizedOrigin)) {
+      // Return the actual origin (not just true) to set the Access-Control-Allow-Origin header correctly
+      return callback(null, normalizedOrigin);
+    }
+
+    console.log('Blocked by CORS:', origin, '| Normalized:', normalizedOrigin);
+    console.log('Allowed origins:', allowedOrigins);
+    return callback(new Error(`Not allowed by CORS: ${origin}`));
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+  exposedHeaders: ['Content-Type', 'Authorization'],
   optionsSuccessStatus: 204,
   preflightContinue: false
 }));

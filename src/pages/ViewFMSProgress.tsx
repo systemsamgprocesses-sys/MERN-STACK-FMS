@@ -283,7 +283,47 @@ const ViewFMSProgress: React.FC = () => {
 
       if (response.data.success) {
         alert('Task updated successfully!');
-        fetchProjects();
+        const wasCompleting = taskStatus === 'Done';
+        const currentTaskIndex = selectedTask?.index;
+        const currentProjectId = selectedProject?.projectId;
+        
+        await fetchProjects();
+        
+        // If we just completed a step, check if the next step needs a date
+        if (wasCompleting && currentTaskIndex !== undefined && currentProjectId && selectedProject?.fmsId) {
+          const fmsSteps = selectedProject.fmsId.steps || [];
+          const nextStepIndex = currentTaskIndex + 1;
+          
+          // Check if next step has ask-on-completion
+          if (nextStepIndex < fmsSteps.length) {
+            const nextStep = fmsSteps[nextStepIndex];
+            if (nextStep.whenType === 'ask-on-completion') {
+              // Refetch to get updated project with next task in 'Awaiting Date' status
+              const projectResponse = await axios.get(`${address}/api/projects?userId=${user?.id}&role=${user?.role}`);
+              if (projectResponse.data.success) {
+                const updatedProjects = projectResponse.data.projects;
+                const updatedProject = updatedProjects.find((p: Project) => p.projectId === currentProjectId);
+                if (updatedProject && nextStepIndex < updatedProject.tasks.length) {
+                  const nextTask = updatedProject.tasks[nextStepIndex];
+                  if (nextTask.status === 'Awaiting Date') {
+                    // Automatically open the next task for date input
+                    setTimeout(() => {
+                      setSelectedProject(updatedProject);
+                      setSelectedTask({ ...nextTask, index: nextStepIndex });
+                      setTaskStatus('Awaiting Date');
+                      setTaskPlannedDate('');
+                      setTaskNotes('');
+                      setFiles([]);
+                    }, 500);
+                    return; // Don't clear the selected task
+                  }
+                }
+              }
+            }
+          }
+        }
+        
+        // Clear selection if not opening next task
         setSelectedTask(null);
         setTaskStatus('');
         setTaskNotes('');

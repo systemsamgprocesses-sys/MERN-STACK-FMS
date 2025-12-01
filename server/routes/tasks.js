@@ -444,6 +444,7 @@ router.post('/create-scheduled', async (req, res) => {
         title: taskData.title,
         description: taskData.description,
         taskType: taskData.taskType, // Store the original recurring type
+        taskCategory: taskData.taskCategory || 'regular', // Include task category
         assignedBy: taskData.assignedBy,
         assignedTo: taskData.assignedTo,
         priority: taskData.priority,
@@ -466,6 +467,17 @@ router.post('/create-scheduled', async (req, res) => {
           yearlyDuration: taskData.yearlyDuration
         }
       };
+      
+      // Add date-range specific fields if applicable
+      if (taskData.taskCategory === 'date-range') {
+        individualTaskData.startDate = taskData.startDate ? new Date(taskData.startDate) : undefined;
+        individualTaskData.endDate = taskData.endDate ? new Date(taskData.endDate) : undefined;
+      }
+      
+      // Add multi-level specific fields if applicable
+      if (taskData.taskCategory === 'multi-level') {
+        individualTaskData.canBeForwarded = true;
+      }
 
       const task = new Task(individualTaskData);
       await task.save();

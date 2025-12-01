@@ -5,6 +5,7 @@ import axios from 'axios';
 import ViewToggle from '../components/ViewToggle';
 import StatusBadge from '../components/StatusBadge';
 import PriorityBadge from '../components/PriorityBadge';
+import TaskTypeBadge from '../components/TaskTypeBadge';
 import { useTheme } from '../contexts/ThemeContext';
 import { EditTaskModal } from '../components/EditTaskModal';
 import { SuperAdminTaskEditModal } from '../components/SuperAdminTaskEditModal';
@@ -65,6 +66,10 @@ const filterTasks = (tasks: Task[], filter: any) => {
     if (filter.priority && task.priority !== filter.priority) {
       return false;
     }
+    // Task type filter
+    if (filter.taskType && task.taskType !== filter.taskType) {
+      return false;
+    }
     // Assigned to filter
     if (filter.assignedTo && (!task.assignedTo || task.assignedTo._id !== filter.assignedTo)) {
       return false;
@@ -110,7 +115,8 @@ const MasterTasks: React.FC = () => {
     assignedTo: '',
     search: '',
     dateFrom: '',
-    dateTo: ''
+    dateTo: '',
+    taskType: ''
   });
   const [showRevisionModal, setShowRevisionModal] = useState<string | null>(null);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
@@ -194,7 +200,7 @@ const MasterTasks: React.FC = () => {
     try {
       setLoading(true);
       const params = new URLSearchParams({
-        taskType: 'one-time',
+        taskType: 'one-time,daily,weekly,monthly,quarterly,yearly',
         page: '1',
         limit: '10000' // Optimized: Reduced from 1000000 to prevent CPU spikes
       });
@@ -210,7 +216,9 @@ const MasterTasks: React.FC = () => {
 
       const response = await axios.get(`${address}/api/tasks?${params}`);
 
-      let tasks = response.data.tasks.filter((task: Task) => task.taskType === 'one-time' && (task.isActive !== false));
+      let tasks = response.data.tasks.filter((task: Task) => 
+        (['one-time', 'daily', 'weekly', 'monthly', 'quarterly', 'yearly'].includes(task.taskType)) && (task.isActive !== false)
+      );
 
       setAllTasks(tasks);
     } catch (error) {
@@ -294,7 +302,8 @@ const MasterTasks: React.FC = () => {
       assignedTo: '',
       search: '',
       dateFrom: '',
-      dateTo: ''
+      dateTo: '',
+      taskType: ''
     });
     setCurrentPage(1);
     setSortBy('dueDate');
@@ -459,6 +468,9 @@ const MasterTasks: React.FC = () => {
               <div className="flex flex-wrap gap-2 mb-4">
                 <StatusBadge status={task.status} isOnHold={task.isOnHold} />
                 <PriorityBadge priority={task.priority} />
+                {task.taskType && task.taskType !== 'one-time' && (
+                  <TaskTypeBadge taskType={task.taskType} size="sm" />
+                )}
                 {task.revisionCount > 0 && (
                   <span className={`px-2 py-1 text-xs font-medium rounded-full ${isDark ? 'bg-orange-700 text-orange-200 border-orange-600' : 'bg-orange-100 text-orange-800 border border-orange-200'}`}>
                     <History size={12} className="inline mr-1" />
@@ -659,8 +671,11 @@ const MasterTasks: React.FC = () => {
                 >
                   <td className="px-6 py-4">
                     <div>
-                      <div className={`text-sm font-medium mb-1 flex items-center ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                      <div className={`text-sm font-medium mb-1 flex items-center gap-2 ${isDark ? 'text-white' : 'text-gray-900'}`}>
                         {task.title}
+                        {task.taskType && task.taskType !== 'one-time' && (
+                          <TaskTypeBadge taskType={task.taskType} size="sm" />
+                        )}
                         {isTaskOverdue(task.dueDate, task.status) && (
                           <span className="ml-2 w-2 h-2 bg-red-500 rounded-full"></span>
                         )}
@@ -886,7 +901,7 @@ const MasterTasks: React.FC = () => {
             {user?.permissions.canViewAllTeamTasks && <span className="text-xs font-normal text-[--color-primary] ml-2">(Admin View - All Team)</span>}
           </h1>
           <p className="mt-1 text-xs text-[--color-textSecondary]">
-            {filteredTasks.length} of {allTasks.length} task(s) found
+            {filteredTasks.length} of {allTasks.length} task(s) found (One-Time + Recurring)
             {user?.permissions.canViewAllTeamTasks ? ' (All team members)' : ' (Your tasks)'}
           </p>
         </div>
@@ -966,6 +981,26 @@ const MasterTasks: React.FC = () => {
                 <option value="">All Priorities</option>
                 <option value="normal">Normal</option>
                 <option value="high">High</option>
+              </select>
+            </div>
+
+            {/* Task Type / Frequency */}
+            <div>
+              <label className="block text-sm font-medium text-[--color-text] mb-1">
+                Task Type / Frequency
+              </label>
+              <select
+                value={filter.taskType}
+                onChange={(e) => setFilter({ ...filter, taskType: e.target.value })}
+                className="w-full text-sm px-3 py-2 border border-[--color-border] rounded-lg focus:ring-2 focus:ring-[--color-primary] focus:border-[--color-primary] bg-[--color-surface] text-[--color-text]"
+              >
+                <option value="">All Types</option>
+                <option value="one-time">One-Time</option>
+                <option value="daily">Daily</option>
+                <option value="weekly">Weekly</option>
+                <option value="monthly">Monthly</option>
+                <option value="quarterly">Quarterly</option>
+                <option value="yearly">Yearly</option>
               </select>
             </div>
 

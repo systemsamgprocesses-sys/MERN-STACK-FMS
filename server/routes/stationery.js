@@ -91,112 +91,9 @@ router.get('/my-requests', auth, async (req, res) => {
   }
 });
 
-// POST /api/stationery/receive/:id (User marks as received)
-router.post('/receive/:id', auth, async (req, res) => {
-  try {
-    // Validate request ID format
-    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
-      return res.status(400).json({ message: 'Invalid request ID format.' });
-    }
-
-    // Get user ID
-    const userId = req.user._id || req.user.id;
-    if (!userId) {
-      return res.status(401).json({ message: 'User authentication required.' });
-    }
-
-    // Find the request
-    const request = await StationeryRequest.findOne({
-      _id: req.params.id,
-      requestedBy: userId,
-    });
-
-    if (!request) {
-      return res.status(404).json({ 
-        message: 'Request not found or you do not have permission to receive this request.' 
-      });
-    }
-    
-    if (request.status !== 'Approved') {
-      return res.status(400).json({ 
-        message: `Request is not in an "Approved" state. Current status: ${request.status}` 
-      });
-    }
-
-    // Populate items to get stationery details
-    await request.populate({
-      path: 'items.item',
-      select: 'name category quantity'
-    });
-
-    // Validate all items have sufficient stock and filter out deleted items
-    const validItems = [];
-    for (const reqItem of request.items) {
-      // Handle both populated and unpopulated item references
-      const itemId = reqItem.item?._id || reqItem.item;
-      
-      if (!itemId) {
-        console.warn(`Skipping deleted item in request ${request._id}`);
-        continue;
-      }
-      
-      const itemDoc = await Stationery.findById(itemId);
-      
-      if (!itemDoc) {
-        console.warn(`Item ${itemId} not found, skipping`);
-        continue;
-      }
-      
-      if (itemDoc.quantity < reqItem.quantity) {
-        return res.status(400).json({
-          message: `Insufficient stock for ${itemDoc.name}. Requested: ${reqItem.quantity}, Available: ${itemDoc.quantity}`
-        });
-      }
-      
-      validItems.push({ itemDoc, quantity: reqItem.quantity });
-    }
-
-    if (validItems.length === 0) {
-      return res.status(400).json({ 
-        message: 'No valid items in this request to process.' 
-      });
-    }
-
-    // Deduct stock for all valid items
-    for (const { itemDoc, quantity } of validItems) {
-      await Stationery.findByIdAndUpdate(
-        itemDoc._id,
-        { $inc: { quantity: -quantity } },
-        { new: true }
-      );
-    }
-
-    // Update request status
-    request.status = 'Received';
-    request.receivedAt = new Date();
-    await request.save();
-
-    // Populate for response
-    await request.populate('requestedBy', 'username email');
-    await request.populate('items.item', 'name category quantity');
-    
-    res.json({ 
-      message: `Items marked as received. ${validItems.length} item(s) processed. Stock has been updated.`, 
-      request 
-    });
-  } catch (error) {
-    console.error('Error in receive endpoint:', error);
-    console.error('Error details:', {
-      message: error.message,
-      stack: error.stack,
-      name: error.name
-    });
-    res.status(500).json({ 
-      message: 'Error marking as received', 
-      error: error.message
-    });
-  }
-});
+// POST /api/stationery/receive/:id (User marks as received) - REMOVED
+// This functionality has been removed to prevent users from reducing stock from inventory.
+// Stock reduction should only be handled by HR admin panel.
 
 // --- HR Admin Routes ---
 
@@ -225,27 +122,52 @@ router.post('/hr/approve/:id', auth, checkHR, async (req, res) => {
       return res.status(404).json({ message: 'Request not found.' });
     }
 
-    // Check if stock is sufficient for all items
+    // Check if stock is sufficient for all items and prepare for deduction
+    const validItems = [];
     for (const reqItem of request.items) {
       if (!reqItem.item) {
         return res.status(400).json({
           message: 'One or more requested items no longer exist in inventory.'
         });
       }
-      if (reqItem.quantity > reqItem.item.quantity) {
+      
+      // Get current stock from database to ensure accuracy
+      const itemDoc = await Stationery.findById(reqItem.item._id || reqItem.item);
+      if (!itemDoc) {
         return res.status(400).json({
-          message: `Stock check failed for ${reqItem.item.name}. Requested: ${reqItem.quantity}, In Stock: ${reqItem.item.quantity}`
+          message: `Item ${reqItem.item.name} no longer exists in inventory.`
         });
       }
+      
+      if (reqItem.quantity > itemDoc.quantity) {
+        return res.status(400).json({
+          message: `Stock check failed for ${itemDoc.name}. Requested: ${reqItem.quantity}, In Stock: ${itemDoc.quantity}`
+        });
+      }
+      
+      validItems.push({ itemDoc, quantity: reqItem.quantity });
     }
 
+    // Deduct stock for all valid items
+    for (const { itemDoc, quantity } of validItems) {
+      await Stationery.findByIdAndUpdate(
+        itemDoc._id,
+        { $inc: { quantity: -quantity } },
+        { new: true }
+      );
+    }
+
+    // Update request status
     request.status = 'Approved';
     request.approvedBy = req.user.id;
     request.approvedAt = new Date();
     request.hrRemarks = hrRemarks;
     await request.save();
 
-    res.json({ message: 'Request Approved.', request });
+    res.json({ 
+      message: `Request Approved. Stock has been deducted for ${validItems.length} item(s).`, 
+      request 
+    });
   } catch (error) {
     res.status(500).json({ message: 'Error approving request', error: error.message });
   }

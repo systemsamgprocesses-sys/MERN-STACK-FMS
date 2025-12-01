@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { UserCheck, Calendar, CheckSquare, Clock, Filter, Printer, ArrowUpDown } from 'lucide-react';
+import { UserCheck, Calendar, CheckSquare, Clock, Printer, ArrowUpDown, TrendingUp, AlertCircle } from 'lucide-react';
 import axios from 'axios';
 import { address } from '../../utils/ipAddress';
 
@@ -39,12 +39,12 @@ const AssignedByMe: React.FC = () => {
   const { user } = useAuth();
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
-  const [filterStatus, setFilterStatus] = useState<string>('all');
+  const [activeTab, setActiveTab] = useState<'pending' | 'overdue' | 'upcoming' | 'completed' | 'all'>('pending');
   const [sortBy, setSortBy] = useState<SortOption>('created-desc');
 
   useEffect(() => {
     fetchTasks();
-  }, [user, filterStatus]);
+  }, [user]);
 
   const fetchTasks = async () => {
     if (!user?.id) return;
@@ -52,8 +52,7 @@ const AssignedByMe: React.FC = () => {
     try {
       setLoading(true);
       const params: any = { 
-        userId: user.id,
-        status: filterStatus !== 'all' ? filterStatus : undefined
+        userId: user.id
       };
 
       // Optimized: Reduced limit from 1000000 to 10000 to prevent CPU spikes
@@ -71,9 +70,58 @@ const AssignedByMe: React.FC = () => {
     }
   };
 
+  // Categorize tasks into: Pending, Overdue, Upcoming, Completed
+  const { pendingTasks, overdueTasks, upcomingTasks, completedTasks } = useMemo(() => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const pending: Task[] = [];
+    const overdue: Task[] = [];
+    const upcoming: Task[] = [];
+    const completed: Task[] = [];
+
+    tasks.forEach(task => {
+      const dueDate = new Date(task.dueDate);
+      dueDate.setHours(0, 0, 0, 0);
+      
+      if (task.status === 'completed') {
+        completed.push(task);
+      } else if (dueDate < today) {
+        // Due before today and not completed = overdue
+        overdue.push(task);
+      } else if (dueDate.getTime() === today.getTime()) {
+        // Due today and not completed = pending
+        pending.push(task);
+      } else {
+        // Due in the future = upcoming
+        upcoming.push(task);
+      }
+    });
+
+    return { pendingTasks: pending, overdueTasks: overdue, upcomingTasks: upcoming, completedTasks: completed };
+  }, [tasks]);
+
+  // Get tasks to display based on active tab
+  const tasksToDisplay = useMemo(() => {
+    switch (activeTab) {
+      case 'pending':
+        return pendingTasks;
+      case 'overdue':
+        return overdueTasks;
+      case 'upcoming':
+        return upcomingTasks;
+      case 'completed':
+        return completedTasks;
+      case 'all':
+        return tasks;
+      default:
+        return tasks;
+    }
+  }, [activeTab, pendingTasks, overdueTasks, upcomingTasks, completedTasks, tasks]);
+
   // Sort tasks based on selected sort option
   const sortedTasks = useMemo(() => {
-    const tasksToSort = [...tasks];
+    const tasksToSort = [...tasksToDisplay];
     
     switch (sortBy) {
       case 'created-desc':
@@ -116,7 +164,7 @@ const AssignedByMe: React.FC = () => {
       default:
         return tasksToSort;
     }
-  }, [tasks, sortBy]);
+  }, [tasksToDisplay, sortBy]);
 
   const handlePrint = () => {
     window.print();
@@ -171,22 +219,62 @@ const AssignedByMe: React.FC = () => {
           </button>
         </div>
 
-        {/* Filters and Sort */}
+        {/* Tabs */}
+        <div className="mb-6 flex gap-2 border-b border-[var(--color-border)] print:hidden overflow-x-auto">
+          <button
+            onClick={() => setActiveTab('pending')}
+            className={`px-6 py-3 font-semibold transition-colors relative whitespace-nowrap ${
+              activeTab === 'pending'
+                ? 'text-[var(--color-primary)] border-b-2 border-[var(--color-primary)]'
+                : 'text-[var(--color-textSecondary)] hover:text-[var(--color-text)]'
+            }`}
+          >
+            Pending ({pendingTasks.length})
+          </button>
+          <button
+            onClick={() => setActiveTab('overdue')}
+            className={`px-6 py-3 font-semibold transition-colors relative whitespace-nowrap ${
+              activeTab === 'overdue'
+                ? 'text-[var(--color-primary)] border-b-2 border-[var(--color-primary)]'
+                : 'text-[var(--color-textSecondary)] hover:text-[var(--color-text)]'
+            }`}
+          >
+            Overdue ({overdueTasks.length})
+          </button>
+          <button
+            onClick={() => setActiveTab('upcoming')}
+            className={`px-6 py-3 font-semibold transition-colors relative whitespace-nowrap ${
+              activeTab === 'upcoming'
+                ? 'text-[var(--color-primary)] border-b-2 border-[var(--color-primary)]'
+                : 'text-[var(--color-textSecondary)] hover:text-[var(--color-text)]'
+            }`}
+          >
+            Upcoming ({upcomingTasks.length})
+          </button>
+          <button
+            onClick={() => setActiveTab('completed')}
+            className={`px-6 py-3 font-semibold transition-colors relative whitespace-nowrap ${
+              activeTab === 'completed'
+                ? 'text-[var(--color-primary)] border-b-2 border-[var(--color-primary)]'
+                : 'text-[var(--color-textSecondary)] hover:text-[var(--color-text)]'
+            }`}
+          >
+            Completed ({completedTasks.length})
+          </button>
+          <button
+            onClick={() => setActiveTab('all')}
+            className={`px-6 py-3 font-semibold transition-colors relative whitespace-nowrap ${
+              activeTab === 'all'
+                ? 'text-[var(--color-primary)] border-b-2 border-[var(--color-primary)]'
+                : 'text-[var(--color-textSecondary)] hover:text-[var(--color-text)]'
+            }`}
+          >
+            All ({tasks.length})
+          </button>
+        </div>
+
+        {/* Sort */}
         <div className="mb-6 flex flex-wrap items-center gap-3 print:hidden">
-          <div className="flex items-center gap-2">
-            <Filter size={18} style={{ color: 'var(--color-textSecondary)' }} />
-            <select
-              value={filterStatus}
-              onChange={(e) => setFilterStatus(e.target.value)}
-              className="px-4 py-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text)]"
-            >
-              <option value="all">All Status</option>
-              <option value="pending">Pending</option>
-              <option value="in-progress">In Progress</option>
-              <option value="completed">Completed</option>
-              <option value="overdue">Overdue</option>
-            </select>
-          </div>
           <div className="flex items-center gap-2">
             <ArrowUpDown size={18} style={{ color: 'var(--color-textSecondary)' }} />
             <select
@@ -207,11 +295,11 @@ const AssignedByMe: React.FC = () => {
         </div>
 
         {/* Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">
           <div className="p-4 rounded-xl bg-[var(--color-surface)] border border-[var(--color-border)]">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-[var(--color-textSecondary)]">Total Assigned</p>
+                <p className="text-sm text-[var(--color-textSecondary)]">Total</p>
                 <p className="text-2xl font-bold text-[var(--color-text)]">{tasks.length}</p>
               </div>
               <CheckSquare size={24} style={{ color: 'var(--color-primary)' }} />
@@ -221,7 +309,8 @@ const AssignedByMe: React.FC = () => {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-[var(--color-textSecondary)]">Pending</p>
-                <p className="text-2xl font-bold text-yellow-600">{tasks.filter(t => t.status === 'pending').length}</p>
+                <p className="text-2xl font-bold text-yellow-600">{pendingTasks.length}</p>
+                <p className="text-xs text-[var(--color-textSecondary)]">Due ≤ Today</p>
               </div>
               <Clock size={24} className="text-yellow-600" />
             </div>
@@ -229,19 +318,30 @@ const AssignedByMe: React.FC = () => {
           <div className="p-4 rounded-xl bg-[var(--color-surface)] border border-[var(--color-border)]">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-[var(--color-textSecondary)]">Completed</p>
-                <p className="text-2xl font-bold text-green-600">{tasks.filter(t => t.status === 'completed').length}</p>
+                <p className="text-sm text-[var(--color-textSecondary)]">Overdue</p>
+                <p className="text-2xl font-bold text-red-600">{overdueTasks.length}</p>
+                <p className="text-xs text-[var(--color-textSecondary)]">Due &lt; Today</p>
               </div>
-              <CheckSquare size={24} className="text-green-600" />
+              <AlertCircle size={24} className="text-red-600" />
             </div>
           </div>
           <div className="p-4 rounded-xl bg-[var(--color-surface)] border border-[var(--color-border)]">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-[var(--color-textSecondary)]">Overdue</p>
-                <p className="text-2xl font-bold text-red-600">{tasks.filter(t => t.status === 'overdue').length}</p>
+                <p className="text-sm text-[var(--color-textSecondary)]">Upcoming</p>
+                <p className="text-2xl font-bold text-blue-600">{upcomingTasks.length}</p>
+                <p className="text-xs text-[var(--color-textSecondary)]">Due &gt; Today</p>
               </div>
-              <Calendar size={24} className="text-red-600" />
+              <TrendingUp size={24} className="text-blue-600" />
+            </div>
+          </div>
+          <div className="p-4 rounded-xl bg-[var(--color-surface)] border border-[var(--color-border)]">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-[var(--color-textSecondary)]">Completed</p>
+                <p className="text-2xl font-bold text-green-600">{completedTasks.length}</p>
+              </div>
+              <CheckSquare size={24} className="text-green-600" />
             </div>
           </div>
         </div>

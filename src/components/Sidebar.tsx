@@ -8,7 +8,6 @@ import {
   CheckSquare,
   RefreshCw,
   Archive,
-  RotateCcw,
   UserPlus,
   Settings,
   ChevronLeft,
@@ -84,7 +83,6 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
   const [counts, setCounts] = useState({
     pendingTasks: 0,
     masterTasks: 0,
-    masterRepetitive: 0,
     myTasks: 0,
     objections: 0,
     myObjections: 0,
@@ -111,9 +109,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
     // Tasks Section
     { section: 'Tasks', icon: Star, label: 'My Tasks', path: '/admin-tasks', countKey: 'myTasks', highlight: true, requireAdmin: true },
     { section: 'Tasks', icon: CheckSquare, label: 'Pending Tasks', path: '/pending-tasks', permission: 'canViewTasks', countKey: 'pendingTasks', highlight: true },
-    { section: 'Tasks', icon: Archive, label: 'Master Tasks', path: '/master-tasks', permission: 'canViewAllTeamTasks', countKey: 'masterTasks', highlight: true },
-    { section: 'Tasks', icon: RotateCcw, label: 'Master Repetitive', path: '/master-recurring', permission: 'canViewAllTeamTasks', countKey: 'masterRepetitive', highlight: true },
-    { section: 'Tasks', icon: Calendar, label: 'Upcoming Tasks', path: '/upcoming-tasks', permission: 'canViewTasks', highlight: true },
+    { section: 'Tasks', icon: Archive, label: 'Master Tasks', path: '/master-tasks', permission: 'canViewTasks', countKey: 'masterTasks', highlight: true },
 
     // Assign Task Section
     { section: 'Assign Task', icon: UserPlus, label: 'Assign Task', path: '/assign-task', permission: 'canAssignTasks', highlight: true },
@@ -226,7 +222,6 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
       setCounts({
         pendingTasks: countsData.pendingTasks || 0,
         masterTasks: countsData.totalTasks || 0,
-        masterRepetitive: countsData.recurringTasks || 0,
         myTasks: countsData.totalTasks || 0,
         assignedByMe: countsData.assignedByMe?.total || 0,
         objections: objectionsCount,

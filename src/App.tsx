@@ -5,9 +5,7 @@ import Layout from './components/Layout';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import PendingTasks from './pages/PendingTasks';
-import UpcomingTasks from './pages/UpcomingTasks';
 import MasterTasks from './pages/MasterTasks';
-import MasterRecurringTasks from './pages/MasterRecurringTasks';
 import AssignTask from './pages/AssignTask';
 import AdminPanel from './pages/AdminPanel';
 import ProtectedRoute from './components/ProtectedRoute';
@@ -63,9 +61,7 @@ function App() {
                   <Route path="dashboard" element={<Dashboard />} />
                   <Route path="performance" element={<ProtectedRoute><Performance /></ProtectedRoute>} />
                   <Route path="pending-tasks" element={<ProtectedRoute requiredPermissions={['canViewTasks']}><PendingTasks /></ProtectedRoute>} />
-                  <Route path="upcoming-tasks" element={<ProtectedRoute requiredPermissions={['canViewTasks']}><UpcomingTasks /></ProtectedRoute>} />
-                  <Route path="master-tasks" element={<ProtectedRoute requiredPermissions={['canViewAllTeamTasks']}><MasterTasks /></ProtectedRoute>} />
-                  <Route path="master-recurring" element={<ProtectedRoute requiredPermissions={['canViewAllTeamTasks']}><MasterRecurringTasks /></ProtectedRoute>} />
+                  <Route path="master-tasks" element={<ProtectedRoute requiredPermissions={['canViewTasks']}><MasterTasks /></ProtectedRoute>} />
                   <Route path="assign-task" element={<ProtectedRoute requiredPermissions={['canAssignTasks']}><AssignTask /></ProtectedRoute>} />
                   <Route path="fms-templates" element={<ProtectedRoute requiredPermissions={['canAssignTasks']}><ViewAllFMS /></ProtectedRoute>} />
                   <Route path="create-fms" element={<ProtectedRoute requiredPermissions={['canAssignTasks']}><CreateFMS /></ProtectedRoute>} />

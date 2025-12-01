@@ -53,24 +53,6 @@ const MyStationeryRequests: React.FC = () => {
     fetchRequests();
   }, []);
 
-  const handleReceive = async (requestId: string) => {
-    if (!window.confirm('Are you sure you have received these items? This action will finalize the request and deduct stock.')) {
-      return;
-    }
-
-    try {
-      const token = localStorage.getItem('token');
-      await axios.post(
-        `${address}/api/stationery/receive/${requestId}`,
-        {},
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      toast.success('Items marked as received!');
-      fetchRequests();
-    } catch (error: any) {
-      toast.error(error.response?.data?.message || 'Failed to mark as received.');
-    }
-  };
 
   const getStatusBadge = (status: string) => {
     const statusConfig = {
@@ -206,17 +188,6 @@ const MyStationeryRequests: React.FC = () => {
               )}
             </div>
 
-            {req.status === 'Approved' && (
-              <div className="text-right mt-4 pt-4 border-t border-gray-200">
-                <button
-                  onClick={() => handleReceive(req._id)}
-                  className="bg-green-600 text-white font-bold py-2 px-6 rounded-md hover:bg-green-700 transition-colors shadow-md flex items-center gap-2 ml-auto"
-                >
-                  <CheckCircle size={18} />
-                  Mark as Received
-                </button>
-              </div>
-            )}
           </div>
         ))}
       </div>

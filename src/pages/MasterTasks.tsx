@@ -148,7 +148,9 @@ const MasterTasks: React.FC = () => {
 
   useEffect(() => {
     fetchTasks();
-    if (user?.permissions.canViewAllTeamTasks) {
+    // Super admin and users with canViewAllTeamTasks permission can see all users
+    const isSuperAdmin = user?.role === 'superadmin';
+    if (isSuperAdmin || user?.permissions.canViewAllTeamTasks) {
       fetchUsers();
     }
   }, [user]);
@@ -210,7 +212,9 @@ const MasterTasks: React.FC = () => {
         params.append('status', 'in-progress');
       }
 
-      if (!user?.permissions.canViewAllTeamTasks && user?.id) {
+      // Super admin should see all data, no restrictions
+      const isSuperAdmin = user?.role === 'superadmin';
+      if (!isSuperAdmin && !user?.permissions.canViewAllTeamTasks && user?.id) {
         params.append('assignedTo', user.id);
       }
 
@@ -898,7 +902,7 @@ const MasterTasks: React.FC = () => {
         <div>
           <h1 className="text-xl font-bold text-[--color-text]">
             Master Tasks
-            {user?.permissions.canViewAllTeamTasks && <span className="text-xs font-normal text-[--color-primary] ml-2">(Admin View - All Team)</span>}
+            {(user?.role === 'superadmin' || user?.permissions.canViewAllTeamTasks) && <span className="text-xs font-normal text-[--color-primary] ml-2">(Admin View - All Team)</span>}
           </h1>
           <p className="mt-1 text-xs text-[--color-textSecondary]">
             {filteredTasks.length} of {allTasks.length} task(s) found (One-Time + Recurring)
@@ -1005,7 +1009,7 @@ const MasterTasks: React.FC = () => {
             </div>
 
             {/* Team Member Filter (Admin only) */}
-            {user?.permissions.canViewAllTeamTasks && (
+            {(user?.role === 'superadmin' || user?.permissions.canViewAllTeamTasks) && (
               <div>
                 <label className="block text-sm font-medium text-[--color-text] mb-1">
                   <Users size={14} className="inline mr-1" />

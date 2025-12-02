@@ -69,16 +69,19 @@ const Checklists: React.FC = () => {
       const params = new URLSearchParams();
       const isPC = user?.role === 'pc';
 
+      // Super admin should see all checklists
+      const isSuperAdmin = user?.role === 'superadmin';
+      
       // Add user context to filter checklists where the user is assigned
-      if (user?.id) {
+      if (user?.id && !isSuperAdmin) {
         params.append('userId', user.id);
       }
       if (user?.role) {
         params.append('role', user.role);
       }
 
-      // Only filter by assignedTo if user is NOT a PC
-      if (!isPC && user?.id) {
+      // Only filter by assignedTo if user is NOT a PC and NOT superadmin
+      if (!isPC && !isSuperAdmin && user?.id) {
         params.append('assignedTo', user.id);
       }
 

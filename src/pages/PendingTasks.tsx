@@ -168,7 +168,9 @@ const PendingTasks: React.FC = () => {
 
   useEffect(() => {
     fetchTasks();
-    if (user?.permissions.canViewAllTeamTasks) {
+    // Super admin and users with canViewAllTeamTasks permission can see all users
+    const isSuperAdmin = user?.role === 'superadmin';
+    if (isSuperAdmin || user?.permissions.canViewAllTeamTasks) {
       fetchUsers();
     }
   }, [user]);
@@ -182,15 +184,20 @@ const PendingTasks: React.FC = () => {
       setLoading(true);
       const params = new URLSearchParams();
 
-      if (!user?.permissions.canViewAllTeamTasks && user?.id) {
+      // Super admin should see all data, no restrictions
+      const isSuperAdmin = user?.role === 'superadmin';
+      if (!isSuperAdmin && !user?.permissions.canViewAllTeamTasks && user?.id) {
         params.append('userId', user.id);
       }
 
       const response = await axios.get(`${address}/api/tasks/pending?${params}`);
       setAllTasks(response.data);
 
-      // Fetch FMS pending tasks
-      if (user?.id) {
+      // Fetch FMS pending tasks - super admin sees all
+      if (isSuperAdmin) {
+        const fmsResponse = await axios.get(`${address}/api/projects/pending-fms-tasks/all`);
+        setFmsTasks(fmsResponse.data.tasks || []);
+      } else if (user?.id) {
         const fmsResponse = await axios.get(`${address}/api/projects/pending-fms-tasks/${user.id}`);
         setFmsTasks(fmsResponse.data.tasks || []);
       }
@@ -1294,7 +1301,23 @@ const PendingTasks: React.FC = () => {
               : 'bg-[--color-background] text-[--color-textSecondary] hover:bg-[--color-border]'
               }`}
           >
-            Today's Due ({activeTab === 'todays-due' ? tabTotalCount : 0})
+            Today's Due ({(() => {
+              const today = new Date();
+              today.setHours(0, 0, 0, 0);
+              const todayPending = pendingTasks.filter(task => {
+                if (!task.dueDate) return false;
+                const dueDate = new Date(task.dueDate);
+                dueDate.setHours(0, 0, 0, 0);
+                return dueDate.getTime() === today.getTime();
+              }).length;
+              const todayFMS = fmsTasks.filter(task => {
+                if (!task.task.plannedDueDate) return false;
+                const dueDate = new Date(task.task.plannedDueDate);
+                dueDate.setHours(0, 0, 0, 0);
+                return dueDate.getTime() === today.getTime();
+              }).length;
+              return todayPending + todayFMS;
+            })()})
           </button>
           <button
             onClick={() => setActiveTab('pending')}
@@ -1335,7 +1358,12 @@ const PendingTasks: React.FC = () => {
               : 'bg-[--color-background] text-[--color-textSecondary] hover:bg-[--color-border]'
               }`}
           >
-            Completed ({activeTab === 'completed' ? tabTotalCount : 0})
+            Completed ({(() => {
+              const completedPending = pendingTasks.filter(task => task.status === 'Completed').length;
+              const completedUpcoming = upcomingTasks.filter(task => task.status === 'Completed').length;
+              const completedFMS = fmsTasks.filter(task => task.task.status === 'Completed').length;
+              return completedPending + completedUpcoming + completedFMS;
+            })()})
           </button>
           <button
             onClick={() => setActiveTab('total')}
@@ -1353,7 +1381,12 @@ const PendingTasks: React.FC = () => {
               : 'bg-[--color-background] text-[--color-textSecondary] hover:bg-[--color-border]'
               }`}
           >
-            Pending Repetitive ({activeTab === 'pending-repetitive' ? tabTotalCount : 0})
+            Pending Repetitive ({(() => {
+              const repetitivePending = pendingTasks.filter(task =>
+                !task.dueDate || task.taskType === 'recurring' || task.taskType === 'daily' || task.taskType === 'weekly' || task.taskType === 'monthly'
+              ).length;
+              return repetitivePending;
+            })()})
           </button>
         </div>
       </div>
@@ -1432,7 +1465,7 @@ const PendingTasks: React.FC = () => {
               </select>
             </div>
 
-            {user?.permissions.canViewAllTeamTasks && (
+            {(user?.role === 'superadmin' || user?.permissions.canViewAllTeamTasks) && (
               <div>
                 <label className="block text-sm font-medium mb-1 text-[--color-textSecondary]">
                   <Users size={14} className="inline mr-1" />

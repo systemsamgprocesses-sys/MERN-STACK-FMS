@@ -111,7 +111,10 @@ const ViewFMSProgress: React.FC = () => {
 
   const fetchProjects = async () => {
     try {
-      const response = await axios.get(`${address}/api/projects?userId=${user?.id}&role=${user?.role}`);
+      // Super admin should see all projects
+      const isSuperAdmin = user?.role === 'superadmin';
+      const userId = isSuperAdmin ? 'all' : user?.id;
+      const response = await axios.get(`${address}/api/projects?userId=${userId}&role=${user?.role}`);
       if (response.data.success) {
         setProjects(response.data.projects);
       }
@@ -124,7 +127,10 @@ const ViewFMSProgress: React.FC = () => {
 
   const fetchMultiLevelTasks = async () => {
     try {
-      const response = await axios.get(`${address}/api/tasks/multi-level?userId=${user?.id}&role=${user?.role}`);
+      // Super admin should see all multi-level tasks
+      const isSuperAdmin = user?.role === 'superadmin';
+      const userId = isSuperAdmin ? 'all' : user?.id;
+      const response = await axios.get(`${address}/api/tasks/multi-level?userId=${userId}&role=${user?.role}`);
       setMultiLevelTasks(response.data);
     } catch (error) {
       console.error('Error fetching multi-level tasks:', error);

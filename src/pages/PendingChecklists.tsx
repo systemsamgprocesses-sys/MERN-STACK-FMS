@@ -34,7 +34,7 @@ const PendingChecklists: React.FC = () => {
   const [pendingChecklists, setPendingChecklists] = useState<ChecklistOccurrence[]>([]);
   const [completedChecklists, setCompletedChecklists] = useState<ChecklistOccurrence[]>([]);
   const [loading, setLoading] = useState(false);
-  const [activeTab, setActiveTab] = useState<'today' | 'pending' | 'completed' | 'all'>('today');
+  const [activeTab, setActiveTab] = useState<'today' | 'pending' | 'upcoming' | 'completed' | 'all'>('today');
   const [filterCategory, setFilterCategory] = useState<string>('all');
   const [categories, setCategories] = useState<string[]>([]);
 
@@ -52,9 +52,10 @@ const PendingChecklists: React.FC = () => {
       const token = localStorage.getItem('token');
       const isPC = user.role === 'pc';
 
-      // PC role can see all checklists, others only see their assigned ones
+      // Super admin and PC role can see all checklists, others only see their assigned ones
+      const isSuperAdmin = user.role === 'superadmin';
       const params: any = { status: 'pending' };
-      if (!isPC) {
+      if (!isPC && !isSuperAdmin) {
         params.assignedTo = user.id;
       }
 
@@ -66,7 +67,7 @@ const PendingChecklists: React.FC = () => {
 
       // Fetch completed checklists
       const completedParams: any = { status: 'completed' };
-      if (!isPC) {
+      if (!isPC && !isSuperAdmin) {
         completedParams.assignedTo = user.id;
       }
 
@@ -113,9 +114,20 @@ const PendingChecklists: React.FC = () => {
       today.setHours(0, 0, 0, 0);
       checklists = pendingChecklists.filter(c => {
         if (!c.dueDate) return false;
+        if (c.status === 'completed') return false; // Only show not done
         const dueDate = new Date(c.dueDate);
         dueDate.setHours(0, 0, 0, 0);
-        return dueDate <= today;
+        return dueDate <= today; // <= today
+      });
+    } else if (activeTab === 'upcoming') {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      checklists = pendingChecklists.filter(c => {
+        if (!c.dueDate) return false;
+        if (c.status === 'completed') return false; // Only show not done
+        const dueDate = new Date(c.dueDate);
+        dueDate.setHours(0, 0, 0, 0);
+        return dueDate > today; // > today
       });
     } else if (activeTab === 'completed') {
       checklists = completedChecklists;
@@ -192,7 +204,7 @@ const PendingChecklists: React.FC = () => {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+      <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">
         <div
           className="p-6 rounded-lg shadow-md cursor-pointer hover:shadow-lg transition-shadow"
           style={{ backgroundColor: 'var(--color-surface)' }}
@@ -229,6 +241,33 @@ const PendingChecklists: React.FC = () => {
               </p>
             </div>
             <Clock className="w-12 h-12" style={{ color: 'var(--color-warning)', opacity: 0.3 }} />
+          </div>
+        </div>
+
+        <div
+          className="p-6 rounded-lg shadow-md cursor-pointer hover:shadow-lg transition-shadow"
+          style={{ backgroundColor: 'var(--color-surface)' }}
+          onClick={() => setActiveTab('upcoming')}
+        >
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm" style={{ color: 'var(--color-textSecondary)' }}>
+                Upcoming
+              </p>
+              <p className="text-3xl font-bold mt-1" style={{ color: 'var(--color-accent)' }}>
+                {(() => {
+                  const today = new Date();
+                  today.setHours(0, 0, 0, 0);
+                  return pendingChecklists.filter(c => {
+                    if (!c.dueDate || c.status === 'completed') return false;
+                    const dueDate = new Date(c.dueDate);
+                    dueDate.setHours(0, 0, 0, 0);
+                    return dueDate > today;
+                  }).length;
+                })()}
+              </p>
+            </div>
+            <CalendarIcon className="w-12 h-12" style={{ color: 'var(--color-accent)', opacity: 0.3 }} />
           </div>
         </div>
 
@@ -294,7 +333,36 @@ const PendingChecklists: React.FC = () => {
                 color: activeTab === 'pending' ? 'white' : 'var(--color-text)'
               }}
             >
-              Pending ({pendingChecklists.length})
+              Pending ({(() => {
+                const today = new Date();
+                today.setHours(0, 0, 0, 0);
+                return pendingChecklists.filter(c => {
+                  if (!c.dueDate || c.status === 'completed') return false;
+                  const dueDate = new Date(c.dueDate);
+                  dueDate.setHours(0, 0, 0, 0);
+                  return dueDate <= today;
+                }).length;
+              })()})
+            </button>
+            <button
+              onClick={() => setActiveTab('upcoming')}
+              className={`px-4 py-2 rounded-lg font-medium transition-colors ${activeTab === 'upcoming' ? 'shadow-md' : ''
+                }`}
+              style={{
+                backgroundColor: activeTab === 'upcoming' ? 'var(--color-accent)' : 'var(--color-background)',
+                color: activeTab === 'upcoming' ? 'white' : 'var(--color-text)'
+              }}
+            >
+              Upcoming ({(() => {
+                const today = new Date();
+                today.setHours(0, 0, 0, 0);
+                return pendingChecklists.filter(c => {
+                  if (!c.dueDate || c.status === 'completed') return false;
+                  const dueDate = new Date(c.dueDate);
+                  dueDate.setHours(0, 0, 0, 0);
+                  return dueDate > today;
+                }).length;
+              })()})
             </button>
             <button
               onClick={() => setActiveTab('completed')}

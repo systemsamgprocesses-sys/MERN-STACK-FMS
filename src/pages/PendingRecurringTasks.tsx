@@ -112,7 +112,7 @@ const PendingRecurringTasks: React.FC = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
 
-  const isAdmin = user?.role === 'admin' || user?.permissions?.canViewAllTeamTasks;
+  const isAdmin = user?.role === 'admin' || user?.role === 'superadmin' || user?.permissions?.canViewAllTeamTasks;
 
   // Helper functions for date calculations - DEFINED FIRST
   const isOverdue = (dueDate: string) => {
@@ -238,8 +238,15 @@ const PendingRecurringTasks: React.FC = () => {
       setLoading(true);
       const params = new URLSearchParams();
 
+      // Super admin should see all data, no restrictions
+      const isSuperAdmin = user?.role === 'superadmin';
       let targetUserId = '';
-      if (isAdmin && filter.assignedTo) {
+      if (isSuperAdmin) {
+        // Super admin sees all - only filter if they select a specific user
+        if (filter.assignedTo) {
+          targetUserId = filter.assignedTo;
+        }
+      } else if (isAdmin && filter.assignedTo) {
         targetUserId = filter.assignedTo;
       } else if (!isAdmin && user?.id) {
         targetUserId = user.id;

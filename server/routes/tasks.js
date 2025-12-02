@@ -283,13 +283,16 @@ router.get('/', async (req, res) => {
 // Get pending tasks (including one-time and recurring that are overdue or due)
 router.get('/pending', async (req, res) => {
   try {
-    const { userId, taskType } = req.query;
+    const { userId, taskType, role } = req.query;
     const query = {
       isActive: true,
       status: { $in: ['pending', 'in-progress', 'overdue'] } // Include pending, in-progress, and overdue
     };
 
-    if (userId) query.assignedTo = userId; // Filter by assigned user if provided
+    // Super admin should see all tasks, no userId filter
+    if (userId && role !== 'superadmin') {
+      query.assignedTo = userId; // Filter by assigned user if provided
+    }
     if (taskType) query.taskType = taskType; // Filter by task type if provided
 
     const tasks = await Task.find(query)
@@ -348,7 +351,7 @@ router.get('/assigned-by-me', async (req, res) => {
 // Get pending recurring tasks (for the specific "PendingRecurringTasks" frontend component)
 router.get('/pending-recurring', async (req, res) => {
   try {
-    const { userId } = req.query;
+    const { userId, role } = req.query;
     const today = new Date();
     today.setHours(0, 0, 0, 0); // Normalize today to start of day for comparison
     const fiveDaysFromNow = new Date(today);
@@ -361,7 +364,10 @@ router.get('/pending-recurring', async (req, res) => {
       dueDate: { $lte: fiveDaysFromNow } // Due today or within the next 5 days (or overdue)
     };
 
-    if (userId) query.assignedTo = userId; // Filter by assigned user if provided
+    // Super admin should see all tasks, no userId filter
+    if (userId && role !== 'superadmin') {
+      query.assignedTo = userId;
+    } // Filter by assigned user if provided
 
     const tasks = await Task.find(query)
       .populate('assignedBy', 'username email phoneNumber')

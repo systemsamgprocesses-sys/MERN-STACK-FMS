@@ -322,15 +322,17 @@ router.put('/:projectId/tasks/:taskIndex', async (req, res) => {
 
       if (nextTask.whenType === 'dependent') {
         // For dependent tasks, calculate due date from current completion
-        const currentStep = project.fmsId.steps[taskIndex];
-        let dueDate = new Date(task.actualCompletedOn);
+        // Use the NEXT step's when value, not the current step's
+        const nextStep = project.fmsId.steps[nextTaskIndex];
+        const completionDate = task.actualCompletedOn || task.completedAt || new Date();
+        let dueDate = new Date(completionDate);
 
-        if (currentStep.whenUnit === 'days') {
-          dueDate.setDate(dueDate.getDate() + currentStep.when);
-        } else if (currentStep.whenUnit === 'hours') {
-          dueDate.setHours(dueDate.getHours() + currentStep.when);
-        } else if (currentStep.whenUnit === 'days+hours') {
-          const totalHours = (currentStep.whenDays || 0) * 24 + (currentStep.whenHours || 0);
+        if (nextStep.whenUnit === 'days') {
+          dueDate.setDate(dueDate.getDate() + nextStep.when);
+        } else if (nextStep.whenUnit === 'hours') {
+          dueDate.setHours(dueDate.getHours() + nextStep.when);
+        } else if (nextStep.whenUnit === 'days+hours') {
+          const totalHours = (nextStep.whenDays || 0) * 24 + (nextStep.whenHours || 0);
           dueDate.setHours(dueDate.getHours() + totalHours);
         }
 
@@ -427,7 +429,27 @@ router.put('/:projectId/tasks/:taskIndex', async (req, res) => {
             const nextTaskIndex = parseInt(taskIndex) + 1;
             if (nextTaskIndex < project.tasks.length) {
               const nextTask = project.tasks[nextTaskIndex];
-              if (nextTask.whenType === 'ask-on-completion') {
+              
+              if (nextTask.whenType === 'dependent') {
+                // For dependent tasks, calculate due date from current completion
+                // Use the NEXT step's when value, not the current step's
+                const nextStep = project.fmsId.steps[nextTaskIndex];
+                const completionDate = task.completedAt || task.actualCompletedOn || new Date();
+                let dueDate = new Date(completionDate);
+
+                if (nextStep.whenUnit === 'days') {
+                  dueDate.setDate(dueDate.getDate() + nextStep.when);
+                } else if (nextStep.whenUnit === 'hours') {
+                  dueDate.setHours(dueDate.getHours() + nextStep.when);
+                } else if (nextStep.whenUnit === 'days+hours') {
+                  const totalHours = (nextStep.whenDays || 0) * 24 + (nextStep.whenHours || 0);
+                  dueDate.setHours(dueDate.getHours() + totalHours);
+                }
+
+                nextTask.plannedDueDate = shiftSundayForward(dueDate, project.fmsId?.frequencySettings);
+                nextTask.originalPlannedDate = nextTask.plannedDueDate;
+                nextTask.status = 'Pending';
+              } else if (nextTask.whenType === 'ask-on-completion') {
                 nextTask.status = 'Awaiting Date';
                 nextTask.plannedDateAsked = false;
               } else if (nextTask.status === 'Not Started' || nextTask.status === 'Awaiting Date') {
@@ -563,6 +585,8 @@ router.put('/:projectId/tasks/:taskIndex', async (req, res) => {
 router.get('/pending-fms-tasks/:userId', async (req, res) => {
   try {
     const { userId } = req.params;
+    const isSuperAdmin = req.user?.role === 'superadmin';
+    const showAll = isSuperAdmin && userId === 'all';
 
     const projects = await Project.find({ status: { $in: ['Active', 'In Progress'] } })
       .populate('tasks.who', 'username email phoneNumber')
@@ -572,8 +596,8 @@ router.get('/pending-fms-tasks/:userId', async (req, res) => {
 
     projects.forEach(project => {
       project.tasks.forEach((task, index) => {
-        // Check if user is assigned to this task
-        const isAssigned = task.who.some(person => person._id.toString() === userId);
+        // For super admin with 'all', show all tasks. Otherwise check if user is assigned
+        const isAssigned = showAll || task.who.some(person => person._id.toString() === userId);
 
         if (isAssigned && (task.status === 'Pending' || task.status === 'In Progress')) {
           // Check if previous task is completed (for step visibility)

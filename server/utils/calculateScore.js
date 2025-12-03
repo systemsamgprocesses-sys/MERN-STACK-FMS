@@ -20,50 +20,64 @@ export function calculateScore(plannedDate, completedDate, startDate = null) {
   const completed = new Date(completedDate);
   const start = startDate ? new Date(startDate) : null;
 
-  // Calculate planned days
+  // Normalize dates to start of day for accurate day comparison (ignore time)
+  const plannedDay = new Date(planned.getFullYear(), planned.getMonth(), planned.getDate());
+  const completedDay = new Date(completed.getFullYear(), completed.getMonth(), completed.getDate());
+  const startDay = start ? new Date(start.getFullYear(), start.getMonth(), start.getDate()) : null;
+
+  // Determine if on time (completed on or before planned date)
+  const wasOnTime = completedDay <= plannedDay;
+
+  // Calculate planned days from start to planned date
   let plannedDays = 0;
-  if (start) {
-    plannedDays = Math.ceil((planned - start) / (1000 * 60 * 60 * 24));
+  if (startDay) {
+    // Use Math.round for more accurate day calculation
+    const diffMs = plannedDay - startDay;
+    plannedDays = Math.round(diffMs / (1000 * 60 * 60 * 24));
   } else {
-    // If no start date, use planned date as reference (0 days)
+    // If no start date, planned days is 0
     plannedDays = 0;
   }
 
-  // Calculate actual days
+  // Calculate actual days from start to completed date
   let actualDays = 0;
-  if (start) {
-    actualDays = Math.ceil((completed - start) / (1000 * 60 * 60 * 24));
+  if (startDay) {
+    // Use Math.round for more accurate day calculation
+    const diffMs = completedDay - startDay;
+    actualDays = Math.round(diffMs / (1000 * 60 * 60 * 24));
   } else {
-    // If no start date, compare planned vs completed directly
-    actualDays = Math.ceil((completed - planned) / (1000 * 60 * 60 * 24));
-    plannedDays = 0;
+    // If no start date, actual days is the difference between completed and planned
+    const diffMs = completedDay - plannedDay;
+    actualDays = Math.round(diffMs / (1000 * 60 * 60 * 24));
   }
 
-  // Determine if on time
-  const wasOnTime = completed <= planned;
+  // If planned and completed are on the same day, ensure they're treated as equal
+  if (plannedDay.getTime() === completedDay.getTime()) {
+    // Same day - ensure actualDays equals plannedDays if both are calculated from start
+    if (startDay) {
+      actualDays = plannedDays;
+    } else {
+      actualDays = 0;
+    }
+  }
 
-  // Calculate score
+  // Calculate score based on whether task was completed on time
   let score = 1.0;
   let scorePercentage = 100;
 
-  if (plannedDays > 0 && actualDays > 0) {
-    if (actualDays <= plannedDays) {
-      // Completed on time or early - full score
-      score = 1.0;
-      scorePercentage = 100;
-    } else {
-      // Late - proportional score
+  if (wasOnTime) {
+    // Completed on or before planned date - full score
+    score = 1.0;
+    scorePercentage = 100;
+  } else {
+    // Late - calculate proportional score
+    if (plannedDays > 0 && actualDays > plannedDays) {
+      // Late: score = plannedDays / actualDays
       score = plannedDays / actualDays;
       scorePercentage = Math.min(100, Math.round((plannedDays / actualDays) * 100 * 10) / 10);
-    }
-  } else if (plannedDays === 0 && actualDays !== undefined) {
-    // Simple comparison: on time = 100%, late = calculated penalty
-    if (wasOnTime) {
-      score = 1.0;
-      scorePercentage = 100;
-    } else {
+    } else if (plannedDays === 0) {
       // Calculate penalty based on days late
-      const daysLate = Math.abs(actualDays);
+      const daysLate = actualDays;
       score = Math.max(0, 1 - (daysLate / 30)); // Cap at 30 days penalty
       scorePercentage = Math.max(0, Math.round(score * 100 * 10) / 10);
     }

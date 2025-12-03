@@ -119,7 +119,7 @@ FMS Project Flow:
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│                         USERS                                    │
+│                         USERS                                   │
 ├─────────────────────────────────────────────────────────────────┤
 │ PK: _id (ObjectId)                                              │
 │ username (String, unique)                                       │
@@ -128,12 +128,12 @@ FMS Project Flow:
 │ password (String, hashed)                                       │
 │ role (String: superadmin|admin|manager|employee|pc)             │
 │ permissions (Object: {                                          │
-│   canViewTasks, canViewAllTeamTasks, canAssignTasks,           │
-│   canDeleteTasks, canEditTasks, canManageUsers,                │
-│   canEditRecurringTaskSchedules, canCompleteTasksOnBehalf      │
+│   canViewTasks, canViewAllTeamTasks, canAssignTasks,            │
+│   canDeleteTasks, canEditTasks, canManageUsers,                 │
+│   canEditRecurringTaskSchedules, canCompleteTasksOnBehalf       │
 │ })                                                              │
 │ isActive (Boolean)                                              │
-│ createdAt, updatedAt (Timestamps)                              │
+│ createdAt, updatedAt (Timestamps)                               │
 └─────────────────────────────────────────────────────────────────┘
          │                    │                    │
          │ 1:N                │ 1:N                │ 1:N

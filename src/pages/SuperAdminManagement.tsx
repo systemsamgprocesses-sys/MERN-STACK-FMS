@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import axios from 'axios';
 import { address } from '../../utils/ipAddress';
 import { useAuth } from '../contexts/AuthContext';
-import { Shield, Calendar, CheckCircle, Trash2, Edit, AlertCircle, RefreshCw, Search, Filter, X } from 'lucide-react';
+import { Shield, Calendar, CheckCircle, Trash2, Edit, AlertCircle, RefreshCw, Search, Filter, X, Settings, Link2, Save } from 'lucide-react';
 
 interface ChecklistOccurrence {
     _id: string;
@@ -45,9 +45,280 @@ interface FMSProject {
     }>;
 }
 
+interface ChecklistTemplate {
+    _id: string;
+    name: string;
+    category: string;
+    frequency: string;
+    fmsConfiguration?: {
+        enabled: boolean;
+        fmsId?: string;
+        fmsName?: string;
+        triggerOnSubmission: boolean;
+    };
+}
+
+interface FMSTemplate {
+    _id: string;
+    fmsId: string;
+    fmsName: string;
+    category: string;
+}
+
+const ChecklistFMSConfigTab: React.FC = () => {
+    const [templates, setTemplates] = useState<ChecklistTemplate[]>([]);
+    const [fmsTemplates, setFmsTemplates] = useState<FMSTemplate[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [editingTemplate, setEditingTemplate] = useState<ChecklistTemplate | null>(null);
+    const [configData, setConfigData] = useState({
+        enabled: false,
+        fmsId: '',
+        triggerOnSubmission: true
+    });
+
+    useEffect(() => {
+        fetchTemplates();
+        fetchFMSTemplates();
+    }, []);
+
+    const fetchTemplates = async () => {
+        try {
+            setLoading(true);
+            const token = localStorage.getItem('token');
+            const response = await axios.get(`${address}/api/checklist-templates`, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            setTemplates(response.data);
+        } catch (error) {
+            console.error('Error fetching templates:', error);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const fetchFMSTemplates = async () => {
+        try {
+            const token = localStorage.getItem('token');
+            const response = await axios.get(`${address}/api/checklist-templates/fms/available`, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            setFmsTemplates(response.data.fmsList || []);
+        } catch (error) {
+            console.error('Error fetching FMS templates:', error);
+        }
+    };
+
+    const handleEdit = (template: ChecklistTemplate) => {
+        setEditingTemplate(template);
+        setConfigData({
+            enabled: template.fmsConfiguration?.enabled || false,
+            fmsId: template.fmsConfiguration?.fmsId || '',
+            triggerOnSubmission: template.fmsConfiguration?.triggerOnSubmission !== false
+        });
+    };
+
+    const handleSave = async () => {
+        if (!editingTemplate) return;
+
+        try {
+            const token = localStorage.getItem('token');
+            await axios.put(
+                `${address}/api/checklist-templates/${editingTemplate._id}/fms-config`,
+                {
+                    enabled: configData.enabled,
+                    fmsId: configData.enabled ? configData.fmsId : null,
+                    triggerOnSubmission: configData.triggerOnSubmission
+                },
+                { headers: { Authorization: `Bearer ${token}` } }
+            );
+            alert('FMS configuration updated successfully!');
+            setEditingTemplate(null);
+            fetchTemplates();
+        } catch (error: any) {
+            alert(error.response?.data?.error || 'Failed to update FMS configuration');
+        }
+    };
+
+    const handleDisable = async (templateId: string) => {
+        if (!window.confirm('Disable FMS configuration for this template?')) return;
+
+        try {
+            const token = localStorage.getItem('token');
+            await axios.put(
+                `${address}/api/checklist-templates/${templateId}/fms-config`,
+                { enabled: false },
+                { headers: { Authorization: `Bearer ${token}` } }
+            );
+            alert('FMS configuration disabled successfully!');
+            fetchTemplates();
+        } catch (error: any) {
+            alert(error.response?.data?.error || 'Failed to disable FMS configuration');
+        }
+    };
+
+    if (loading) {
+        return (
+            <div className="flex flex-col items-center justify-center py-20">
+                <div className="w-16 h-16 border-4 border-purple-200 border-t-purple-600 rounded-full animate-spin mb-4"></div>
+                <p className="text-gray-600 font-medium">Loading...</p>
+            </div>
+        );
+    }
+
+    return (
+        <div className="space-y-4">
+            <div className="bg-white rounded-xl shadow-sm p-6">
+                <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
+                    <Link2 className="w-6 h-6 text-purple-600" />
+                    Configure FMS for Checklist Templates
+                </h2>
+                <p className="text-sm text-gray-600 mb-6">
+                    Link FMS templates to checklist templates. When a checklist is submitted, the configured FMS will automatically start.
+                </p>
+
+                <div className="overflow-x-auto">
+                    <table className="min-w-full divide-y divide-gray-200">
+                        <thead className="bg-gradient-to-r from-gray-50 to-gray-100">
+                            <tr>
+                                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase">Template Name</th>
+                                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase">Category</th>
+                                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase">Frequency</th>
+                                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase">FMS Status</th>
+                                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase">Linked FMS</th>
+                                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody className="bg-white divide-y divide-gray-100">
+                            {templates.map((template) => (
+                                <tr key={template._id} className="hover:bg-gray-50">
+                                    <td className="px-4 py-3 text-sm font-medium text-gray-900">{template.name}</td>
+                                    <td className="px-4 py-3 text-sm text-gray-600">{template.category}</td>
+                                    <td className="px-4 py-3 text-sm text-gray-600 capitalize">{template.frequency}</td>
+                                    <td className="px-4 py-3">
+                                        {template.fmsConfiguration?.enabled ? (
+                                            <span className="px-2 py-1 text-xs font-medium bg-green-100 text-green-800 rounded-md">
+                                                Enabled
+                                            </span>
+                                        ) : (
+                                            <span className="px-2 py-1 text-xs font-medium bg-gray-100 text-gray-800 rounded-md">
+                                                Disabled
+                                            </span>
+                                        )}
+                                    </td>
+                                    <td className="px-4 py-3 text-sm text-gray-600">
+                                        {template.fmsConfiguration?.fmsName || 'None'}
+                                    </td>
+                                    <td className="px-4 py-3">
+                                        <div className="flex gap-2">
+                                            <button
+                                                onClick={() => handleEdit(template)}
+                                                className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                                                title="Configure FMS"
+                                            >
+                                                <Edit size={16} />
+                                            </button>
+                                            {template.fmsConfiguration?.enabled && (
+                                                <button
+                                                    onClick={() => handleDisable(template._id)}
+                                                    className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                                                    title="Disable FMS"
+                                                >
+                                                    <X size={16} />
+                                                </button>
+                                            )}
+                                        </div>
+                                    </td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            {/* Edit Modal */}
+            {editingTemplate && (
+                <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+                    <div className="bg-white rounded-2xl p-6 max-w-md w-full mx-4 shadow-2xl">
+                        <div className="flex items-center justify-between mb-4">
+                            <h3 className="text-xl font-bold text-gray-900">Configure FMS for {editingTemplate.name}</h3>
+                            <button
+                                onClick={() => setEditingTemplate(null)}
+                                className="p-1 hover:bg-gray-100 rounded-lg transition-colors"
+                            >
+                                <X size={20} className="text-gray-500" />
+                            </button>
+                        </div>
+
+                        <div className="space-y-4">
+                            <label className="flex items-center gap-2">
+                                <input
+                                    type="checkbox"
+                                    checked={configData.enabled}
+                                    onChange={(e) => setConfigData({ ...configData, enabled: e.target.checked })}
+                                    className="w-4 h-4 text-purple-600 rounded focus:ring-purple-500"
+                                />
+                                <span className="text-sm font-medium text-gray-700">Enable FMS Triggering</span>
+                            </label>
+
+                            {configData.enabled && (
+                                <>
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                                            Select FMS Template
+                                        </label>
+                                        <select
+                                            value={configData.fmsId}
+                                            onChange={(e) => setConfigData({ ...configData, fmsId: e.target.value })}
+                                            className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                                        >
+                                            <option value="">Select an FMS template...</option>
+                                            {fmsTemplates.map((fms) => (
+                                                <option key={fms._id} value={fms._id}>
+                                                    {fms.fmsId} - {fms.fmsName}
+                                                </option>
+                                            ))}
+                                        </select>
+                                    </div>
+
+                                    <label className="flex items-center gap-2">
+                                        <input
+                                            type="checkbox"
+                                            checked={configData.triggerOnSubmission}
+                                            onChange={(e) => setConfigData({ ...configData, triggerOnSubmission: e.target.checked })}
+                                            className="w-4 h-4 text-purple-600 rounded focus:ring-purple-500"
+                                        />
+                                        <span className="text-sm text-gray-700">Trigger FMS on checklist submission</span>
+                                    </label>
+                                </>
+                            )}
+
+                            <div className="flex gap-2 mt-6">
+                                <button
+                                    onClick={() => setEditingTemplate(null)}
+                                    className="flex-1 px-4 py-2.5 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-medium transition-colors"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    onClick={handleSave}
+                                    disabled={configData.enabled && !configData.fmsId}
+                                    className="flex-1 px-4 py-2.5 bg-gradient-to-r from-purple-500 to-indigo-600 text-white rounded-lg hover:from-purple-600 hover:to-indigo-700 font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                                >
+                                    <Save size={18} />
+                                    Save Configuration
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+};
+
 const SuperAdminManagement: React.FC = () => {
     const { user } = useAuth();
-    const [activeTab, setActiveTab] = useState<'checklists' | 'fms'>('checklists');
+    const [activeTab, setActiveTab] = useState<'checklists' | 'fms' | 'fms-config'>('checklists');
     const [checklists, setChecklists] = useState<ChecklistOccurrence[]>([]);
     const [fmsProjects, setFmsProjects] = useState<FMSProject[]>([]);
     const [loading, setLoading] = useState(false);
@@ -281,6 +552,18 @@ const SuperAdminManagement: React.FC = () => {
                         <div className="flex items-center gap-2">
                             <RefreshCw size={18} />
                             FMS Projects
+                        </div>
+                    </button>
+                    <button
+                        onClick={() => setActiveTab('fms-config')}
+                        className={`px-6 py-2.5 rounded-lg font-medium text-sm transition-all duration-200 ${activeTab === 'fms-config'
+                                ? 'bg-gradient-to-r from-purple-500 to-indigo-600 text-white shadow-md'
+                                : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+                            }`}
+                    >
+                        <div className="flex items-center gap-2">
+                            <Settings size={18} />
+                            Checklist FMS Config
                         </div>
                     </button>
                 </div>
@@ -543,6 +826,11 @@ const SuperAdminManagement: React.FC = () => {
                                     ))}
                                 </div>
                             </div>
+                        )}
+
+                        {/* Checklist FMS Configuration Tab */}
+                        {activeTab === 'fms-config' && (
+                            <ChecklistFMSConfigTab />
                         )}
                     </>
                 )}

@@ -1,8 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { NavLink } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import axios from 'axios';
 import { address } from '../../utils/ipAddress';
+import { useCachedApi } from '../hooks/useCachedApi';
 import {
   LayoutDashboard,
   CheckSquare,
@@ -138,99 +139,120 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
     { section: 'Admin', icon: Award, label: 'Score Logs', path: '/score-logs', requireSuperAdmin: true },
   ];
 
+  // Build API URLs with memoization
+  const countsUrl = useMemo(() => {
+    if (!user?.id) return null;
+    const countsParams = new URLSearchParams();
+    countsParams.append('userId', user.id);
+    countsParams.append('assignedById', user.id);
+    if (user?.role === 'admin' || user?.role === 'superadmin' || user?.role === 'manager') {
+      countsParams.append('isAdmin', 'true');
+    }
+    return `${address}/api/dashboard/counts-optimized?${countsParams}`;
+  }, [user?.id, user?.role]);
+
+  const objectionsUrl = useMemo(() => 
+    user?.id ? `${address}/api/objections/pending/${user.id}` : null,
+    [user?.id]
+  );
+
+  const helpTicketsUrl = useMemo(() => 
+    user?.id ? `${address}/api/help-tickets?userId=${user.id}&role=${user?.role}` : null,
+    [user?.id, user?.role]
+  );
+
+  const myObjectionsUrl = useMemo(() => 
+    user?.id ? `${address}/api/objections/my/${user.id}` : null,
+    [user?.id]
+  );
+
+  const complaintsUrl = useMemo(() => 
+    `${address}/api/complaints?scope=assigned`,
+    []
+  );
+
+  // Use cached API hooks
+  const { data: countsData, refetch: refetchCounts } = useCachedApi<any>(
+    countsUrl,
+    {},
+    { ttl: 1 * 60 * 1000, staleWhileRevalidate: true } // 1 minute cache
+  );
+
+  const { data: objectionsData } = useCachedApi<any>(
+    objectionsUrl,
+    {},
+    { ttl: 1 * 60 * 1000, staleWhileRevalidate: true }
+  );
+
+  const { data: helpTicketsData } = useCachedApi<any>(
+    helpTicketsUrl,
+    {},
+    { ttl: 1 * 60 * 1000, staleWhileRevalidate: true }
+  );
+
+  const { data: myObjectionsData } = useCachedApi<any>(
+    myObjectionsUrl,
+    {},
+    { ttl: 1 * 60 * 1000, staleWhileRevalidate: true }
+  );
+
+  const { data: complaintsData } = useCachedApi<any>(
+    complaintsUrl,
+    {
+      headers: {
+        Authorization: `Bearer ${localStorage.getItem('token')}`
+      }
+    },
+    { ttl: 1 * 60 * 1000, staleWhileRevalidate: true }
+  );
+
+  // Calculate counts from cached data
   useEffect(() => {
-    if (user?.id) {
-      fetchCounts();
-      const interval = setInterval(fetchCounts, 90000);
+    if (!user?.id) return;
 
-      const handleTaskUpdate = () => {
-        fetchCounts();
-      };
+    const objectionsCount = objectionsData ? (
+      (objectionsData.regularTasks?.reduce((acc: number, task: any) => {
+        return acc + (task.objections?.filter((obj: any) => obj.status === 'pending').length || 0);
+      }, 0) || 0) +
+      (objectionsData.fmsTasks?.reduce((acc: number, project: any) => {
+        return acc + (project.tasks?.reduce((taskAcc: number, task: any) => {
+          return taskAcc + (task.objections?.filter((obj: any) => obj.status === 'pending').length || 0);
+        }, 0) || 0);
+      }, 0) || 0)
+    ) : 0;
 
-      window.addEventListener('taskDeleted', handleTaskUpdate);
-      window.addEventListener('taskUpdated', handleTaskUpdate);
+    const helpTicketsCount = helpTicketsData ? helpTicketsData.length : 0;
+    const myObjections = myObjectionsData ? 
+      ((myObjectionsData.regular?.length || 0) + (myObjectionsData.fms?.length || 0)) : 0;
+    const complaintsInbox = complaintsData ? 
+      (Array.isArray(complaintsData) ? complaintsData.length : 0) : 0;
 
-      return () => {
-        clearInterval(interval);
-        window.removeEventListener('taskDeleted', handleTaskUpdate);
-        window.removeEventListener('taskUpdated', handleTaskUpdate);
-      };
-    }
-  }, [user]);
+    setCounts({
+      pendingTasks: countsData?.pendingTasks || 0,
+      masterTasks: countsData?.totalTasks || 0,
+      myTasks: countsData?.totalTasks || 0,
+      assignedByMe: countsData?.assignedByMe?.total || 0,
+      objections: objectionsCount,
+      myObjections,
+      helpTickets: helpTicketsCount,
+      complaintsInbox,
+    });
+  }, [countsData, objectionsData, helpTicketsData, myObjectionsData, complaintsData, user?.id]);
 
-  const fetchCounts = async () => {
-    try {
-      const countsParams = new URLSearchParams();
-      if (user?.id) {
-        countsParams.append('userId', user.id);
-        countsParams.append('assignedById', user.id);
-      }
-      if (user?.role === 'admin' || user?.role === 'superadmin' || user?.role === 'manager') {
-        countsParams.append('isAdmin', 'true');
-      }
+  // Listen for task updates and refresh counts
+  useEffect(() => {
+    const handleTaskUpdate = () => {
+      refetchCounts(true); // Force refresh on task updates
+    };
 
-      const countsResponse = await axios.get(`${address}/api/dashboard/counts-optimized?${countsParams}`);
-      const countsData = countsResponse.data;
+    window.addEventListener('taskDeleted', handleTaskUpdate);
+    window.addEventListener('taskUpdated', handleTaskUpdate);
 
-      let objectionsCount = 0;
-      try {
-        const objectionsResponse = await axios.get(`${address}/api/objections/pending/${user?.id}`);
-        const regularObjectionsCount = objectionsResponse.data.regularTasks?.reduce((acc: number, task: any) => {
-          return acc + (task.objections?.filter((obj: any) => obj.status === 'pending').length || 0);
-        }, 0) || 0;
-        const fmsObjectionsCount = objectionsResponse.data.fmsTasks?.reduce((acc: number, project: any) => {
-          return acc + (project.tasks?.reduce((taskAcc: number, task: any) => {
-            return taskAcc + (task.objections?.filter((obj: any) => obj.status === 'pending').length || 0);
-          }, 0) || 0);
-        }, 0) || 0;
-        objectionsCount = regularObjectionsCount + fmsObjectionsCount;
-      } catch (e) {
-        console.error('Error fetching objections:', e);
-      }
-
-      let helpTicketsCount = 0;
-      try {
-        const helpTicketsResponse = await axios.get(`${address}/api/help-tickets?userId=${user?.id}&role=${user?.role}`);
-        helpTicketsCount = helpTicketsResponse.data.length;
-      } catch (e) {
-        console.error('Error fetching help tickets:', e);
-      }
-
-      let myObjections = 0;
-      try {
-        if (user?.id) {
-          const myObjResponse = await axios.get(`${address}/api/objections/my/${user.id}`);
-          myObjections = (myObjResponse.data?.regular?.length || 0) + (myObjResponse.data?.fms?.length || 0);
-        }
-      } catch (err) {
-        console.error('Error fetching my objections:', err);
-      }
-
-      let complaintsInbox = 0;
-      try {
-        const token = localStorage.getItem('token');
-        const complaintsResponse = await axios.get(`${address}/api/complaints?scope=assigned`, {
-          headers: token ? { Authorization: `Bearer ${token}` } : undefined
-        });
-        complaintsInbox = Array.isArray(complaintsResponse.data) ? complaintsResponse.data.length : 0;
-      } catch (err) {
-        console.error('Error fetching complaints:', err);
-      }
-
-      setCounts({
-        pendingTasks: countsData.pendingTasks || 0,
-        masterTasks: countsData.totalTasks || 0,
-        myTasks: countsData.totalTasks || 0,
-        assignedByMe: countsData.assignedByMe?.total || 0,
-        objections: objectionsCount,
-        myObjections,
-        helpTickets: helpTicketsCount,
-        complaintsInbox,
-      });
-    } catch (error) {
-      console.error('Error fetching counts:', error);
-    }
-  };
+    return () => {
+      window.removeEventListener('taskDeleted', handleTaskUpdate);
+      window.removeEventListener('taskUpdated', handleTaskUpdate);
+    };
+  }, [refetchCounts]);
 
   const filteredMenuItems = menuItems.filter(item => {
     if (user?.role === 'superadmin') return true;

@@ -1,12 +1,12 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { CheckSquare, Calendar, Users, Filter, Search } from 'lucide-react';
-import axios from 'axios';
 import { address } from '../../utils/ipAddress';
 import TaskCompletionModal from '../components/TaskCompletionModal';
 import { useTaskSettings } from '../hooks/useTaskSettings';
 import { formatDate } from '../utils/dateFormat';
+import { useCachedApi } from '../hooks/useCachedApi';
 
 interface Task {
   _id: string;
@@ -26,9 +26,7 @@ interface Task {
 const AdminTasks: React.FC = () => {
   const { user } = useAuth();
   const { settings: taskSettings, loading: settingsLoading } = useTaskSettings();
-  const [tasks, setTasks] = useState<Task[]>([]);
   const [filteredTasks, setFilteredTasks] = useState<Task[]>([]);
-  const [loading, setLoading] = useState(true);
   const [showCompleteModal, setShowCompleteModal] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'todays-due' | 'pending' | 'completed' | 'total'>('todays-due');
   const [filter, setFilter] = useState({
@@ -37,29 +35,30 @@ const AdminTasks: React.FC = () => {
     search: '',
   });
 
-  useEffect(() => {
-    fetchAdminTasks();
-  }, []);
+  // Use cached API hook for fetching tasks
+  const apiUrl = useMemo(() => 
+    user?.id ? `${address}/api/tasks?assignedTo=${user.id}&limit=10000` : null,
+    [user?.id]
+  );
+
+  const { data: apiResponse, loading, refetch } = useCachedApi<any>(
+    apiUrl,
+    {},
+    {
+      ttl: 2 * 60 * 1000, // 2 minutes cache
+      staleWhileRevalidate: true,
+    }
+  );
+
+  // Extract tasks from API response
+  const tasks = useMemo(() => {
+    if (!apiResponse) return [];
+    return Array.isArray(apiResponse) ? apiResponse : (apiResponse.tasks || []);
+  }, [apiResponse]);
 
   useEffect(() => {
     applyFilters();
   }, [tasks, filter, activeTab]);
-
-  const fetchAdminTasks = async () => {
-    try {
-      // Fetch with reasonable limit - removed the 1000000 limit that was causing CPU spikes
-      // Backend will handle pagination properly
-      const response = await axios.get(`${address}/api/tasks?assignedTo=${user?.id}&limit=10000`);
-      // Handle both array response and paginated response
-      const tasksData = Array.isArray(response.data) ? response.data : (response.data.tasks || []);
-      setTasks(tasksData);
-    } catch (error) {
-      console.error('Error fetching admin tasks:', error);
-      setTasks([]); // Set empty array on error
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const applyFilters = () => {
     // Ensure tasks is an array before filtering
@@ -71,15 +70,15 @@ const AdminTasks: React.FC = () => {
     let filtered = [...tasks];
 
     if (filter.status) {
-      filtered = filtered.filter(t => t.status === filter.status);
+      filtered = filtered.filter((t: Task) => t.status === filter.status);
     }
 
     if (filter.priority) {
-      filtered = filtered.filter(t => t.priority === filter.priority);
+      filtered = filtered.filter((t: Task) => t.priority === filter.priority);
     }
 
     if (filter.search) {
-      filtered = filtered.filter(t => 
+      filtered = filtered.filter((t: Task) => 
         t.title.toLowerCase().includes(filter.search.toLowerCase()) ||
         t.description.toLowerCase().includes(filter.search.toLowerCase())
       );
@@ -91,7 +90,7 @@ const AdminTasks: React.FC = () => {
 
     switch (activeTab) {
       case 'todays-due':
-        filtered = filtered.filter(task => {
+        filtered = filtered.filter((task: Task) => {
           if (!task.dueDate) return false;
           const dueDate = new Date(task.dueDate);
           dueDate.setHours(0, 0, 0, 0);
@@ -99,10 +98,10 @@ const AdminTasks: React.FC = () => {
         });
         break;
       case 'pending':
-        filtered = filtered.filter(task => task.status !== 'completed');
+        filtered = filtered.filter((task: Task) => task.status !== 'completed');
         break;
       case 'completed':
-        filtered = filtered.filter(task => task.status === 'completed');
+        filtered = filtered.filter((task: Task) => task.status === 'completed');
         break;
       case 'total':
         // Show all tasks
@@ -114,11 +113,11 @@ const AdminTasks: React.FC = () => {
 
   const handleTaskCompletion = () => {
     setShowCompleteModal(null);
-    fetchAdminTasks();
+    refetch(true); // Force refresh after task completion
   };
 
-  const getTaskToComplete = () => {
-    return tasks.find(task => task._id === showCompleteModal);
+  const getTaskToComplete = (): Task | undefined => {
+    return tasks.find((task: Task) => task._id === showCompleteModal);
   };
 
   const getPriorityColor = (priority: string) => {
@@ -144,7 +143,7 @@ const AdminTasks: React.FC = () => {
   const completingTask = getTaskToComplete();
 
   // Calculate counts for tabs
-  const todaysDueCount = tasks.filter(task => {
+  const todaysDueCount = tasks.filter((task: Task) => {
     if (!task.dueDate) return false;
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -153,8 +152,8 @@ const AdminTasks: React.FC = () => {
     return dueDate.getTime() === today.getTime() && task.status !== 'completed';
   }).length;
 
-  const pendingCount = tasks.filter(task => task.status !== 'completed').length;
-  const completedCount = tasks.filter(task => task.status === 'completed').length;
+  const pendingCount = tasks.filter((task: Task) => task.status !== 'completed').length;
+  const completedCount = tasks.filter((task: Task) => task.status === 'completed').length;
   const totalCount = tasks.length;
 
   return (
@@ -334,9 +333,9 @@ const AdminTasks: React.FC = () => {
           taskId={showCompleteModal}
           taskTitle={completingTask.title}
           isRecurring={false}
-          allowAttachments={taskSettings.adminTasks?.allowAttachments ?? true}
-          mandatoryAttachments={taskSettings.adminTasks?.mandatoryAttachments ?? false}
-          mandatoryRemarks={taskSettings.adminTasks?.mandatoryRemarks ?? false}
+          allowAttachments={taskSettings.pendingTasks?.allowAttachments ?? true}
+          mandatoryAttachments={taskSettings.pendingTasks?.mandatoryAttachments ?? false}
+          mandatoryRemarks={taskSettings.pendingTasks?.mandatoryRemarks ?? false}
           onClose={() => setShowCompleteModal(null)}
           onComplete={handleTaskCompletion}
         />

@@ -1,11 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, ChevronDown, ChevronUp, Eye, Printer, Edit, Download } from 'lucide-react';
+import { Plus, ChevronDown, ChevronUp, Eye, Printer, Edit } from 'lucide-react';
 import axios from 'axios';
-import jsPDF from 'jspdf';
-import html2canvas from 'html2canvas';
-import JSZip from 'jszip';
-import { saveAs } from 'file-saver';
 import { address } from '../../utils/ipAddress';
 import { useAuth } from '../contexts/AuthContext';
 import MermaidDiagram from '../components/MermaidDiagram';
@@ -40,7 +36,6 @@ const ViewAllFMS: React.FC = () => {
   const [showCategoryEdit, setShowCategoryEdit] = useState(false);
   const [newCategory, setNewCategory] = useState('');
   const [editingFMS, setEditingFMS] = useState<string | null>(null);
-  const [downloadingPdfs, setDownloadingPdfs] = useState(false);
 
   const escapeHtml = (value: string | undefined | null) => {
     if (!value) return '';
@@ -79,253 +74,6 @@ const ViewAllFMS: React.FC = () => {
     return resolved.length ? resolved.join(', ') : 'N/A';
   };
 
-  const getPrintableStyles = () => `
-    * { box-sizing: border-box; }
-    body {
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      margin: 0;
-      padding: 12px;
-      line-height: 1.4;
-      color: #333;
-      font-size: 11px;
-      background: #fff;
-    }
-    .header {
-      text-align: center;
-      margin-bottom: 10px;
-      border-bottom: 2px solid #007bff;
-      padding-bottom: 10px;
-    }
-    .header h1 {
-      color: #007bff;
-      margin: 0;
-      font-size: 18px;
-      font-weight: bold;
-    }
-    .header p {
-      margin: 3px 0;
-      color: #666;
-      font-size: 11px;
-    }
-    .category-badge {
-      display: inline-block;
-      background: #28a745;
-      color: white;
-      padding: 3px 10px;
-      border-radius: 14px;
-      font-size: 10px;
-      font-weight: bold;
-      margin-left: 8px;
-    }
-    .fms-info {
-      background: #f8f9fa;
-      padding: 10px;
-      border-radius: 6px;
-      margin-bottom: 10px;
-      border-left: 3px solid #007bff;
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 6px;
-      font-size: 10px;
-    }
-    .fms-info p {
-      margin: 3px 0;
-      font-size: 10px;
-    }
-    .steps-section {
-      margin-top: 8px;
-    }
-    .steps-section h2 {
-      color: #007bff;
-      border-bottom: 1px solid #dee2e6;
-      padding-bottom: 4px;
-      font-size: 13px;
-      margin-bottom: 8px;
-    }
-    .steps-grid {
-      display: grid;
-      grid-template-columns: repeat(2, 1fr);
-      gap: 8px;
-    }
-    .step {
-      border: 1px solid #e9ecef;
-      border-radius: 6px;
-      padding: 10px;
-      background: white;
-      font-size: 10px;
-      page-break-inside: avoid;
-    }
-    .step-header {
-      font-weight: bold;
-      margin-bottom: 8px;
-      font-size: 11px;
-      color: #495057;
-      display: flex;
-      align-items: center;
-    }
-    .step-number {
-      background: #007bff;
-      color: white;
-      width: 22px;
-      height: 22px;
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-weight: bold;
-      margin-right: 8px;
-      flex-shrink: 0;
-      font-size: 10px;
-    }
-    .detail-row {
-      margin-bottom: 5px;
-      display: flex;
-      align-items: flex-start;
-      font-size: 10px;
-    }
-    .label {
-      font-weight: bold;
-      display: inline-block;
-      width: 60px;
-      color: #495057;
-      font-size: 10px;
-      text-transform: uppercase;
-      letter-spacing: 0.3px;
-      flex-shrink: 0;
-    }
-    .value {
-      flex: 1;
-      font-size: 10px;
-      word-wrap: break-word;
-      white-space: pre-wrap;
-    }
-    .checklist-items {
-      margin: 0;
-      padding-left: 14px;
-      list-style: disc;
-      font-size: 10px;
-    }
-    .checklist-items li {
-      margin-bottom: 2px;
-    }
-    .footer {
-      margin-top: 10px;
-      text-align: center;
-      font-size: 9px;
-      color: #6c757d;
-      border-top: 1px solid #dee2e6;
-      padding-top: 10px;
-    }
-  `;
-
-  const buildPrintableBody = (fms: FMSTemplate) => `
-    <div class="header">
-      <h1>FMS Template: ${escapeHtml(fms.fmsName)}</h1>
-      <p>FMS ID: ${escapeHtml(fms.fmsId)} <span class="category-badge">${escapeHtml(fms.category || 'General')}</span></p>
-    </div>
-    <div class="fms-info">
-      <p><strong>Created by:</strong> ${escapeHtml(fms.createdBy || '')}</p>
-      <p><strong>Created:</strong> ${escapeHtml(new Date(fms.createdOn).toLocaleDateString())}</p>
-      <p><strong>Category:</strong> ${escapeHtml(fms.category || 'General')}</p>
-      <p><strong>Total Steps:</strong> ${fms.stepCount}</p>
-      <p><strong>Duration:</strong> ${escapeHtml(fms.totalTimeFormatted || '')}</p>
-      <p><strong>Status:</strong> ${escapeHtml(fms.status || 'Active')}</p>
-    </div>
-    <div class="steps-section">
-      <h2>Workflow Steps</h2>
-      <div class="steps-grid">
-        ${fms.steps.map(step => `
-          <div class="step">
-            <div class="step-header">
-              <div class="step-number">${step.stepNo}</div>
-              <div>${escapeHtml(step.what || 'Task Description')}</div>
-            </div>
-            <div class="detail-row">
-              <span class="label">WHO:</span>
-              <span class="value">${escapeHtml(formatAssigneeNames(step.who))}</span>
-            </div>
-            <div class="detail-row">
-              <span class="label">HOW:</span>
-              <span class="value">${escapeHtml(step.how || 'Method not specified')}</span>
-            </div>
-            <div class="detail-row">
-              <span class="label">WHEN:</span>
-              <span class="value">${escapeHtml(getStepDurationText(step))}</span>
-            </div>
-            ${step.whenType ? `
-              <div class="detail-row">
-                <span class="label">Type:</span>
-                <span class="value">${escapeHtml(step.whenType === 'fixed' ? 'Fixed' : step.whenType === 'dependent' ? 'Dependent' : 'Ask')}</span>
-              </div>
-            ` : ''}
-            ${step.requiresChecklist && step.checklistItems?.length ? `
-              <div class="detail-row checklist-row">
-                <span class="label">Check:</span>
-                <span class="value">
-                  <ul class="checklist-items">
-                    ${step.checklistItems.map((item: any) => `<li>${escapeHtml(item.text || '')}</li>`).join('')}
-                  </ul>
-                </span>
-              </div>
-            ` : ''}
-            ${step.attachments?.length ? `
-              <div class="detail-row">
-                <span class="label">Files:</span>
-                <span class="value">${step.attachments.length} file(s)</span>
-              </div>
-            ` : ''}
-          </div>
-        `).join('')}
-      </div>
-    </div>
-    <div class="footer">
-      <p><strong>FMS Management System</strong> | Generated on ${escapeHtml(new Date().toLocaleString())}</p>
-    </div>
-  `;
-
-  const buildPrintableDocument = (fms: FMSTemplate) => `
-    <!DOCTYPE html>
-    <html>
-      <head>
-        <title>FMS Template: ${escapeHtml(fms.fmsName)}</title>
-        <style>
-          @page {
-            size: A4;
-            margin: 0.5cm;
-          }
-          ${getPrintableStyles()}
-        </style>
-      </head>
-      <body>
-        ${buildPrintableBody(fms)}
-        <script>
-          window.onload = function() {
-            window.print();
-            window.onafterprint = function() {
-              window.close();
-            };
-          };
-        </script>
-      </body>
-    </html>
-  `;
-
-  const createHiddenPrintableNode = (fms: FMSTemplate) => {
-    const node = document.createElement('div');
-    node.style.position = 'fixed';
-    node.style.top = '-10000px';
-    node.style.left = '-10000px';
-    node.style.width = '794px';
-    node.style.background = '#ffffff';
-    node.innerHTML = `<style>${getPrintableStyles()}</style>${buildPrintableBody(fms)}`;
-    document.body.appendChild(node);
-    return node;
-  };
-
-  const sanitizeFileName = (value: string) => {
-    if (!value) return 'template';
-    return value.replace(/[^a-z0-9-_]+/gi, '_').slice(0, 60) || 'template';
-  };
 
   useEffect(() => {
     fetchFMSTemplates();
@@ -492,77 +240,54 @@ const ViewAllFMS: React.FC = () => {
     const printWindow = window.open('', '_blank');
     if (!printWindow) return;
 
-    printWindow.document.write(buildPrintableDocument(fms));
+    let stepsHTML = fms.steps.map((step) => `
+      <div style="page-break-inside: avoid; border: 1px solid #ddd; padding: 15px; margin-bottom: 15px; border-radius: 8px;">
+        <h4 style="margin: 0 0 10px 0; color: #333; font-size: 16px;">Step ${step.stepNo}: ${step.what}</h4>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; font-size: 14px;">
+          <div><strong>Who:</strong> ${Array.isArray(step.who) ? step.who.map((w: any) => w.username || w).join(', ') : 'N/A'}</div>
+          <div><strong>How:</strong> ${step.how}</div>
+          <div><strong>Duration:</strong> ${step.whenUnit === 'days+hours' ? `${step.whenDays || 0}d ${step.whenHours || 0}h` : `${step.when} ${step.whenUnit}`}</div>
+          <div><strong>Type:</strong> ${step.whenType === 'fixed' ? 'Fixed Duration' : step.whenType === 'dependent' ? 'Dependent' : 'Ask On Completion'}</div>
+        </div>
+      </div>
+    `).join('');
+
+    const content = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>${fms.fmsName} - Print</title>
+        <style>
+          body { font-family: Arial, sans-serif; margin: 20px; background: white; }
+          h1 { color: #2563eb; margin-bottom: 10px; }
+          .header { border-bottom: 3px solid #2563eb; padding-bottom: 15px; margin-bottom: 20px; }
+          .info { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px; font-size: 14px; }
+          .info div { background: #f3f4f6; padding: 10px; border-radius: 5px; }
+          @media print { body { margin: 0; } }
+        </style>
+      </head>
+      <body>
+        <div class="header">
+          <h1>${fms.fmsName}</h1>
+          <p style="margin: 5px 0; color: #666;">${fms.fmsId}</p>
+        </div>
+        <div class="info">
+          <div><strong>Steps:</strong> ${fms.stepCount}</div>
+          <div><strong>Total Time:</strong> ${fms.totalTimeFormatted}</div>
+          <div><strong>Created By:</strong> ${fms.createdBy}</div>
+          <div><strong>Created On:</strong> ${new Date(fms.createdOn).toLocaleDateString()}</div>
+        </div>
+        <h2 style="color: #333; margin-top: 30px; margin-bottom: 15px;">Steps Details</h2>
+        ${stepsHTML}
+        <script>
+          window.onload = function() { window.print(); }
+        </script>
+      </body>
+      </html>
+    `;
+
+    printWindow.document.write(content);
     printWindow.document.close();
-  };
-
-  const downloadFmsAsPdf = async (fms: FMSTemplate) => {
-    if (typeof window === 'undefined') return;
-
-    try {
-      const node = createHiddenPrintableNode(fms);
-
-      try {
-        const canvas = await html2canvas(node, {
-          scale: 2,
-          useCORS: true,
-          backgroundColor: '#ffffff'
-        });
-        const imgData = canvas.toDataURL('image/png');
-        const pdf = new jsPDF('p', 'mm', 'a4');
-        const pdfWidth = pdf.internal.pageSize.getWidth();
-        const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
-        pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
-        pdf.save(`${sanitizeFileName(fms.fmsId)}-${sanitizeFileName(fms.fmsName)}.pdf`);
-      } catch (pdfError) {
-        console.error(`Failed to generate PDF for ${fms.fmsName}`, pdfError);
-        alert('Failed to generate PDF. Please try again.');
-      } finally {
-        node.remove();
-      }
-    } catch (error) {
-      console.error('Error generating PDF:', error);
-      alert('Failed to generate PDF. Please try again.');
-    }
-  };
-
-  const downloadAllFmsAsPdf = async () => {
-    if (typeof window === 'undefined' || downloadingPdfs || fmsList.length === 0) return;
-
-    setDownloadingPdfs(true);
-    try {
-      const zip = new JSZip();
-
-      for (const fms of fmsList) {
-        const node = createHiddenPrintableNode(fms);
-
-        try {
-          const canvas = await html2canvas(node, {
-            scale: 2,
-            useCORS: true,
-            backgroundColor: '#ffffff'
-          });
-          const imgData = canvas.toDataURL('image/png');
-          const pdf = new jsPDF('p', 'mm', 'a4');
-          const pdfWidth = pdf.internal.pageSize.getWidth();
-          const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
-          pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
-          const blob = pdf.output('blob');
-          zip.file(`${sanitizeFileName(fms.fmsId)}-${sanitizeFileName(fms.fmsName)}.pdf`, blob);
-        } catch (pdfError) {
-          console.error(`Failed to render PDF for ${fms.fmsName}`, pdfError);
-        } finally {
-          node.remove();
-        }
-      }
-
-      const zipBlob = await zip.generateAsync({ type: 'blob' });
-      saveAs(zipBlob, `fms-templates-${new Date().toISOString().split('T')[0]}.zip`);
-    } catch (error) {
-      console.error('Error generating PDF bundle:', error);
-    } finally {
-      setDownloadingPdfs(false);
-    }
   };
 
   const generateMermaidDiagram = (steps: any[]) => {
@@ -724,20 +449,6 @@ const ViewAllFMS: React.FC = () => {
             )}
 
             <button
-              onClick={downloadAllFmsAsPdf}
-              disabled={downloadingPdfs || fmsList.length === 0}
-              className={`px-4 py-2 rounded-lg border text-sm flex items-center gap-2 ${downloadingPdfs || fmsList.length === 0 ? 'opacity-60 cursor-not-allowed' : 'hover:bg-[var(--color-background)]'}`}
-              style={{
-                backgroundColor: 'var(--color-surface)',
-                borderColor: 'var(--color-border)',
-                color: 'var(--color-text)'
-              }}
-            >
-              <Download size={18} />
-              <span>{downloadingPdfs ? 'Preparing PDFs...' : 'Download PDFs'}</span>
-            </button>
-
-            <button
               onClick={() => window.print()}
               className="px-4 py-2 rounded-lg bg-[var(--color-secondary)]/10 text-[var(--color-secondary)] hover:bg-[var(--color-secondary)]/15 flex items-center gap-2 print:hidden"
             >
@@ -891,16 +602,6 @@ const ViewAllFMS: React.FC = () => {
                                 <button
                                   onClick={(e) => {
                                     e.stopPropagation();
-                                    void downloadFmsAsPdf(fms);
-                                  }}
-                                  className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 flex items-center gap-2"
-                                >
-                                  <Download size={16} />
-                                  Download PDF
-                                </button>
-                                <button
-                                  onClick={(e) => {
-                                    e.stopPropagation();
                                     navigate(`/start-project?fmsId=${fms._id}`);
                                   }}
                                   className="px-4 py-2 bg-[var(--color-primary)] text-white rounded-lg hover:opacity-90"
@@ -947,13 +648,6 @@ const ViewAllFMS: React.FC = () => {
                                     >
                                       <Printer size={18} />
                                       <span>Print</span>
-                                    </button>
-                                    <button
-                                      onClick={() => void downloadFmsAsPdf(fms)}
-                                      className="px-5 py-2.5 bg-white/20 backdrop-blur-sm hover:bg-white/30 text-white rounded-xl font-semibold transition-all transform hover:scale-105 flex items-center gap-2 border border-white/30"
-                                    >
-                                      <Download size={18} />
-                                      <span>Download PDF</span>
                                     </button>
                                     <button
                                       onClick={() => setShowMermaid(null)}

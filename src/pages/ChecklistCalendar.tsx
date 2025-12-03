@@ -23,7 +23,8 @@ import {
     AlertTriangle,
     Info,
     Users,
-    CalendarDays
+    CalendarDays,
+    RefreshCw
 } from 'lucide-react';
 import axios from 'axios';
 import { address } from '../../utils/ipAddress';
@@ -92,9 +93,14 @@ const ChecklistCalendar: React.FC = () => {
             fetchCalendarData();
             fetchStats();
             fetchPreviousMonthData();
+        }
+    }, [currentDate, user]);
+
+    useEffect(() => {
+        if (calendarData) {
             calculateDistribution();
         }
-    }, [currentDate, user, calendarData]);
+    }, [calendarData]);
 
     const fetchCalendarData = async () => {
         if (!user) return;
@@ -131,6 +137,7 @@ const ChecklistCalendar: React.FC = () => {
             if (!isAdminOrSuper) {
                 params.userId = user.id;
             }
+            
             const response = await axios.get(`${address}/api/checklist-occurrences/stats/dashboard`, {
                 params,
                 headers: { Authorization: `Bearer ${token}` }
@@ -223,12 +230,6 @@ const ChecklistCalendar: React.FC = () => {
 
     // Calculate first day of month (0 = Sunday, 6 = Saturday)
     const firstDayOfMonth = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1).getDay();
-
-    // Create calendar grid with empty cells for days before month starts
-    const calendarGrid: (CalendarDay | null)[] = Array(firstDayOfMonth).fill(null);
-    if (calendarData) {
-        calendarGrid.push(...calendarData.calendarData);
-    }
 
     const completionRate = stats.totalCompleted + stats.totalPending > 0
         ? Math.round((stats.totalCompleted / (stats.totalCompleted + stats.totalPending)) * 100)
@@ -328,9 +329,49 @@ const ChecklistCalendar: React.FC = () => {
                 </p>
             </div>
 
-            {/* Distribution Button */}
-            {distributionData && isAdminOrSuper && (
-                <div className="mb-4">
+            {/* Frequency & Date Range Summary - Moved to Top */}
+            {calendarData && (
+                <div className="mb-6 p-6 rounded-xl shadow-md" style={{ backgroundColor: 'var(--color-surface)' }}>
+                    <h3 className="text-lg font-bold mb-4 flex items-center gap-2" style={{ color: 'var(--color-text)' }}>
+                        <CalendarDays className="w-5 h-5" style={{ color: 'var(--color-primary)' }} />
+                        Frequency & Date Range
+                    </h3>
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                        <div className="p-4 rounded-lg" style={{ backgroundColor: 'var(--color-background)' }}>
+                            <p className="text-sm mb-1" style={{ color: 'var(--color-textSecondary)' }}>Active Templates:</p>
+                            <p className="text-2xl font-bold" style={{ color: 'var(--color-primary)' }}>
+                                {new Set(calendarData.calendarData.flatMap(d => d.occurrences.map(o => o.templateName))).size}
+                            </p>
+                        </div>
+                        <div className="p-4 rounded-lg" style={{ backgroundColor: 'var(--color-background)' }}>
+                            <p className="text-sm mb-1" style={{ color: 'var(--color-textSecondary)' }}>Total Occurrences:</p>
+                            <p className="text-2xl font-bold" style={{ color: 'var(--color-primary)' }}>
+                                {calendarData.calendarData.reduce((sum, d) => sum + d.total, 0)}
+                            </p>
+                        </div>
+                        <div className="p-4 rounded-lg" style={{ backgroundColor: 'var(--color-background)' }}>
+                            <p className="text-sm mb-1" style={{ color: 'var(--color-textSecondary)' }}>Month Range:</p>
+                            <p className="text-lg font-bold" style={{ color: 'var(--color-text)' }}>
+                                {monthNames[currentDate.getMonth()]} {currentDate.getFullYear()}
+                            </p>
+                        </div>
+                        <div className="p-4 rounded-lg flex items-center">
+                            <button
+                                onClick={() => navigate('/checklist-template/create')}
+                                className="w-full px-4 py-3 rounded-lg flex items-center justify-center gap-2 font-medium transition-all hover:shadow-md"
+                                style={{ backgroundColor: 'var(--color-primary)', color: 'white' }}
+                            >
+                                <Plus className="w-5 h-5" />
+                                Create New Template
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Action Buttons */}
+            <div className="mb-4 flex gap-2">
+                {distributionData && isAdminOrSuper && (
                     <button
                         onClick={() => setShowDistributionModal(true)}
                         className="px-4 py-2 rounded-lg flex items-center gap-2 text-sm font-medium transition-all hover:shadow-md"
@@ -342,8 +383,25 @@ const ChecklistCalendar: React.FC = () => {
                         <Users className="w-4 h-4" />
                         View Distribution
                     </button>
-                </div>
-            )}
+                )}
+                <button
+                    onClick={() => {
+                        fetchCalendarData();
+                        fetchStats();
+                        fetchPreviousMonthData();
+                    }}
+                    className="px-4 py-2 rounded-lg flex items-center gap-2 text-sm font-medium transition-all hover:shadow-md border"
+                    style={{ 
+                        borderColor: 'var(--color-border)',
+                        color: 'var(--color-text)',
+                        backgroundColor: 'var(--color-background)'
+                    }}
+                    title="Refresh data"
+                >
+                    <RefreshCw className="w-4 h-4" />
+                    Refresh
+                </button>
+            </div>
 
             {/* Enhanced Metrics Cards */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
@@ -601,12 +659,17 @@ const ChecklistCalendar: React.FC = () => {
 
                                 {/* Calendar Grid */}
                                 <div className="grid grid-cols-7 gap-2">
-                                    {calendarGrid.map((dayData, index) => {
+                                    {Array.from({ length: 42 }, (_, index) => {
+                                        const dayIndex = index - firstDayOfMonth;
+                                        const dayData = calendarData && dayIndex >= 0 && dayIndex < calendarData.calendarData.length
+                                            ? calendarData.calendarData[dayIndex]
+                                            : null;
+
                                         if (!dayData) {
                                             return (
                                                 <div
                                                     key={`empty-${index}`}
-                                                    className="aspect-square"
+                                                    className="aspect-square min-h-[120px]"
                                                 />
                                             );
                                         }
@@ -646,7 +709,7 @@ const ChecklistCalendar: React.FC = () => {
                                                         <div className="text-xs space-y-1 w-full overflow-hidden">
                                                             {dayData.occurrences.slice(0, 3).map((occ, idx) => (
                                                                 <div
-                                                                    key={occ._id}
+                                                                    key={occ._id || idx}
                                                                     className="truncate px-1 py-0.5 rounded"
                                                                     style={{
                                                                         backgroundColor: occ.status === 'completed'
@@ -826,47 +889,6 @@ const ChecklistCalendar: React.FC = () => {
                         )}
                     </div>
 
-                    {/* Frequency & Date Range Summary */}
-                    {calendarData && (
-                        <div className="mt-4 p-4 rounded-lg" style={{ backgroundColor: 'var(--color-background)' }}>
-                            <h4 className="text-sm font-semibold mb-3 flex items-center gap-2" style={{ color: 'var(--color-text)' }}>
-                                <CalendarDays className="w-4 h-4" />
-                                Frequency & Date Range
-                            </h4>
-                            <div className="space-y-2 text-xs">
-                                <div className="flex justify-between">
-                                    <span style={{ color: 'var(--color-textSecondary)' }}>Active Templates:</span>
-                                    <span className="font-semibold" style={{ color: 'var(--color-text)' }}>
-                                        {new Set(calendarData.calendarData.flatMap(d => d.occurrences.map(o => o.templateName))).size}
-                                    </span>
-                                </div>
-                                <div className="flex justify-between">
-                                    <span style={{ color: 'var(--color-textSecondary)' }}>Total Occurrences:</span>
-                                    <span className="font-semibold" style={{ color: 'var(--color-text)' }}>
-                                        {calendarData.calendarData.reduce((sum, d) => sum + d.total, 0)}
-                                    </span>
-                                </div>
-                                <div className="flex justify-between">
-                                    <span style={{ color: 'var(--color-textSecondary)' }}>Month Range:</span>
-                                    <span className="font-semibold" style={{ color: 'var(--color-text)' }}>
-                                        {monthNames[currentDate.getMonth()]} {currentDate.getFullYear()}
-                                    </span>
-                                </div>
-                            </div>
-                        </div>
-                    )}
-
-                    {/* Quick Actions */}
-                    <div className="space-y-2 mt-4">
-                        <button
-                            onClick={() => navigate('/checklist-template/create')}
-                            className="w-full px-4 py-3 rounded-lg flex items-center justify-center gap-2 font-medium transition-all hover:shadow-md"
-                            style={{ backgroundColor: 'var(--color-primary)', color: 'white' }}
-                        >
-                            <Plus className="w-5 h-5" />
-                            Create New Template
-                        </button>
-                    </div>
                 </div>
             </div>
 

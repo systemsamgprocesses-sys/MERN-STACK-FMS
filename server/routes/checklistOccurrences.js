@@ -178,7 +178,10 @@ router.get('/:id', authenticateToken, async (req, res) => {
   try {
     const occurrence = await ChecklistOccurrence.findById(req.params.id)
       .populate('assignedTo', 'username email')
-      .populate('templateId', 'name frequency')
+      .populate({
+        path: 'templateId',
+        select: 'name frequency category items fmsConfiguration'
+      })
       .populate('completedBy', 'username email');
 
     if (!occurrence) {
@@ -276,7 +279,10 @@ router.patch('/:id/items/:itemIndex', authenticateToken, async (req, res) => {
 router.post('/:id/submit', authenticateToken, async (req, res) => {
   try {
     const occurrence = await ChecklistOccurrence.findById(req.params.id)
-      .populate('templateId');
+      .populate({
+        path: 'templateId',
+        select: 'name description category items fmsConfiguration'
+      });
 
     if (!occurrence) {
       return res.status(404).json({ error: 'Occurrence not found' });
@@ -418,7 +424,18 @@ router.post('/:id/submit', authenticateToken, async (req, res) => {
       }
     }
 
-    await occurrence.populate('assignedTo templateId completedBy');
+    await occurrence.populate({
+      path: 'assignedTo',
+      select: 'username email'
+    });
+    await occurrence.populate({
+      path: 'templateId',
+      select: 'name description category items fmsConfiguration'
+    });
+    await occurrence.populate({
+      path: 'completedBy',
+      select: 'username email'
+    });
 
     res.json({
       message: 'Checklist submitted successfully',

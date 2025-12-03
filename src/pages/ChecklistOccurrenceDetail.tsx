@@ -249,10 +249,12 @@ const ChecklistOccurrenceDetail: React.FC = () => {
       
       let message = 'Checklist submitted successfully!';
       if (response.data.triggeredFMS) {
-        message += ` FMS project ${response.data.triggeredFMS.projectId} has been started.`;
+        message += `\n\nFMS project "${response.data.triggeredFMS.projectName}" (${response.data.triggeredFMS.projectId}) has been automatically started from this checklist.`;
       }
       
       setSuccess(message);
+      
+      // Note: Cache will be invalidated automatically on next calendar refresh
       
       setTimeout(() => {
         navigate('/checklist-calendar');
@@ -328,9 +330,17 @@ const ChecklistOccurrenceDetail: React.FC = () => {
               })}
             </p>
             {occurrence.triggeredFMS && (
-              <p className="mt-2 text-sm" style={{ color: 'var(--color-primary)' }}>
-                FMS Project {occurrence.triggeredFMS.projectName} started from this checklist
-              </p>
+              <div className="mt-2 p-3 rounded-lg flex items-center gap-2" style={{ backgroundColor: 'var(--color-primary-light)', border: '1px solid var(--color-primary)' }}>
+                <CheckCircle2 className="w-5 h-5" style={{ color: 'var(--color-primary)' }} />
+                <div>
+                  <p className="text-sm font-semibold" style={{ color: 'var(--color-primary)' }}>
+                    FMS Project Started
+                  </p>
+                  <p className="text-xs" style={{ color: 'var(--color-textSecondary)' }}>
+                    {occurrence.triggeredFMS.projectName} was automatically started from this checklist
+                  </p>
+                </div>
+              </div>
             )}
           </div>
 

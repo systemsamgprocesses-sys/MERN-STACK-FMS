@@ -1,6 +1,7 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
 import { ThemeProvider } from './contexts/ThemeContext';
+import { ApiCacheProvider } from './contexts/ApiCacheContext';
 import Layout from './components/Layout';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
@@ -46,8 +47,9 @@ function App() {
   return (
     <ErrorBoundary>
       <ThemeProvider>
-        <AuthProvider>
-          <Router
+        <ApiCacheProvider>
+          <AuthProvider>
+            <Router
             future={{
               v7_startTransition: true,
               v7_relativeSplatPath: true,
@@ -99,7 +101,8 @@ function App() {
               </Routes>
             </div>
           </Router>
-        </AuthProvider>
+          </AuthProvider>
+        </ApiCacheProvider>
       </ThemeProvider>
     </ErrorBoundary>
   );

@@ -5,7 +5,20 @@ const checklistItemResponseSchema = new mongoose.Schema({
   description: { type: String },
   checked: { type: Boolean, default: false },
   checkedAt: { type: Date },
-  remarks: { type: String }
+  remarks: { type: String },
+  // New fields for "Not Done" option
+  status: {
+    type: String,
+    enum: ['done', 'not-done', 'pending'],
+    default: 'pending'
+  },
+  notDoneReason: { type: String },
+  actionTaken: {
+    type: { type: String, enum: ['complaint', 'task', 'none'] },
+    complaintId: { type: mongoose.Schema.Types.ObjectId, ref: 'HelpTicket' },
+    taskId: { type: mongoose.Schema.Types.ObjectId, ref: 'Task' },
+    description: { type: String }
+  }
 });
 
 const checklistOccurrenceSchema = new mongoose.Schema({
@@ -45,6 +58,17 @@ const checklistOccurrenceSchema = new mongoose.Schema({
     min: 0,
     max: 100
   },
+  // Track if FMS was triggered from this checklist
+  triggeredFMS: {
+    projectId: { type: mongoose.Schema.Types.ObjectId, ref: 'Project' },
+    projectName: { type: String },
+    triggeredAt: { type: Date }
+  },
+  submittedAt: { type: Date },
+  submittedBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User'
+  },
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now }
 });
@@ -56,15 +80,19 @@ checklistOccurrenceSchema.index({ templateId: 1, dueDate: 1 });
 checklistOccurrenceSchema.pre('save', function(next) {
   this.updatedAt = new Date();
   
-  // Calculate progress percentage
+  // Calculate progress percentage based on done items
   if (this.items && this.items.length > 0) {
-    const checkedCount = this.items.filter(item => item.checked).length;
-    this.progressPercentage = Math.round((checkedCount / this.items.length) * 100);
+    const doneCount = this.items.filter(item => item.status === 'done' || item.checked).length;
+    this.progressPercentage = Math.round((doneCount / this.items.length) * 100);
     
-    // Auto-complete if all items are checked
+    // Auto-complete if all items are done (not considering not-done items)
     if (this.progressPercentage === 100 && this.status !== 'completed') {
-      this.status = 'completed';
-      this.completedAt = new Date();
+      // Only auto-complete if all items are actually done (not not-done)
+      const allDone = this.items.every(item => item.status === 'done' || (item.checked && item.status !== 'not-done'));
+      if (allDone) {
+        this.status = 'completed';
+        this.completedAt = new Date();
+      }
     }
   }
   

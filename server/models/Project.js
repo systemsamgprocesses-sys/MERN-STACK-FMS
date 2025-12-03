@@ -103,6 +103,12 @@ const projectSchema = new mongoose.Schema({
   tasksOnTime: { type: Number, default: 0 },
   tasksLate: { type: Number, default: 0 },
   averageCompletionTime: { type: Number, default: 0 },
+  // Track if project was started from a checklist
+  startedFromChecklist: {
+    checklistId: { type: mongoose.Schema.Types.ObjectId, ref: 'ChecklistOccurrence' },
+    checklistName: { type: String },
+    startedAt: { type: Date }
+  },
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now }
 });

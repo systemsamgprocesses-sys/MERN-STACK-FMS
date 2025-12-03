@@ -8,9 +8,10 @@
 
 The **AMG Task & Flow Monitoring System** is a comprehensive MERN-stack application designed for enterprise task management, workflow automation, and performance tracking. Built for Ashok Malhotra Group, this system provides role-based access control, FMS (Flow Management System) templates, recurring task automation, and real-time analytics.
 
-**Version:** 1.0.0  
+**Version:** 1.1.0  
 **Stack:** MongoDB, Express.js, React, Node.js  
-**Deployment:** Hostinger VPS (Production: https://hub.amgrealty.in)
+**Deployment:** Hostinger VPS (Production: https://hub.amgrealty.in)  
+**Last Major Update:** January 2025 (Dynamic Scoring System)
 
 ---
 
@@ -64,6 +65,9 @@ The **AMG Task & Flow Monitoring System** is a comprehensive MERN-stack applicat
 │  ┌──────┐ ┌──────────┐ ┌────────────┐ ┌──────────────┐  │
 │  │ FMS  │ │ScoreLog  │ │HelpTickets │ │   Settings   │  │
 │  └──────┘ └──────────┘ └────────────┘ └──────────────┘  │
+│                                                           │
+│  Note: ScoreLogs are now dynamically calculated from    │
+│  Tasks, Projects, and Checklists rather than stored      │
 └─────────────────────────────────────────────────────────────┘
 ```
 
@@ -159,21 +163,31 @@ FMS Project Flow:
          ↓
 ┌──────────────────────────────────────────────────────────────┐
 │                       SCORELOGS                               │
+│              (Dynamically Calculated)                        │
 ├──────────────────────────────────────────────────────────────┤
 │ PK: _id                                                       │
-│ FK: taskId (ref: Task)                                        │
+│ entityType (String: 'task'|'fms'|'checklist')                │
+│ entityId (ObjectId: ref to Task/Project/Checklist)           │
+│ entityTitle (String: display name)                            │
 │ FK: userId (ref: User)                                        │
-│ taskTitle (String)                                            │
-│ taskType (String)                                             │
+│ taskType (String: for tasks only)                             │
+│ taskCategory (String: for tasks only)                          │
 │ score (Number, 0-1)                                           │
 │ scorePercentage (Number)                                      │
+│ plannedDate (Date: original planned completion)               │
+│ completedDate (Date: actual completion)                       │
 │ plannedDays (Number)                                          │
 │ actualDays (Number)                                           │
-│ completedAt (Date)                                            │
+│ completedAt (Date: alias for completedDate)                  │
 │ wasOnTime (Boolean)                                           │
 │ scoreImpacted (Boolean)                                       │
 │ impactReason (String)                                         │
+│ isCalculated (Boolean: always true)                           │
 │ createdAt, updatedAt                                          │
+│                                                               │
+│ Note: ScoreLogs are generated dynamically from source data    │
+│ and not permanently stored. The model structure supports     │
+│ both legacy stored logs and new calculated logs.             │
 └──────────────────────────────────────────────────────────────┘
 
 ┌──────────────────────────────────────────────────────────────┐
@@ -360,21 +374,70 @@ FMS Project Flow:
 
 ### 4.3 Scoring & Performance System
 
-**Automatic Scoring:**
+**Dynamic Scoring Architecture:**
+
+The scoring system has been redesigned to calculate scores dynamically from source data (Tasks, FMS Projects, Checklists) rather than storing pre-calculated scores. This ensures scores are always accurate and update automatically when dates are modified.
+
+**Core Scoring Logic:**
 ```javascript
-Score = Planned Days / Actual Days
+// Score calculation formula
+if (completedDay <= plannedDay) {
+  score = 1.0 (100%)  // On-time completion
+} else {
+  score = plannedDays / actualDays  // Late completion penalty
+}
 ```
 
-- Full marks (1.0 or 100%) for on-time completion
-- Reduced score for late completion
-- Score impact tracking for date extensions
-- Individual and team performance metrics
+**Key Features:**
+- **Dynamic Calculation**: Scores calculated on-the-fly from planned and actual dates
+- **Real-time Updates**: Automatically reflects date changes from backend edits
+- **Multi-Entity Support**: Calculates scores for Tasks, FMS Project Tasks, and Checklists
+- **Date Normalization**: All dates normalized to start of day for accurate day calculations
+- **Same-Day Handling**: Tasks completed on planned date receive 100% score
+
+**Score Calculation Utility (`server/utils/calculateScore.js`):**
+
+The system uses a centralized utility for consistent score calculations across all entity types:
+
+1. **`calculateScore(plannedDate, completedDate, startDate)`**
+   - Core scoring function
+   - Normalizes dates to start of day
+   - Calculates planned days and actual days
+   - Returns: `score`, `scorePercentage`, `plannedDays`, `actualDays`, `wasOnTime`
+
+2. **`calculateTaskScore(task)`**
+   - Calculates score for regular tasks
+   - Handles date-range tasks (startDate/endDate) and standard tasks (dueDate)
+   - Uses `originalPlannedDate` for recurring tasks
+
+3. **`calculateFMSTaskScore(project, taskIndex)`**
+   - Calculates score for FMS project tasks
+   - Uses `plannedDueDate` or `originalPlannedDate`
+   - Extracts task title from FMS step
+
+4. **`calculateChecklistScore(checklist)`**
+   - Calculates score for checklist submissions
+   - Uses `nextRunDate` or `startDate` as planned date
+   - Uses `submittedAt` as completed date
+
+**ScoreLog Model Updates:**
+
+The ScoreLog model now includes additional metadata fields:
+- `entityType`: 'task', 'fms', or 'checklist'
+- `entityId`: Reference to the source entity
+- `entityTitle`: Display name for the entity
+- `plannedDate`: Original planned completion date
+- `completedDate`: Actual completion date
+- `isCalculated`: Flag indicating dynamic calculation (always true)
 
 **Score Categories:**
-- Task completion score
-- On-time completion rate
-- Average completion time
+- Task completion score (per task)
+- FMS task completion score (per project step)
+- Checklist submission score (per checklist)
+- On-time completion rate (percentage)
+- Average completion time (days)
 - Team performance rankings
+- Overall performance percentage (based on completed tasks only)
 
 ### 4.4 Checklist System
 
@@ -907,35 +970,80 @@ System Actions:
 
 ### 6.12 Performance (`/performance`)
 
-**Purpose:** View personal performance metrics and scores
+**Purpose:** View team and individual performance metrics and scores
 
-**Available to:** All Users
+**Available to:** All Users (own performance), Admin/Superadmin (team performance)
 
-**Metrics Displayed:**
+**Features:**
 
-1. **Overall Score:**
-   - All-time average score
-   - Based on task completion timing
+1. **Team Performance View (Admin/Superadmin):**
+   - Team member cards showing:
+     - Total tasks count
+     - Overall performance percentage
+     - Task type breakdown (One-time, Daily, Weekly, Monthly, Quarterly, Yearly)
+     - Completion rate
+     - On-time completion rate
+   - Sorted by performance score (highest first)
+   - "View Detailed Breakdown" button for each team member
 
-2. **Current Month Score:**
-   - This month's performance
+2. **Individual Performance View:**
+   - Total tasks
+   - Average score (calculated from completed tasks only)
+   - Completion rate
+   - On-time rate
+   - Task type breakdown
 
-3. **Task Breakdown:**
-   - Total tasks completed
-   - On-time completions
-   - Late completions
-   - Average completion time
+3. **Performance Calculation:**
+   - **Performance Score**: Average of all completed task scores (Tasks, FMS, Checklists)
+   - **Completion Rate**: (Completed Tasks / Total Tasks) × 100
+   - **On-Time Rate**: (On-Time Completions / Completed Tasks) × 100
+   - Only includes tasks completed up to current date (excludes future tasks)
 
-4. **Charts:**
-   - Score trend over time
-   - Task type completion rates
-   - Monthly performance comparison
+4. **Navigation:**
+   - Click "View Detailed Breakdown" to see task-wise scoring details
+   - Links to `/performance/details` page
 
-5. **Detailed Logs:**
-   - Individual task scores
-   - Completion dates
-   - Planned vs actual days
-   - Score calculations
+---
+
+### 6.12.1 Detailed Performance (`/performance/details`)
+
+**Purpose:** View task-wise scoring breakdown for individual users
+
+**Available to:** All Users (own data), Admin/Superadmin (any user's data)
+
+**Features:**
+
+1. **Summary Cards:**
+   - Total Tasks: Count of all completed tasks with scores
+   - Average Score: Mean of all task scores
+   - On Time: Count of tasks completed on or before planned date
+   - Late: Count of tasks completed after planned date
+   - Impacted: Count of tasks with score impact flag
+
+2. **Filters:**
+   - **Entity Type**: All Types, Tasks, FMS, Checklists
+   - **Task Type**: All Types, One-time, Daily, Weekly, Monthly, Quarterly, Yearly
+   - **Status**: All, On Time, Late, Impacted
+   - **User Selector** (Admin/Superadmin only): Select any user to view their performance
+
+3. **Detailed Task Table:**
+   - **Task**: Entity title and type
+   - **Type**: Task type (for tasks) or entity type
+   - **Score**: Percentage score (e.g., 96.0%)
+   - **Planned On**: Original planned completion date
+   - **Completed On**: Actual completion date
+   - **Days**: Planned days / Actual days (e.g., 24 / 25)
+   - **Status**: On Time, Late, or Impacted
+
+4. **Data Source:**
+   - Dynamically calculated from completed tasks, FMS tasks, and checklists
+   - Updates automatically when dates are modified
+   - Filters by selected user (or all users for superadmin)
+
+5. **Superadmin Access:**
+   - Can view all users' detailed performance
+   - User dropdown selector at top of page
+   - Can filter by any user in the system
 
 ---
 
@@ -1136,26 +1244,57 @@ System Actions:
 
 ### 6.19 Score Logs (`/score-logs`)
 
-**Purpose:** View detailed scoring history
+**Purpose:** View comprehensive scoring history across all entity types
 
-**Available to:** Super Admin, Admin
+**Available to:** Super Admin, Admin (all logs), Regular Users (own logs)
 
-**Information:**
-- Task title and type
-- User (who completed)
-- Score (0-1 scale)
-- Score percentage
-- Planned days vs actual days
-- Completion date
-- On-time status
-- Score impact flag
-- Impact reason
+**Features:**
 
-**Use Cases:**
-- Performance reviews
-- Identify bottlenecks
-- Reward high performers
-- Training needs identification
+1. **Dynamic Score Calculation:**
+   - Scores calculated in real-time from source data
+   - Automatically updates when dates are modified
+   - No pre-stored scores (all calculated on-demand)
+
+2. **Multi-Entity Support:**
+   - **Tasks**: Regular one-time and recurring tasks
+   - **FMS**: FMS project tasks/steps
+   - **Checklists**: Checklist submissions
+
+3. **Information Displayed:**
+   - **User**: Who completed the task/checklist
+   - **Entity Title**: Task name, FMS step name, or checklist title
+   - **Entity Type**: Task, FMS, or Checklist
+   - **Task Type**: One-time, Daily, Weekly, Monthly, Quarterly, Yearly (for tasks)
+   - **Score**: Percentage score (e.g., 96.0%)
+   - **Planned On**: Original planned completion date
+   - **Completed On**: Actual completion date
+   - **Planned/Actual Days**: Planned days / Actual days (e.g., 24 / 25)
+   - **Status**: On Time, Late, or Impacted
+
+4. **Filters:**
+   - **User Filter**: 
+     - Admin/Superadmin: Can select "All Users" or specific user
+     - Regular users: Only see own logs
+   - **Entity Type Filter**: All Types, Tasks, FMS, Checklists
+   - **Date Range**: Filter by completion date (optional)
+
+5. **Pagination:**
+   - Default: 50 logs per page
+   - Superadmin: Can view all logs (increased limit)
+
+6. **Use Cases:**
+   - Performance reviews and evaluations
+   - Identify bottlenecks and delays
+   - Reward high performers
+   - Training needs identification
+   - Track improvement over time
+   - Audit compliance and accountability
+
+7. **Technical Details:**
+   - Uses `fetchAllScoreLogs()` function for dynamic calculation
+   - Fetches completed tasks, FMS tasks, and checklists
+   - Applies score calculation utility to each entity
+   - Sorts by completion date (newest first)
 
 ---
 
@@ -1284,7 +1423,8 @@ Content-Type: application/json
 | `/api/help-tickets`       | POST   | Create ticket                    |
 | `/api/objections/pending/:userId` | GET | Get pending objections      |
 | `/api/audit-logs`         | GET    | Get audit logs                   |
-| `/api/score-logs`         | GET    | Get score logs                   |
+| `/api/score-logs`         | GET    | Get score logs (dynamically calculated) |
+| `/api/score-logs/user/:userId/summary` | GET | Get user score summary |
 | `/api/dashboard/analytics`| GET    | Get dashboard analytics          |
 | `/api/dashboard/counts`   | GET    | Get task counts                  |
 
@@ -1645,8 +1785,305 @@ find /home/deploy/mongodb-backups -type d -mtime +7 -exec rm -rf {} +
 
 **Development Team:** Ashok Malhotra Group IT Department  
 **Production URL:** https://hub.amgrealty.in  
-**Version:** 1.0.0  
-**Last Updated:** January 2025
+**Version:** 1.1.0  
+**Last Updated:** January 2025  
+**Recent Updates:** Dynamic Scoring System, Detailed Performance Page, Multi-Entity Score Calculation
+
+---
+
+---
+
+## 10. Scoring System Architecture (Updated)
+
+### 10.1 Dynamic Scoring System
+
+**Overview:**
+
+The scoring system has been completely redesigned to calculate scores dynamically from source data rather than storing pre-calculated values. This ensures:
+
+- **Accuracy**: Scores always reflect current data
+- **Consistency**: Same calculation logic across all entity types
+- **Real-time Updates**: Automatically updates when dates are modified
+- **Flexibility**: Easy to modify calculation logic in one place
+
+### 10.2 Score Calculation Flow
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    Score Request Flow                        │
+└─────────────────────────────────────────────────────────────┘
+
+1. User requests score logs (/api/score-logs)
+   │
+   ↓
+2. Backend calls fetchAllScoreLogs()
+   │
+   ↓
+3. Fetches completed entities:
+   ├── Tasks (status: 'completed', completedAt exists)
+   ├── FMS Project Tasks (status: 'Done', completedAt exists)
+   └── Checklists (status: 'Submitted', submittedAt exists)
+   │
+   ↓
+4. For each entity, calls appropriate calculator:
+   ├── calculateTaskScore(task)
+   ├── calculateFMSTaskScore(project, taskIndex)
+   └── calculateChecklistScore(checklist)
+   │
+   ↓
+5. Each calculator calls calculateScore(plannedDate, completedDate, startDate)
+   │
+   ↓
+6. Returns score data:
+   ├── score (0-1)
+   ├── scorePercentage (0-100)
+   ├── plannedDays
+   ├── actualDays
+   ├── wasOnTime (boolean)
+   └── metadata (userId, entityTitle, etc.)
+   │
+   ↓
+7. Frontend displays formatted score logs
+```
+
+### 10.3 Score Calculation Algorithm
+
+**Date Normalization:**
+```javascript
+// All dates normalized to start of day (00:00:00)
+function normalizeDate(date) {
+  return new Date(date.getFullYear(), date.getMonth(), date.getDate());
+}
+```
+
+**Day Calculation:**
+```javascript
+// Calculate days between dates
+const plannedDay = normalizeDate(plannedDate);
+const completedDay = normalizeDate(completedDate);
+const startDay = startDate ? normalizeDate(startDate) : null;
+
+// Calculate planned days
+const plannedDays = startDay 
+  ? Math.round((plannedDay - startDay) / (1000 * 60 * 60 * 24))
+  : 0;
+
+// Calculate actual days
+let actualDays;
+if (plannedDay.getTime() === completedDay.getTime()) {
+  // Same day completion
+  actualDays = plannedDays || 0;
+} else {
+  actualDays = startDay
+    ? Math.round((completedDay - startDay) / (1000 * 60 * 60 * 24))
+    : Math.round((completedDay - plannedDay) / (1000 * 60 * 60 * 24));
+}
+```
+
+**Score Calculation:**
+```javascript
+if (completedDay <= plannedDay) {
+  // On-time completion
+  score = 1.0;
+  scorePercentage = 100;
+  wasOnTime = true;
+} else {
+  // Late completion
+  if (plannedDays > 0) {
+    score = plannedDays / actualDays;
+  } else {
+    // Penalty for tasks with no planned days
+    score = Math.max(0, 1 - (actualDays - plannedDays) * 0.1);
+  }
+  scorePercentage = score * 100;
+  wasOnTime = false;
+}
+```
+
+### 10.4 Entity-Specific Score Calculation
+
+**1. Regular Tasks:**
+```javascript
+// Date-range tasks (recurring with startDate/endDate)
+if (task.startDate && task.endDate) {
+  plannedDate = task.endDate;
+  startDate = task.startDate;
+}
+// Standard tasks
+else if (task.originalPlannedDate) {
+  plannedDate = task.originalPlannedDate;
+  startDate = task.creationDate || task.createdAt;
+}
+else {
+  plannedDate = task.dueDate;
+  startDate = task.creationDate || task.createdAt;
+}
+
+completedDate = task.completedAt;
+```
+
+**2. FMS Project Tasks:**
+```javascript
+// Get task from project.tasks array
+const task = project.tasks[taskIndex];
+
+// Determine planned date
+plannedDate = task.plannedDueDate || task.originalPlannedDate;
+startDate = project.creationDate || project.startDate;
+
+completedDate = task.completedAt;
+```
+
+**3. Checklists:**
+```javascript
+// Determine planned date
+plannedDate = checklist.nextRunDate || checklist.startDate;
+startDate = checklist.startDate || checklist.createdAt;
+
+completedDate = checklist.submittedAt;
+```
+
+### 10.5 Performance Metrics Calculation
+
+**Individual User Performance:**
+```javascript
+// Fetch all score logs for user
+const scoreLogs = await fetchAllScoreLogs({ userId: user._id });
+
+// Calculate metrics
+const totalTasks = scoreLogs.length;
+const averageScore = scoreLogs.reduce((sum, log) => sum + log.scorePercentage, 0) / totalTasks;
+const onTimeCount = scoreLogs.filter(log => log.wasOnTime).length;
+const onTimeRate = (onTimeCount / totalTasks) * 100;
+const lateCount = totalTasks - onTimeCount;
+const impactedCount = scoreLogs.filter(log => log.scoreImpacted).length;
+
+// Performance score (used for ranking)
+const performanceScore = averageScore; // Direct average of all scores
+```
+
+**Team Performance:**
+```javascript
+// For each user in team
+for (const user of teamUsers) {
+  const userLogs = await fetchAllScoreLogs({ userId: user._id });
+  
+  // Calculate user metrics
+  const userPerformance = {
+    username: user.username,
+    totalTasks: userLogs.length,
+    averageScore: calculateAverage(userLogs),
+    performanceScore: calculateAverage(userLogs), // Used for sorting
+    completionRate: calculateCompletionRate(user),
+    onTimeRate: calculateOnTimeRate(userLogs)
+  };
+  
+  teamPerformance.push(userPerformance);
+}
+
+// Sort by performance score
+teamPerformance.sort((a, b) => b.performanceScore - a.performanceScore);
+```
+
+### 10.6 API Endpoints
+
+**GET `/api/score-logs`**
+- **Purpose**: Fetch dynamically calculated score logs
+- **Query Parameters**:
+  - `userId` (optional): Filter by user ID
+  - `entityType` (optional): 'task', 'fms', 'checklist', or 'all'
+  - `startDate` (optional): Filter by completion date range
+  - `endDate` (optional): Filter by completion date range
+  - `page` (optional): Page number for pagination
+  - `limit` (optional): Items per page (default: 50)
+- **Response**:
+```json
+{
+  "logs": [
+    {
+      "_id": "task_690f150258284167441dc185",
+      "entityType": "task",
+      "entityId": "690f150258284167441dc185",
+      "entityTitle": "Pantry Expense",
+      "userId": { "_id": "...", "username": "..." },
+      "taskType": "daily",
+      "score": 0.96,
+      "scorePercentage": 96.0,
+      "plannedDate": "2025-02-12T00:00:00.000Z",
+      "completedDate": "2025-02-12T00:00:00.000Z",
+      "plannedDays": 24,
+      "actualDays": 25,
+      "wasOnTime": false,
+      "scoreImpacted": false,
+      "isCalculated": true
+    }
+  ],
+  "total": 150,
+  "page": 1,
+  "limit": 50,
+  "totalPages": 3
+}
+```
+
+**GET `/api/score-logs/user/:userId/summary`**
+- **Purpose**: Get performance summary for a user
+- **Response**:
+```json
+{
+  "summary": {
+    "totalTasks": 35,
+    "averageScore": 99.9,
+    "onTimeTasks": 33,
+    "lateTasks": 2,
+    "impactedTasks": 0
+  },
+  "logs": [...]
+}
+```
+
+### 10.7 Frontend Components
+
+**ScoreLogs.tsx:**
+- Displays all score logs in table format
+- Filters: User, Entity Type
+- Shows: User, Entity Title, Type, Score, Planned On, Completed On, Days, Status
+- Pagination support
+
+**Performance.tsx:**
+- Team performance cards (Admin/Superadmin)
+- Individual performance metrics
+- Links to detailed breakdown
+- Sorted by performance score
+
+**DetailedPerformance.tsx:**
+- Task-wise scoring breakdown
+- Summary cards (Total, Average, On Time, Late, Impacted)
+- Filters: Entity Type, Task Type, Status
+- User selector (Admin/Superadmin)
+- Detailed table with all score information
+
+### 10.8 Key Improvements
+
+1. **Real-time Accuracy**: Scores always reflect current data
+2. **Automatic Updates**: No manual recalculation needed when dates change
+3. **Unified Logic**: Single source of truth for score calculation
+4. **Multi-Entity Support**: Consistent scoring across Tasks, FMS, and Checklists
+5. **Better Performance Tracking**: Only completed tasks included in performance metrics
+6. **Enhanced Filtering**: Filter by entity type, user, date range
+7. **Superadmin Access**: Full visibility into all users' scores
+
+### 10.9 Migration Notes
+
+**Legacy ScoreLogs:**
+- Old stored ScoreLogs remain in database for historical reference
+- New system calculates scores dynamically
+- `isCalculated` flag distinguishes new vs old logs
+- Both can coexist in the system
+
+**Backward Compatibility:**
+- API endpoints maintain same structure
+- Frontend components updated to handle new data format
+- Existing score logs still accessible for historical data
 
 ---
 

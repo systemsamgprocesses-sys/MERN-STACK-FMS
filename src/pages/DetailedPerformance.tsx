@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { ArrowLeft, Award, Filter, Calendar, FileText, CheckCircle, Clock, X } from 'lucide-react';
+import { ArrowLeft, Award, Filter, Calendar, FileText, CheckCircle, Clock, X, User } from 'lucide-react';
 import axios from 'axios';
 import { address } from '../../utils/ipAddress';
 import { formatDate } from '../utils/dateFormat';
@@ -48,8 +48,12 @@ const DetailedPerformance: React.FC = () => {
   });
 
   // Get userId and username from location state or use current user
-  const [targetUserId, setTargetUserId] = useState<string | null>(location.state?.userId || user?.id || null);
-  const [targetUsername, setTargetUsername] = useState<string>(location.state?.username || user?.username || '');
+  const [targetUserId, setTargetUserId] = useState<string | null>(
+    location.state?.userId || user?.id || null
+  );
+  const [targetUsername, setTargetUsername] = useState<string>(
+    location.state?.username || user?.username || ''
+  );
 
   useEffect(() => {
     if (user?.role === 'superadmin' || user?.role === 'admin') {
@@ -63,20 +67,31 @@ const DetailedPerformance: React.FC = () => {
       fetchUserIdFromUsername();
     } else if (targetUserId) {
       fetchScoreLogs();
+    } else if (!targetUserId && !targetUsername && user?.id) {
+      // Fallback: use current user if no target specified
+      setTargetUserId(user.id);
+      setTargetUsername(user.username || '');
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [targetUserId, targetUsername]);
+  }, [targetUserId, targetUsername, user]);
 
   useEffect(() => {
-    // When selected user changes (for superadmin), update target user
+    // When selected user changes (for superadmin/admin), update target user and refetch data
     if (selectedUser && (user?.role === 'superadmin' || user?.role === 'admin')) {
       const selectedUserData = users.find(u => (u._id || u.id) === selectedUser);
       if (selectedUserData) {
-        setTargetUserId(selectedUserData._id || selectedUserData.id);
-        setTargetUsername(selectedUserData.username);
+        const newUserId = selectedUserData._id || selectedUserData.id;
+        const newUsername = selectedUserData.username;
+        
+        // Only update if different to avoid unnecessary re-renders
+        if (targetUserId !== newUserId) {
+          setTargetUserId(newUserId);
+          setTargetUsername(newUsername);
+          // fetchScoreLogs will be triggered by the useEffect that watches targetUserId
+        }
       }
     }
-  }, [selectedUser, users, user]);
+  }, [selectedUser, users, user, targetUserId]);
 
   const fetchUsers = async () => {
     try {
@@ -122,11 +137,22 @@ const DetailedPerformance: React.FC = () => {
   const fetchScoreLogs = async () => {
     if (!targetUserId) {
       setLoading(false);
+      setLogs([]);
+      setSummary({
+        totalTasks: 0,
+        averageScore: 0,
+        onTimeTasks: 0,
+        lateTasks: 0,
+        impactedTasks: 0
+      });
       return;
     }
     
     try {
       setLoading(true);
+      // Clear previous data while loading
+      setLogs([]);
+      
       // Ensure we're using the correct userId format
       const userIdToUse = targetUserId.toString();
       const params: any = { userId: userIdToUse, limit: 10000 }; // Get all logs, no pagination
@@ -260,14 +286,25 @@ const DetailedPerformance: React.FC = () => {
               <span className="font-semibold text-[var(--color-text)]">Select User</span>
             </div>
             <select
-              value={selectedUser}
-              onChange={(e) => setSelectedUser(e.target.value)}
+              value={selectedUser || targetUserId || ''}
+              onChange={(e) => {
+                const newSelectedUserId = e.target.value;
+                setSelectedUser(newSelectedUserId);
+                // Immediately update target user to trigger refetch
+                if (newSelectedUserId) {
+                  const selectedUserData = users.find(u => (u._id || u.id) === newSelectedUserId);
+                  if (selectedUserData) {
+                    setTargetUserId(selectedUserData._id || selectedUserData.id);
+                    setTargetUsername(selectedUserData.username);
+                  }
+                }
+              }}
               className="w-full px-4 py-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] text-[var(--color-text)]"
             >
               <option value="">Select a user...</option>
               {users.map((u) => (
                 <option key={u._id || u.id} value={u._id || u.id}>
-                  {u.username}
+                  {u.username} {targetUserId === (u._id || u.id) ? '(Current)' : ''}
                 </option>
               ))}
             </select>

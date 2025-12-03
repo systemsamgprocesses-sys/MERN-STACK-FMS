@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState, useRef } from 'react';
 import axios from 'axios';
 import { useAuth } from '../contexts/AuthContext';
 import { address } from '../../utils/ipAddress';
@@ -12,7 +12,12 @@ import {
   Mail,
   Lock,
   Activity,
-  Users
+  Users,
+  Eye,
+  EyeOff,
+  RotateCw,
+  X,
+  Trash2
 } from 'lucide-react';
 import { formatDate, formatDateTime } from '../utils/dateFormat';
 
@@ -50,11 +55,17 @@ const Profile: React.FC = () => {
   const [statusMessage, setStatusMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [passwordStatus, setPasswordStatus] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [passwordForm, setPasswordForm] = useState({ newPassword: '', confirmPassword: '' });
+  const [showPassword, setShowPassword] = useState({ newPassword: false, confirmPassword: false });
   const [logs, setLogs] = useState<AdjustmentLog[]>([]);
   const [logsLoading, setLogsLoading] = useState(false);
   const [loadingProfile, setLoadingProfile] = useState(true);
   const [savingProfile, setSavingProfile] = useState(false);
   const [changingPassword, setChangingPassword] = useState(false);
+  const [showCropModal, setShowCropModal] = useState(false);
+  const [cropImage, setCropImage] = useState<string | null>(null);
+  const [rotation, setRotation] = useState(0);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const imageRef = useRef<HTMLImageElement>(null);
 
   const actingOnSelf = useMemo(() => selectedUserId === user?.id, [selectedUserId, user]);
 
@@ -148,8 +159,111 @@ const Profile: React.FC = () => {
   const handleAvatarChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
-    setAvatarFile(file);
-    setAvatarPreview(URL.createObjectURL(file));
+    
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      setStatusMessage({ type: 'error', text: 'Please select an image file.' });
+      return;
+    }
+    
+    // Validate file size (5MB max)
+    if (file.size > 5 * 1024 * 1024) {
+      setStatusMessage({ type: 'error', text: 'Image size must be less than 5MB.' });
+      return;
+    }
+    
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const imageUrl = e.target?.result as string;
+      setCropImage(imageUrl);
+      setShowCropModal(true);
+      setRotation(0);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleCropAndSave = () => {
+    if (!cropImage || !canvasRef.current || !imageRef.current) return;
+
+    const canvas = canvasRef.current;
+    const ctx = canvas.getContext('2d');
+    const img = imageRef.current;
+
+    if (!ctx) return;
+
+    // Set canvas size
+    const size = 400; // Output size
+    canvas.width = size;
+    canvas.height = size;
+
+    // Clear canvas
+    ctx.clearRect(0, 0, size, size);
+
+    // Calculate rotation
+    const radians = (rotation * Math.PI) / 180;
+    
+    // Move to center
+    ctx.save();
+    ctx.translate(size / 2, size / 2);
+    ctx.rotate(radians);
+    
+    // Draw image centered
+    const scale = Math.max(size / img.width, size / img.height);
+    const scaledWidth = img.width * scale;
+    const scaledHeight = img.height * scale;
+    ctx.drawImage(img, -scaledWidth / 2, -scaledHeight / 2, scaledWidth, scaledHeight);
+    
+    ctx.restore();
+
+    // Convert to blob
+    canvas.toBlob((blob) => {
+      if (blob) {
+        const file = new File([blob], 'avatar.png', { type: 'image/png' });
+        setAvatarFile(file);
+        setAvatarPreview(URL.createObjectURL(blob));
+        setShowCropModal(false);
+        setCropImage(null);
+        setRotation(0);
+      }
+    }, 'image/png', 0.9);
+  };
+
+  const handleRemoveProfilePicture = async () => {
+    if (!profile) return;
+    
+    try {
+      setSavingProfile(true);
+      setStatusMessage(null);
+      
+      const endpoint =
+        selectedUserId && !actingOnSelf
+          ? `${address}/api/users/profile/${selectedUserId}`
+          : `${address}/api/users/profile`;
+
+      const formData = new FormData();
+      formData.append('removeProfilePicture', 'true');
+
+      const response = await axios.put(endpoint, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+
+      const updatedProfile: ProfileUser = response.data.user;
+      setProfile(updatedProfile);
+      setAvatarPreview(null);
+      setAvatarFile(null);
+      setStatusMessage({ type: 'success', text: 'Profile picture removed successfully.' });
+      
+      if (actingOnSelf) {
+        updateUser({
+          profilePicture: ''
+        });
+      }
+    } catch (error: any) {
+      console.error('Error removing profile picture:', error);
+      setStatusMessage({ type: 'error', text: error.response?.data?.message || 'Failed to remove profile picture.' });
+    } finally {
+      setSavingProfile(false);
+    }
   };
 
   const handleProfileSave = async () => {
@@ -318,10 +432,19 @@ const Profile: React.FC = () => {
               <div className="flex flex-col items-center text-center">
                 <div className="relative">
                   {renderAvatar()}
-                  <label className="absolute bottom-0 right-0 bg-[--color-primary] text-white rounded-full p-2 cursor-pointer shadow">
+                  <label className="absolute bottom-0 right-0 bg-[--color-primary] text-white rounded-full p-2 cursor-pointer shadow hover:bg-[--color-primary-dark] transition-colors">
                     <Camera size={16} />
                     <input type="file" className="hidden" accept="image/*" onChange={handleAvatarChange} />
                   </label>
+                  {fullAvatar && (
+                    <button
+                      onClick={handleRemoveProfilePicture}
+                      className="absolute top-0 right-0 bg-red-500 text-white rounded-full p-2 cursor-pointer shadow hover:bg-red-600 transition-colors"
+                      title="Remove profile picture"
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                  )}
                 </div>
                 <h2 className="text-xl font-semibold text-[--color-text] mt-4">{profile?.username}</h2>
                 <p className="text-sm text-[--color-textSecondary] capitalize">{profile?.role}</p>
@@ -469,23 +592,41 @@ const Profile: React.FC = () => {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="text-sm font-medium text-[--color-text] mb-1">New Password</label>
-                  <input
-                    type="password"
-                    value={passwordForm.newPassword}
-                    onChange={(e) => setPasswordForm((prev) => ({ ...prev, newPassword: e.target.value }))}
-                    className="w-full px-4 py-2 rounded-lg border border-[--color-border] bg-[--color-background]"
-                    placeholder="Enter new password"
-                  />
+                  <div className="relative">
+                    <input
+                      type={showPassword.newPassword ? 'text' : 'password'}
+                      value={passwordForm.newPassword}
+                      onChange={(e) => setPasswordForm((prev) => ({ ...prev, newPassword: e.target.value }))}
+                      className="w-full px-4 py-2 pr-10 rounded-lg border border-[--color-border] bg-[--color-background]"
+                      placeholder="Enter new password"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(prev => ({ ...prev, newPassword: !prev.newPassword }))}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-[--color-textSecondary] hover:text-[--color-text]"
+                    >
+                      {showPassword.newPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                    </button>
+                  </div>
                 </div>
                 <div>
                   <label className="text-sm font-medium text-[--color-text] mb-1">Confirm Password</label>
-                  <input
-                    type="password"
-                    value={passwordForm.confirmPassword}
-                    onChange={(e) => setPasswordForm((prev) => ({ ...prev, confirmPassword: e.target.value }))}
-                    className="w-full px-4 py-2 rounded-lg border border-[--color-border] bg-[--color-background]"
-                    placeholder="Re-enter new password"
-                  />
+                  <div className="relative">
+                    <input
+                      type={showPassword.confirmPassword ? 'text' : 'password'}
+                      value={passwordForm.confirmPassword}
+                      onChange={(e) => setPasswordForm((prev) => ({ ...prev, confirmPassword: e.target.value }))}
+                      className="w-full px-4 py-2 pr-10 rounded-lg border border-[--color-border] bg-[--color-background]"
+                      placeholder="Re-enter new password"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(prev => ({ ...prev, confirmPassword: !prev.confirmPassword }))}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-[--color-textSecondary] hover:text-[--color-text]"
+                    >
+                      {showPassword.confirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                    </button>
+                  </div>
                 </div>
               </div>
               <button
@@ -527,6 +668,80 @@ const Profile: React.FC = () => {
             </div>
           )}
         </div>
+
+        {/* Image Crop/Rotate Modal */}
+        {showCropModal && cropImage && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-[--color-surface] rounded-2xl border border-[--color-border] p-6 max-w-2xl w-full max-h-[90vh] overflow-auto">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold text-[--color-text]">Crop & Rotate Image</h3>
+                <button
+                  onClick={() => {
+                    setShowCropModal(false);
+                    setCropImage(null);
+                    setRotation(0);
+                  }}
+                  className="text-[--color-textSecondary] hover:text-[--color-text]"
+                >
+                  <X size={24} />
+                </button>
+              </div>
+              
+              <div className="mb-4 flex items-center justify-center bg-[--color-background] rounded-lg p-4 min-h-[300px]">
+                <div className="relative">
+                  <img
+                    ref={imageRef}
+                    src={cropImage}
+                    alt="Crop preview"
+                    className="max-w-full max-h-[400px]"
+                    style={{
+                      transform: `rotate(${rotation}deg)`,
+                      transition: 'transform 0.3s ease'
+                    }}
+                    onLoad={() => {
+                      // Image loaded
+                    }}
+                  />
+                </div>
+              </div>
+              
+              <div className="flex items-center gap-4 mb-4">
+                <button
+                  onClick={() => setRotation((prev) => (prev + 90) % 360)}
+                  className="px-4 py-2 rounded-lg bg-[--color-primary] text-white font-semibold hover:bg-[--color-primary-dark] flex items-center gap-2"
+                >
+                  <RotateCw size={18} />
+                  Rotate 90°
+                </button>
+                <span className="text-sm text-[--color-textSecondary]">
+                  Rotation: {rotation}°
+                </span>
+              </div>
+              
+              <canvas ref={canvasRef} className="hidden" />
+              
+              <div className="flex gap-3 justify-end">
+                <button
+                  onClick={() => {
+                    setShowCropModal(false);
+                    setCropImage(null);
+                    setRotation(0);
+                  }}
+                  className="px-4 py-2 rounded-lg border border-[--color-border] text-[--color-text] hover:bg-[--color-background]"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleCropAndSave}
+                  className="px-4 py-2 rounded-lg bg-[--color-primary] text-white font-semibold hover:bg-[--color-primary-dark] flex items-center gap-2"
+                >
+                  <Save size={16} />
+                  Apply
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

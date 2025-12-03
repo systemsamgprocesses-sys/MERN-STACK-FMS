@@ -57,7 +57,9 @@ const sanitizeUser = (user) => {
 
 const canManageProfile = (reqUser, targetId) => {
   if (!reqUser) return false;
-  if (reqUser.role === 'superadmin') return true;
+  // Allow superadmin and admin to manage any profile
+  if (reqUser.role === 'superadmin' || reqUser.role === 'admin') return true;
+  // Users can manage their own profile
   return reqUser._id.toString() === targetId.toString();
 };
 
@@ -174,18 +176,43 @@ router.put('/profile/:userId?', authenticateToken, avatarUpload.single('profileP
     }
 
     const updates = {};
-    const { username, email, phoneNumber, role, isActive } = req.body;
+    const { username, email, phoneNumber, role, isActive, removeProfilePicture } = req.body;
 
     if (typeof username !== 'undefined') updates.username = username.trim();
     if (typeof email !== 'undefined') updates.email = email.trim();
     if (typeof phoneNumber !== 'undefined') updates.phoneNumber = phoneNumber.trim();
 
-    if (req.user.role === 'superadmin') {
+    if (req.user.role === 'superadmin' || req.user.role === 'admin') {
       if (typeof role !== 'undefined') updates.role = role;
       if (typeof isActive !== 'undefined') updates.isActive = isActive === 'true' || isActive === true;
     }
 
-    if (req.file) {
+    // Handle profile picture removal
+    if (removeProfilePicture === 'true') {
+      // Delete old profile picture file if it exists
+      if (oldUser.profilePicture && oldUser.profilePicture.startsWith('/uploads/avatars/')) {
+        const oldFilePath = path.join(__dirname, '..', oldUser.profilePicture);
+        if (fs.existsSync(oldFilePath)) {
+          try {
+            fs.unlinkSync(oldFilePath);
+          } catch (err) {
+            console.error('Error deleting old profile picture:', err);
+          }
+        }
+      }
+      updates.profilePicture = '';
+    } else if (req.file) {
+      // Delete old profile picture if uploading new one
+      if (oldUser.profilePicture && oldUser.profilePicture.startsWith('/uploads/avatars/')) {
+        const oldFilePath = path.join(__dirname, '..', oldUser.profilePicture);
+        if (fs.existsSync(oldFilePath)) {
+          try {
+            fs.unlinkSync(oldFilePath);
+          } catch (err) {
+            console.error('Error deleting old profile picture:', err);
+          }
+        }
+      }
       updates.profilePicture = `/uploads/avatars/${req.file.filename}`;
     }
 

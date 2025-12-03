@@ -221,7 +221,7 @@ router.patch('/:id', authenticateToken, async (req, res) => {
 // Update a specific item in an occurrence
 router.patch('/:id/items/:itemIndex', authenticateToken, async (req, res) => {
   try {
-    const { checked, remarks } = req.body;
+    const { checked, remarks, status, notDoneReason, actionTaken } = req.body;
     const itemIndex = parseInt(req.params.itemIndex);
 
     const occurrence = await ChecklistOccurrence.findById(req.params.id);
@@ -237,6 +237,25 @@ router.patch('/:id/items/:itemIndex', authenticateToken, async (req, res) => {
     if (checked !== undefined) {
       occurrence.items[itemIndex].checked = checked;
       occurrence.items[itemIndex].checkedAt = checked ? new Date() : null;
+      if (checked) {
+        occurrence.items[itemIndex].status = 'done';
+      }
+    }
+
+    if (status) {
+      occurrence.items[itemIndex].status = status;
+      if (status === 'done') {
+        occurrence.items[itemIndex].checked = true;
+        occurrence.items[itemIndex].checkedAt = new Date();
+      } else if (status === 'not-done') {
+        occurrence.items[itemIndex].checked = false;
+        if (notDoneReason) {
+          occurrence.items[itemIndex].notDoneReason = notDoneReason;
+        }
+        if (actionTaken) {
+          occurrence.items[itemIndex].actionTaken = actionTaken;
+        }
+      }
     }
 
     if (remarks !== undefined) {
@@ -253,7 +272,166 @@ router.patch('/:id/items/:itemIndex', authenticateToken, async (req, res) => {
   }
 });
 
-// Complete occurrence (mark as done)
+// Submit checklist occurrence (with FMS triggering support)
+router.post('/:id/submit', authenticateToken, async (req, res) => {
+  try {
+    const occurrence = await ChecklistOccurrence.findById(req.params.id)
+      .populate('templateId');
+
+    if (!occurrence) {
+      return res.status(404).json({ error: 'Occurrence not found' });
+    }
+
+    // Check if user has access
+    if (
+      occurrence.assignedTo.toString() !== req.user._id.toString() &&
+      req.user.role !== 'admin' &&
+      req.user.role !== 'superadmin'
+    ) {
+      return res.status(403).json({ error: 'Access denied' });
+    }
+
+    // Mark as completed
+    occurrence.status = 'completed';
+    occurrence.completedAt = new Date();
+    occurrence.completedBy = req.user._id;
+    occurrence.submittedAt = new Date();
+    occurrence.submittedBy = req.user._id;
+
+    await occurrence.save();
+
+    // Check if FMS should be triggered
+    const template = occurrence.templateId;
+    let triggeredProject = null;
+
+    if (template && template.fmsConfiguration && template.fmsConfiguration.enabled && template.fmsConfiguration.triggerOnSubmission) {
+      try {
+        const FMS = (await import('../models/FMS.js')).default;
+        const Project = (await import('../models/Project.js')).default;
+        const mongoose = (await import('mongoose')).default;
+
+        const fms = await FMS.findById(template.fmsConfiguration.fmsId).populate('steps.who');
+        if (fms) {
+          // Get next project ID
+          const PROJECT_ID_REGEX = /^PRJ-\d+$/;
+          const getNextProjectId = async () => {
+            const latestProject = await Project.findOne({ projectId: { $regex: PROJECT_ID_REGEX } })
+              .sort({ projectId: -1 })
+              .select('projectId')
+              .lean();
+            const latestNumber = latestProject?.projectId ? parseInt(latestProject.projectId.split('-')[1], 10) : 0;
+            const nextNumber = Number.isNaN(latestNumber) ? 1 : latestNumber + 1;
+            return `PRJ-${nextNumber.toString().padStart(4, '0')}`;
+          };
+
+          const projectId = await getNextProjectId();
+          const projectName = `${template.fmsConfiguration.fmsName || fms.fmsName} - ${occurrence.templateName}`;
+          const startDate = new Date();
+
+          const normalizeUserId = (value) => {
+            if (!value) return null;
+            if (typeof value === 'string') {
+              return mongoose.Types.ObjectId.isValid(value) ? value : null;
+            }
+            if (typeof value === 'object') {
+              if (value._id && mongoose.Types.ObjectId.isValid(value._id)) return value._id;
+              if (value.id && mongoose.Types.ObjectId.isValid(value.id)) return value.id;
+            }
+            return null;
+          };
+
+          const tasks = fms.steps.map((step, index) => {
+            const assignees = (Array.isArray(step.who) ? step.who : [])
+              .map(normalizeUserId)
+              .filter(Boolean);
+
+            if (assignees.length === 0) {
+              assignees.push(occurrence.assignedTo);
+            }
+
+            let plannedDueDate = null;
+            let status = 'Not Started';
+
+            if (index === 0) {
+              status = 'Pending';
+              const dueDate = new Date(startDate);
+              if (step.when && step.whenUnit) {
+                if (step.whenUnit === 'days') {
+                  dueDate.setDate(dueDate.getDate() + step.when);
+                } else if (step.whenUnit === 'hours') {
+                  dueDate.setHours(dueDate.getHours() + step.when);
+                }
+              }
+              plannedDueDate = dueDate;
+            } else {
+              status = 'Not Started';
+            }
+
+            return {
+              stepNo: step.stepNo || index + 1,
+              what: step.what || '',
+              who: assignees,
+              how: step.how || '',
+              plannedDueDate,
+              status,
+              whenType: step.whenType || 'fixed',
+              requiresChecklist: step.checklistItems && step.checklistItems.length > 0,
+              checklistItems: step.checklistItems || [],
+              attachments: step.attachments || [],
+              requireAttachments: step.requireAttachments || false,
+              mandatoryAttachments: step.mandatoryAttachments || false
+            };
+          });
+
+          const project = new Project({
+            projectId,
+            fmsId: fms._id,
+            projectName,
+            startDate,
+            tasks,
+            createdBy: req.user._id,
+            startedFromChecklist: {
+              checklistId: occurrence._id,
+              checklistName: occurrence.templateName,
+              startedAt: new Date()
+            }
+          });
+
+          await project.save();
+
+          // Update occurrence with triggered FMS info
+          occurrence.triggeredFMS = {
+            projectId: project._id,
+            projectName: project.projectId,
+            triggeredAt: new Date()
+          };
+          await occurrence.save();
+
+          triggeredProject = {
+            projectId: project.projectId,
+            projectName: project.projectName
+          };
+        }
+      } catch (fmsError) {
+        console.error('Error triggering FMS:', fmsError);
+        // Continue with submission even if FMS trigger fails
+      }
+    }
+
+    await occurrence.populate('assignedTo templateId completedBy');
+
+    res.json({
+      message: 'Checklist submitted successfully',
+      occurrence,
+      triggeredFMS: triggeredProject
+    });
+  } catch (error) {
+    console.error('Error submitting checklist:', error);
+    res.status(500).json({ error: 'Server error', message: error.message });
+  }
+});
+
+// Complete occurrence (mark as done) - kept for backward compatibility
 router.post('/:id/complete', authenticateToken, async (req, res) => {
   try {
     const { userId } = req.body;
@@ -267,6 +445,8 @@ router.post('/:id/complete', authenticateToken, async (req, res) => {
     occurrence.status = 'completed';
     occurrence.completedAt = new Date();
     occurrence.completedBy = userId;
+    occurrence.submittedAt = new Date();
+    occurrence.submittedBy = userId;
 
     await occurrence.save();
     await occurrence.populate('assignedTo templateId completedBy');

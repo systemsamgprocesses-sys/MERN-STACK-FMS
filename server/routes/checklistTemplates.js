@@ -630,6 +630,77 @@ router.post('/import', authenticateToken, csvUpload.single('file'), async (req, 
   }
 });
 
+// Configure FMS for checklist template (Superadmin only)
+router.put('/:id/fms-config', authenticateToken, async (req, res) => {
+  try {
+    if (req.user.role !== 'superadmin') {
+      return res.status(403).json({ error: 'Only Super Admins can configure FMS for checklists' });
+    }
+
+    const { enabled, fmsId, triggerOnSubmission } = req.body;
+    const template = await ChecklistTemplate.findById(req.params.id);
+
+    if (!template) {
+      return res.status(404).json({ error: 'Template not found' });
+    }
+
+    // If enabling FMS, validate FMS exists
+    if (enabled && fmsId) {
+      const FMS = (await import('../models/FMS.js')).default;
+      const fms = await FMS.findById(fmsId);
+      if (!fms) {
+        return res.status(404).json({ error: 'FMS template not found' });
+      }
+
+      template.fmsConfiguration = {
+        enabled: true,
+        fmsId: fms._id,
+        fmsName: fms.fmsName,
+        triggerOnSubmission: triggerOnSubmission !== false // Default to true
+      };
+    } else {
+      // Disable FMS configuration
+      template.fmsConfiguration = {
+        enabled: false,
+        fmsId: null,
+        fmsName: null,
+        triggerOnSubmission: false
+      };
+    }
+
+    await template.save();
+    await template.populate('assignedTo createdBy');
+
+    res.json({
+      template,
+      message: enabled ? 'FMS configuration updated successfully' : 'FMS configuration disabled'
+    });
+  } catch (error) {
+    console.error('Error configuring FMS for checklist template:', error);
+    res.status(500).json({ error: 'Server error', message: error.message });
+  }
+});
+
+// Get available FMS templates for configuration (Superadmin only)
+router.get('/fms/available', authenticateToken, async (req, res) => {
+  try {
+    if (req.user.role !== 'superadmin') {
+      return res.status(403).json({ error: 'Only Super Admins can view FMS templates' });
+    }
+
+    const FMS = (await import('../models/FMS.js')).default;
+    const fmsList = await FMS.find({ status: 'Active' })
+      .select('_id fmsId fmsName category steps')
+      .populate('createdBy', 'username')
+      .sort({ createdAt: -1 });
+
+    res.json({ fmsList });
+  } catch (error) {
+    console.error('Error fetching FMS templates:', error);
+    res.status(500).json({ error: 'Server error', message: error.message });
+  }
+});
+
 // Download sample CSV
 export default router;
 

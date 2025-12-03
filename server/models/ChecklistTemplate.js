@@ -54,6 +54,13 @@ const checklistTemplateSchema = new mongoose.Schema({
     enum: ['active', 'inactive', 'archived'],
     default: 'active'
   },
+  // FMS Configuration - can be set by superadmin
+  fmsConfiguration: {
+    enabled: { type: Boolean, default: false },
+    fmsId: { type: mongoose.Schema.Types.ObjectId, ref: 'FMS' },
+    fmsName: { type: String }, // Denormalized for quick access
+    triggerOnSubmission: { type: Boolean, default: true } // Trigger FMS when checklist is submitted
+  },
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now }
 });

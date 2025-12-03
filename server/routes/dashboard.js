@@ -8,6 +8,7 @@ import Project from '../models/Project.js';
 import Checklist from '../models/Checklist.js';
 // Import score calculation utilities
 import { calculateTaskScore, calculateFMSTaskScore, calculateChecklistScore } from '../utils/calculateScore.js';
+import { fetchAllScoreLogs } from './scoreLogs.js';
 
 const router = express.Router();
 
@@ -996,27 +997,42 @@ router.get('/analytics', async (req, res) => {
     // Calculate overall score
     let overallScore = 0;
     if (isAdmin === 'true') {
-      const allScoreLogs = await ScoreLog.find({
-        ...(userObjectId ? { userId: userObjectId } : {})
-      });
-      if (allScoreLogs.length > 0) {
-        overallScore = allScoreLogs.reduce((sum, log) => sum + log.scorePercentage, 0) / allScoreLogs.length;
+      try {
+        const allScoreLogs = await fetchAllScoreLogs({
+          userId: userObjectId ? userObjectId.toString() : null
+        });
+        if (allScoreLogs && allScoreLogs.length > 0) {
+          const scores = allScoreLogs.map(log => log.scorePercentage).filter(score => score !== undefined);
+          if (scores.length > 0) {
+            overallScore = scores.reduce((sum, score) => sum + score, 0) / scores.length;
+          }
+        }
+      } catch (error) {
+        console.error('Error calculating overall score:', error);
       }
     }
 
     // Calculate current month score
     let currentMonthScore = 0;
     if (isAdmin === 'true') {
-      const currentMonth = new Date();
-      const startOfMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1);
-      const endOfMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 0, 23, 59, 59, 999);
+      try {
+        const currentMonth = new Date();
+        const startOfMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1);
+        const endOfMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 0, 23, 59, 59, 999);
 
-      const currentMonthScoreLogs = await ScoreLog.find({
-        completedAt: { $gte: startOfMonth, $lte: endOfMonth },
-        ...(userObjectId ? { userId: userObjectId } : {})
-      });
-      if (currentMonthScoreLogs.length > 0) {
-        currentMonthScore = currentMonthScoreLogs.reduce((sum, log) => sum + log.scorePercentage, 0) / currentMonthScoreLogs.length;
+        const currentMonthScoreLogs = await fetchAllScoreLogs({
+          userId: userObjectId ? userObjectId.toString() : null,
+          startDate: startOfMonth.toISOString(),
+          endDate: endOfMonth.toISOString()
+        });
+        if (currentMonthScoreLogs && currentMonthScoreLogs.length > 0) {
+          const scores = currentMonthScoreLogs.map(log => log.scorePercentage).filter(score => score !== undefined);
+          if (scores.length > 0) {
+            currentMonthScore = scores.reduce((sum, score) => sum + score, 0) / scores.length;
+          }
+        }
+      } catch (error) {
+        console.error('Error calculating current month score:', error);
       }
     }
 

@@ -15,7 +15,7 @@ const router = express.Router();
 router.use(authenticateToken);
 
 // Helper function to fetch and calculate all score logs
-async function fetchAllScoreLogs(filters = {}) {
+export async function fetchAllScoreLogs(filters = {}) {
   const { userId, entityType, startDate, endDate } = filters;
   const allLogs = [];
   const entityTypes = entityType ? [entityType] : ['task', 'fms', 'checklist'];

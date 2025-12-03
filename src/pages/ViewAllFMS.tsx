@@ -496,6 +496,36 @@ const ViewAllFMS: React.FC = () => {
     printWindow.document.close();
   };
 
+  const downloadFmsAsPdf = async (fms: FMSTemplate) => {
+    if (typeof window === 'undefined') return;
+
+    try {
+      const node = createHiddenPrintableNode(fms);
+
+      try {
+        const canvas = await html2canvas(node, {
+          scale: 2,
+          useCORS: true,
+          backgroundColor: '#ffffff'
+        });
+        const imgData = canvas.toDataURL('image/png');
+        const pdf = new jsPDF('p', 'mm', 'a4');
+        const pdfWidth = pdf.internal.pageSize.getWidth();
+        const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+        pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+        pdf.save(`${sanitizeFileName(fms.fmsId)}-${sanitizeFileName(fms.fmsName)}.pdf`);
+      } catch (pdfError) {
+        console.error(`Failed to generate PDF for ${fms.fmsName}`, pdfError);
+        alert('Failed to generate PDF. Please try again.');
+      } finally {
+        node.remove();
+      }
+    } catch (error) {
+      console.error('Error generating PDF:', error);
+      alert('Failed to generate PDF. Please try again.');
+    }
+  };
+
   const downloadAllFmsAsPdf = async () => {
     if (typeof window === 'undefined' || downloadingPdfs || fmsList.length === 0) return;
 
@@ -861,6 +891,16 @@ const ViewAllFMS: React.FC = () => {
                                 <button
                                   onClick={(e) => {
                                     e.stopPropagation();
+                                    void downloadFmsAsPdf(fms);
+                                  }}
+                                  className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 flex items-center gap-2"
+                                >
+                                  <Download size={16} />
+                                  Download PDF
+                                </button>
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
                                     navigate(`/start-project?fmsId=${fms._id}`);
                                   }}
                                   className="px-4 py-2 bg-[var(--color-primary)] text-white rounded-lg hover:opacity-90"
@@ -907,6 +947,13 @@ const ViewAllFMS: React.FC = () => {
                                     >
                                       <Printer size={18} />
                                       <span>Print</span>
+                                    </button>
+                                    <button
+                                      onClick={() => void downloadFmsAsPdf(fms)}
+                                      className="px-5 py-2.5 bg-white/20 backdrop-blur-sm hover:bg-white/30 text-white rounded-xl font-semibold transition-all transform hover:scale-105 flex items-center gap-2 border border-white/30"
+                                    >
+                                      <Download size={18} />
+                                      <span>Download PDF</span>
                                     </button>
                                     <button
                                       onClick={() => setShowMermaid(null)}

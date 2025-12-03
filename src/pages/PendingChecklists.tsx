@@ -39,10 +39,11 @@ const PendingChecklists: React.FC = () => {
   const [categories, setCategories] = useState<string[]>([]);
 
   useEffect(() => {
-    if (user) {
+    if (user?.id) {
       fetchChecklists();
     }
-  }, [user]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id]);
 
   const fetchChecklists = async () => {
     if (!user) return;

@@ -92,6 +92,7 @@ router.get('/calendar', authenticateToken, async (req, res) => {
     // Fetch all occurrences for this user/role in this month
     const occurrences = await ChecklistOccurrence.find(query)
       .populate('templateId', 'name')
+      .populate('assignedTo', 'username email department')
       .sort({ dueDate: 1 });
 
     // Group occurrences by date

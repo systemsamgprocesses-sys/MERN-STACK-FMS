@@ -24,7 +24,6 @@ import ErrorBoundary from './components/ErrorBoundary';
 import Checklists from './pages/Checklists';
 import CreateChecklist from './pages/CreateChecklist';
 import ChecklistDetail from './pages/ChecklistDetail';
-import ChecklistDashboard from './pages/ChecklistDashboard';
 import HelpTickets from './pages/HelpTickets';
 import AdminHelpTickets from './pages/AdminHelpTickets';
 import Complaints from './pages/Complaints';
@@ -72,7 +71,6 @@ function App() {
                   <Route path="/checklists" element={<ProtectedRoute><Checklists /></ProtectedRoute>} />
                   <Route path="/checklists/create" element={<ProtectedRoute><CreateChecklist /></ProtectedRoute>} />
                   <Route path="/checklists/:id" element={<ProtectedRoute><ChecklistDetail /></ProtectedRoute>} />
-                  <Route path="/checklist-dashboard" element={<ProtectedRoute requiredPermissions={['canViewAllChecklists']}><ChecklistDashboard /></ProtectedRoute>} />
                   <Route path="/checklist-calendar" element={<ProtectedRoute><ChecklistCalendar /></ProtectedRoute>} />
                   <Route path="/checklist-template/create" element={<ProtectedRoute><ChecklistTemplateForm /></ProtectedRoute>} />
                   <Route path="/checklist-occurrence/:id" element={<ProtectedRoute><ChecklistOccurrenceDetail /></ProtectedRoute>} />

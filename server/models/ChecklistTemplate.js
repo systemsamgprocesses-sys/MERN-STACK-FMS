@@ -16,8 +16,12 @@ const checklistTemplateSchema = new mongoose.Schema({
   }],
   frequency: {
     type: String,
-    enum: ['daily', 'weekly', 'monthly'],
+    enum: ['daily', 'weekly', 'fortnightly', 'monthly', 'quarterly', 'yearly'],
     required: true
+  },
+  excludeSunday: {
+    type: Boolean,
+    default: false
   },
   // For weekly frequency - which days of week (0=Sunday, 6=Saturday)
   weeklyDays: [{

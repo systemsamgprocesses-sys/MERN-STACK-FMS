@@ -84,20 +84,49 @@ async function generateOccurrences(template) {
     case 'daily':
       // Generate one occurrence for each day
       while (currentDate <= endDate) {
-        occurrences.push({
-          templateId: template._id,
-          templateName: template.name,
-          category: template.category || 'General',
-          dueDate: new Date(currentDate),
-          assignedTo: template.assignedTo,
-          items: template.items.map(item => ({
-            label: item.label,
-            description: item.description,
-            checked: false
-          })),
-          status: 'pending'
-        });
+        const dayOfWeek = currentDate.getDay();
+        // Skip Sunday if excludeSunday is true
+        if (!template.excludeSunday || dayOfWeek !== 0) {
+          occurrences.push({
+            templateId: template._id,
+            templateName: template.name,
+            category: template.category || 'General',
+            dueDate: new Date(currentDate),
+            assignedTo: template.assignedTo,
+            items: template.items.map(item => ({
+              label: item.label,
+              description: item.description,
+              checked: false
+            })),
+            status: 'pending'
+          });
+        }
         currentDate.setDate(currentDate.getDate() + 1);
+      }
+      break;
+
+    case 'fortnightly':
+      // Generate occurrences every 2 weeks
+      let fortnightCounter = 0;
+      while (currentDate <= endDate) {
+        const dayOfWeek = currentDate.getDay();
+        // Skip Sunday if excludeSunday is true
+        if (!template.excludeSunday || dayOfWeek !== 0) {
+          occurrences.push({
+            templateId: template._id,
+            templateName: template.name,
+            category: template.category || 'General',
+            dueDate: new Date(currentDate),
+            assignedTo: template.assignedTo,
+            items: template.items.map(item => ({
+              label: item.label,
+              description: item.description,
+              checked: false
+            })),
+            status: 'pending'
+          });
+        }
+        currentDate.setDate(currentDate.getDate() + 14);
       }
       break;
 
@@ -168,6 +197,52 @@ async function generateOccurrences(template) {
         }
 
         currentMonth.setMonth(currentMonth.getMonth() + 1);
+      }
+      break;
+
+    case 'quarterly':
+      // Generate occurrences every 3 months on the same date
+      let quarterlyDate = new Date(startDate);
+      while (quarterlyDate <= endDate) {
+        if (quarterlyDate >= startDate && quarterlyDate <= endDate) {
+          occurrences.push({
+            templateId: template._id,
+            templateName: template.name,
+            category: template.category || 'General',
+            dueDate: new Date(quarterlyDate),
+            assignedTo: template.assignedTo,
+            items: template.items.map(item => ({
+              label: item.label,
+              description: item.description,
+              checked: false
+            })),
+            status: 'pending'
+          });
+        }
+        quarterlyDate.setMonth(quarterlyDate.getMonth() + 3);
+      }
+      break;
+
+    case 'yearly':
+      // Generate occurrences every year on the same date
+      let yearlyDate = new Date(startDate);
+      while (yearlyDate <= endDate) {
+        if (yearlyDate >= startDate && yearlyDate <= endDate) {
+          occurrences.push({
+            templateId: template._id,
+            templateName: template.name,
+            category: template.category || 'General',
+            dueDate: new Date(yearlyDate),
+            assignedTo: template.assignedTo,
+            items: template.items.map(item => ({
+              label: item.label,
+              description: item.description,
+              checked: false
+            })),
+            status: 'pending'
+          });
+        }
+        yearlyDate.setFullYear(yearlyDate.getFullYear() + 1);
       }
       break;
   }
@@ -291,9 +366,9 @@ router.post('/', authenticateToken, async (req, res) => {
       });
     }
 
-    if (!['daily', 'weekly', 'monthly'].includes(templateData.frequency)) {
+    if (!['daily', 'weekly', 'fortnightly', 'monthly', 'quarterly', 'yearly'].includes(templateData.frequency)) {
       return res.status(400).json({
-        error: 'Invalid frequency. Must be daily, weekly, or monthly'
+        error: 'Invalid frequency. Must be daily, weekly, fortnightly, monthly, quarterly, or yearly'
       });
     }
 

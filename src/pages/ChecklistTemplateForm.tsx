@@ -23,12 +23,13 @@ const ChecklistTemplateForm: React.FC = () => {
   const [formData, setFormData] = useState({
     name: '',
     category: 'General',
-    frequency: 'daily' as 'daily' | 'weekly' | 'monthly',
+    frequency: 'daily' as 'daily' | 'weekly' | 'fortnightly' | 'monthly' | 'quarterly' | 'yearly',
     startDate: '',
     endDate: '',
     assignedTo: '',
     weeklyDays: [] as number[],
     monthlyDates: [] as number[],
+    excludeSunday: false,
   });
 
   const [items, setItems] = useState<ChecklistItem[]>([
@@ -176,6 +177,7 @@ const ChecklistTemplateForm: React.FC = () => {
         createdBy: user?.id,
         weeklyDays: formData.frequency === 'weekly' ? formData.weeklyDays : undefined,
         monthlyDates: formData.frequency === 'monthly' ? formData.monthlyDates : undefined,
+        excludeSunday: formData.excludeSunday,
       };
 
       console.log('Payload being sent:', payload);
@@ -393,7 +395,10 @@ const ChecklistTemplateForm: React.FC = () => {
               >
                 <option value="daily">Daily</option>
                 <option value="weekly">Weekly</option>
+                <option value="fortnightly">Fortnightly (Every 2 Weeks)</option>
                 <option value="monthly">Monthly</option>
+                <option value="quarterly">Quarterly (Every 3 Months)</option>
+                <option value="yearly">Yearly</option>
               </select>
             </div>
 
@@ -425,6 +430,23 @@ const ChecklistTemplateForm: React.FC = () => {
                     </button>
                   ))}
                 </div>
+              </div>
+            )}
+
+            {/* Exclude Sunday Option */}
+            {(formData.frequency === 'daily' || formData.frequency === 'fortnightly') && (
+              <div className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  id="excludeSunday"
+                  checked={formData.excludeSunday}
+                  onChange={(e) => setFormData(prev => ({ ...prev, excludeSunday: e.target.checked }))}
+                  className="w-4 h-4 rounded"
+                  style={{ accentColor: 'var(--color-primary)' }}
+                />
+                <label htmlFor="excludeSunday" className="text-sm" style={{ color: 'var(--color-text)' }}>
+                  Exclude Sunday
+                </label>
               </div>
             )}
 

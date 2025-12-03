@@ -102,8 +102,6 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
     // Checklists Section
     { section: 'Checklists', icon: ListTodo, label: 'Pending Checklists', path: '/pending-checklists', highlight: true },
     { section: 'Checklists', icon: Calendar, label: 'Checklist Calendar', path: '/checklist-calendar', highlight: true },
-    { section: 'Checklists', icon: CheckSquare, label: 'My Checklists', path: '/checklists', highlight: true },
-    { section: 'Checklists', icon: BarChart2, label: 'Checklist Dashboard', path: '/checklist-dashboard', permission: 'canViewAllChecklists', highlight: true },
     { section: 'Checklists', icon: Settings, label: 'Manage Checklist Categories', path: '/checklist-categories', requireAdmin: true, highlight: true },
 
     // Tasks Section

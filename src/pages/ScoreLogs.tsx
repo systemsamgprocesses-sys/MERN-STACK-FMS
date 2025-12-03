@@ -56,13 +56,19 @@ const ScoreLogs: React.FC = () => {
       // For non-superadmin/admin users, always filter to their own data
       if (user?.role !== 'superadmin' && user?.role !== 'admin') {
         params.userId = user?.id;
-      } else if (selectedUser !== 'all') {
+      } else if (selectedUser && selectedUser !== 'all') {
         params.userId = selectedUser;
       }
+      // If superadmin/admin selects 'all', don't pass userId to get all logs
 
       // Filter by entity type
       if (selectedEntityType !== 'all') {
         params.entityType = selectedEntityType;
+      }
+
+      // Increase limit for superadmin to see all logs
+      if (user?.role === 'superadmin' || user?.role === 'admin') {
+        params.limit = 10000;
       }
 
       const response = await axios.get(`${address}/api/score-logs`, { params });

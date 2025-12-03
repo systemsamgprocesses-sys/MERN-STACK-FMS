@@ -5,8 +5,9 @@ import mongoose from 'mongoose';
 import { authenticateToken } from '../middleware/auth.js';
 // Import Project model for FMS metrics
 import Project from '../models/Project.js';
-// Import ScoreLog model
-import ScoreLog from '../models/ScoreLog.js';
+import Checklist from '../models/Checklist.js';
+// Import score calculation utilities
+import { calculateTaskScore, calculateFMSTaskScore, calculateChecklistScore } from '../utils/calculateScore.js';
 
 const router = express.Router();
 
@@ -424,8 +425,94 @@ router.get('/analytics', async (req, res) => {
         const onTimeRecurringTasks = await Task.find(recurringOnTimeQuery).select('_id title taskType completedAt nextDueDate dueDate');
         const onTimeCompletedRecurringTasks = onTimeRecurringTasks.length;
 
+        // Calculate performance based on score logs (only completed tasks)
+        // Calculate scores dynamically from completed tasks, FMS, and checklists
+        let averageScore = 0;
+        let scoreLogsCount = 0;
+        const scores = [];
+        
+        // Calculate scores from completed tasks
+        const completedTasksForScoring = await Task.find({
+          isActive: true,
+          assignedTo: user._id,
+          status: 'completed',
+          completedAt: { $ne: null },
+          ...(startDate && endDate ? {
+            completedAt: { $gte: new Date(startDate), $lte: new Date(endDate) }
+          } : {})
+        });
+        
+        for (const task of completedTasksForScoring) {
+          const scoreData = await calculateTaskScore(task);
+          if (scoreData && scoreData.scorePercentage !== undefined) {
+            scores.push(scoreData.scorePercentage);
+          }
+        }
+        
+        // Calculate scores from completed FMS tasks
+        const projects = await Project.find({ status: { $ne: 'Deleted' } })
+          .populate('fmsId');
+        
+        for (const project of projects) {
+          for (let i = 0; i < project.tasks.length; i++) {
+            const task = project.tasks[i];
+            if (task.status === 'Done' && task.completedAt) {
+              // Check if task is assigned to this user
+              const taskUserIds = Array.isArray(task.who) ? task.who.map(w => w?.toString()) : [];
+              if (task.completedBy) taskUserIds.push(task.completedBy.toString());
+              if (taskUserIds.includes(user._id.toString())) {
+                // Check date range if specified
+                if (startDate && endDate) {
+                  const completedDate = new Date(task.completedAt);
+                  const start = new Date(startDate);
+                  const end = new Date(endDate);
+                  if (completedDate < start || completedDate > end) {
+                    continue;
+                  }
+                }
+                const scoreData = await calculateFMSTaskScore(project, i);
+                if (scoreData && scoreData.scorePercentage !== undefined) {
+                  scores.push(scoreData.scorePercentage);
+                }
+              }
+            }
+          }
+        }
+        
+        // Calculate scores from completed checklists
+        const completedChecklists = await Checklist.find({
+          status: 'Submitted',
+          submittedAt: { $ne: null },
+          assignedTo: user._id,
+          ...(startDate && endDate ? {
+            submittedAt: { $gte: new Date(startDate), $lte: new Date(endDate) }
+          } : {})
+        });
+        
+        for (const checklist of completedChecklists) {
+          const scoreData = await calculateChecklistScore(checklist);
+          if (scoreData && scoreData.scorePercentage !== undefined) {
+            scores.push(scoreData.scorePercentage);
+          }
+        }
+        
+        // Calculate average score
+        if (scores.length > 0) {
+          const totalScore = scores.reduce((sum, score) => sum + score, 0);
+          averageScore = totalScore / scores.length;
+          scoreLogsCount = scores.length;
+        }
+
+        // Calculate completion rate based on completed tasks only (not including pending)
+        // Only count tasks that have been completed (have score logs)
         const completionRate = totalTasks > 0 ? (completedTasks / totalTasks) * 100 : 0;
         const onTimeRate = completedTasksForRate > 0 ? Math.min((onTimeCompletedTasks + onTimeCompletedRecurringTasks) / completedTasksForRate * 100, 100) : 0;
+        
+        // Use average score from score logs as the performance metric
+        // If no score logs, fall back to weighted average
+        const performanceScore = scoreLogsCount > 0 
+          ? averageScore 
+          : ((completionRate * 0.5) + (onTimeRate * 0.5));
 
         if (totalTasks > 0 || completedTasks > 0 || pendingTasks > 0) {
           userTeamPerformance.push({
@@ -457,11 +544,18 @@ router.get('/analytics', async (req, res) => {
             completionRate: Math.round(completionRate * 10) / 10,
             onTimeRate: Math.round(onTimeRate * 10) / 10,
             onTimeCompletedTasks,
-            onTimeRecurringCompleted: onTimeCompletedRecurringTasks
+            onTimeRecurringCompleted: onTimeCompletedRecurringTasks,
+            averageScore: Math.round(averageScore * 10) / 10,
+            performanceScore: Math.round(performanceScore * 10) / 10
           });
         }
       }
-      userTeamPerformance.sort((a, b) => b.completionRate - a.completionRate);
+      // Sort by performanceScore (from score logs) if available, otherwise by completionRate
+      userTeamPerformance.sort((a, b) => {
+        const aScore = a.performanceScore !== undefined ? a.performanceScore : a.completionRate;
+        const bScore = b.performanceScore !== undefined ? b.performanceScore : b.completionRate;
+        return bScore - aScore;
+      });
     } else {
       // Non-admin: Get individual user performance
       if (userObjectId) {
@@ -562,8 +656,92 @@ router.get('/analytics', async (req, res) => {
           const onTimeRecurringTasks = await Task.find(recurringOnTimeQuery).select('_id title taskType completedAt nextDueDate dueDate');
           const onTimeCompletedRecurringTasks = onTimeRecurringTasks.length;
 
+          // Calculate performance based on score logs (only completed tasks)
+          // Calculate scores dynamically from completed tasks, FMS, and checklists
+          let averageScore = 0;
+          let scoreLogsCount = 0;
+          const scores = [];
+          
+          // Calculate scores from completed tasks
+          const completedTasksForScoring = await Task.find({
+            isActive: true,
+            assignedTo: userObjectId,
+            status: 'completed',
+            completedAt: { $ne: null },
+            ...(startDate && endDate ? {
+              completedAt: { $gte: new Date(startDate), $lte: new Date(endDate) }
+            } : {})
+          });
+          
+          for (const task of completedTasksForScoring) {
+            const scoreData = await calculateTaskScore(task);
+            if (scoreData && scoreData.scorePercentage !== undefined) {
+              scores.push(scoreData.scorePercentage);
+            }
+          }
+          
+          // Calculate scores from completed FMS tasks
+          const projects = await Project.find({ status: { $ne: 'Deleted' } })
+            .populate('fmsId');
+          
+          for (const project of projects) {
+            for (let i = 0; i < project.tasks.length; i++) {
+              const task = project.tasks[i];
+              if (task.status === 'Done' && task.completedAt) {
+                // Check if task is assigned to this user
+                const taskUserIds = Array.isArray(task.who) ? task.who.map(w => w?.toString()) : [];
+                if (task.completedBy) taskUserIds.push(task.completedBy.toString());
+                if (taskUserIds.includes(userObjectId.toString())) {
+                  // Check date range if specified
+                  if (startDate && endDate) {
+                    const completedDate = new Date(task.completedAt);
+                    const start = new Date(startDate);
+                    const end = new Date(endDate);
+                    if (completedDate < start || completedDate > end) {
+                      continue;
+                    }
+                  }
+                  const scoreData = await calculateFMSTaskScore(project, i);
+                  if (scoreData && scoreData.scorePercentage !== undefined) {
+                    scores.push(scoreData.scorePercentage);
+                  }
+                }
+              }
+            }
+          }
+          
+          // Calculate scores from completed checklists
+          const completedChecklists = await Checklist.find({
+            status: 'Submitted',
+            submittedAt: { $ne: null },
+            assignedTo: userObjectId,
+            ...(startDate && endDate ? {
+              submittedAt: { $gte: new Date(startDate), $lte: new Date(endDate) }
+            } : {})
+          });
+          
+          for (const checklist of completedChecklists) {
+            const scoreData = await calculateChecklistScore(checklist);
+            if (scoreData && scoreData.scorePercentage !== undefined) {
+              scores.push(scoreData.scorePercentage);
+            }
+          }
+          
+          // Calculate average score
+          if (scores.length > 0) {
+            const totalScore = scores.reduce((sum, score) => sum + score, 0);
+            averageScore = totalScore / scores.length;
+            scoreLogsCount = scores.length;
+          }
+
           const completionRate = totalTasks > 0 ? (completedTasks / totalTasks) * 100 : 0;
           const onTimeRate = completedTasksForRate > 0 ? Math.min((onTimeCompletedTasks + onTimeCompletedRecurringTasks) / completedTasksForRate * 100, 100) : 0;
+          
+          // Use average score from score logs as the performance metric
+          // If no score logs, fall back to weighted average
+          const performanceScore = scoreLogsCount > 0 
+            ? averageScore 
+            : ((completionRate * 0.5) + (onTimeRate * 0.5));
 
           userPerformanceData = {
             username: userData.username,
@@ -594,7 +772,9 @@ router.get('/analytics', async (req, res) => {
             completionRate: Math.round(completionRate * 10) / 10,
             onTimeRate: Math.round(onTimeRate * 10) / 10,
             onTimeCompletedTasks,
-            onTimeRecurringCompleted: onTimeCompletedRecurringTasks
+            onTimeRecurringCompleted: onTimeCompletedRecurringTasks,
+            averageScore: Math.round(averageScore * 10) / 10,
+            performanceScore: Math.round(performanceScore * 10) / 10
           };
         }
       }

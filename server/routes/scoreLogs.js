@@ -5,9 +5,14 @@ import Task from '../models/Task.js';
 import Project from '../models/Project.js';
 import Checklist from '../models/Checklist.js';
 import User from '../models/User.js';
+import mongoose from 'mongoose';
+import { authenticateToken } from '../middleware/auth.js';
 import { calculateTaskScore, calculateFMSTaskScore, calculateChecklistScore } from '../utils/calculateScore.js';
 
 const router = express.Router();
+
+// Require authentication for all routes
+router.use(authenticateToken);
 
 // Helper function to fetch and calculate all score logs
 async function fetchAllScoreLogs(filters = {}) {
@@ -15,10 +20,18 @@ async function fetchAllScoreLogs(filters = {}) {
   const allLogs = [];
   const entityTypes = entityType ? [entityType] : ['task', 'fms', 'checklist'];
 
+  // Convert userId to ObjectId if provided
+  let userIdObjectId = null;
+  if (userId) {
+    if (mongoose.Types.ObjectId.isValid(userId)) {
+      userIdObjectId = new mongoose.Types.ObjectId(userId);
+    }
+  }
+
   // Fetch and calculate scores for Tasks
   if (entityTypes.includes('task')) {
     const taskQuery = { status: 'completed', completedAt: { $exists: true, $ne: null } };
-    if (userId) taskQuery.assignedTo = userId;
+    if (userIdObjectId) taskQuery.assignedTo = userIdObjectId;
     if (startDate && endDate) {
       taskQuery.completedAt = { $gte: new Date(startDate), $lte: new Date(endDate) };
     }
@@ -82,8 +95,11 @@ async function fetchAllScoreLogs(filters = {}) {
               // Create a score log entry for each assigned user
               assignedUsers.forEach((assignedUserId, userIndex) => {
                 // Filter by userId if specified
-                if (userId && assignedUserId?.toString() !== userId.toString()) {
-                  return;
+                if (userIdObjectId) {
+                  const assignedUserIdObj = assignedUserId?._id || assignedUserId;
+                  if (!assignedUserIdObj || assignedUserIdObj.toString() !== userIdObjectId.toString()) {
+                    return;
+                  }
                 }
 
                 allLogs.push({
@@ -117,7 +133,7 @@ async function fetchAllScoreLogs(filters = {}) {
   // Fetch and calculate scores for Checklists
   if (entityTypes.includes('checklist')) {
     const checklistQuery = { status: 'Submitted', submittedAt: { $exists: true, $ne: null } };
-    if (userId) checklistQuery.assignedTo = userId;
+    if (userIdObjectId) checklistQuery.assignedTo = userIdObjectId;
     if (startDate && endDate) {
       checklistQuery.submittedAt = { $gte: new Date(startDate), $lte: new Date(endDate) };
     }
@@ -175,8 +191,31 @@ async function fetchAllScoreLogs(filters = {}) {
 router.get('/', async (req, res) => {
   try {
     const { userId, entityType, page = 1, limit = 50, startDate, endDate } = req.query;
+    const currentUser = req.user;
     
-    const allLogs = await fetchAllScoreLogs({ userId, entityType, startDate, endDate });
+    // Convert userId to ObjectId if provided
+    let targetUserId = null;
+    if (userId) {
+      if (mongoose.Types.ObjectId.isValid(userId)) {
+        targetUserId = new mongoose.Types.ObjectId(userId);
+      } else {
+        return res.status(400).json({ message: 'Invalid userId format' });
+      }
+    }
+    
+    // Permission check: non-superadmin/admin users can only view their own data
+    if (currentUser.role !== 'superadmin' && currentUser.role !== 'admin') {
+      // Force filter to current user's data
+      targetUserId = new mongoose.Types.ObjectId(currentUser._id || currentUser.id);
+    }
+    // If superadmin/admin and no userId provided, targetUserId remains null to fetch all logs
+    
+    const allLogs = await fetchAllScoreLogs({ 
+      userId: targetUserId ? targetUserId.toString() : null, 
+      entityType, 
+      startDate, 
+      endDate 
+    });
 
     // Pagination
     const total = allLogs.length;

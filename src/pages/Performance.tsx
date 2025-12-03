@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useTheme } from '../contexts/ThemeContext';
 import {
   Calendar, Target, CheckCircle, ChevronDown, Award, Star, BarChart3, Trophy,
-  Clock4, CalendarDays, RefreshCw, UserCheck, PercentIcon, ClockIcon, User, RotateCcw
+  Clock4, CalendarDays, RefreshCw, UserCheck, PercentIcon, ClockIcon, User, RotateCcw, Eye
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import axios from 'axios';
@@ -41,6 +42,8 @@ interface DashboardData {
     onTimeRate: number;
     onTimeCompletedTasks: number;
     onTimeRecurringCompleted: number;
+    averageScore?: number;
+    performanceScore?: number;
   }>;
   userPerformance?: {
     username: string;
@@ -72,11 +75,14 @@ interface DashboardData {
     onTimeRate: number;
     onTimeCompletedTasks: number;
     onTimeRecurringCompleted: number;
+    averageScore?: number;
+    performanceScore?: number;
   };
 }
 
 const Performance: React.FC = () => {
   const { user } = useAuth();
+  const navigate = useNavigate();
   useTheme();
   const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -118,7 +124,10 @@ const Performance: React.FC = () => {
 
     const actualCompletionRate = total > 0 ? (completed / total) * 100 : 0;
     const actualOnTimeRate = completed > 0 ? Math.min((onTimeCompletedTasks / completed) * 100, 100) : 0;
-    const totalPerformanceRate = (actualCompletionRate * 0.5) + (actualOnTimeRate * 0.5);
+    // Use performanceScore from backend (based on score logs) if available, otherwise calculate weighted average
+    const totalPerformanceRate = userPerformance.performanceScore !== undefined 
+      ? userPerformance.performanceScore 
+      : ((actualCompletionRate * 0.5) + (actualOnTimeRate * 0.5));
 
 
     return (
@@ -230,6 +239,17 @@ const Performance: React.FC = () => {
             </div>
           </div>
         </div>
+        <div className="mt-4 pt-4 border-t border-[var(--color-border)]">
+          <button
+            onClick={() => navigate('/performance/details', { 
+              state: { userId: user?.id, username: userPerformance.username } 
+            })}
+            className="w-full sm:w-auto px-4 py-2 bg-[var(--color-primary)] text-white rounded-lg hover:opacity-90 transition-all flex items-center justify-center gap-2"
+          >
+            <Eye size={16} />
+            View Detailed Breakdown
+          </button>
+        </div>
       </ThemeCard>
     );
   };
@@ -263,7 +283,10 @@ const Performance: React.FC = () => {
 
     const actualCompletionRate = total > 0 ? (completed / total) * 100 : 0;
     const actualOnTimeRate = completed > 0 ? Math.min((onTimeCompletedTasks / completed) * 100, 100) : 0;
-    const totalPerformanceRate = (actualCompletionRate * 0.5) + (actualOnTimeRate * 0.5);
+    // Use performanceScore from backend (based on score logs) if available, otherwise calculate weighted average
+    const totalPerformanceRate = member.performanceScore !== undefined 
+      ? member.performanceScore 
+      : ((actualCompletionRate * 0.5) + (actualOnTimeRate * 0.5));
 
     return (
       <ThemeCard className="p-4 sm:p-6 mb-4" variant="glass" hover={false}>
@@ -373,6 +396,21 @@ const Performance: React.FC = () => {
               </span>
             </div>
           </div>
+        </div>
+        <div className="mt-4 pt-4 border-t border-[var(--color-border)]">
+          <button
+            onClick={() => {
+              // Get userId from member - we need to fetch it or pass it differently
+              // For now, we'll need to get the user ID from the API or pass username
+              navigate('/performance/details', { 
+                state: { username: member.username } 
+              });
+            }}
+            className="w-full sm:w-auto px-4 py-2 bg-[var(--color-primary)] text-white rounded-lg hover:opacity-90 transition-all flex items-center justify-center gap-2"
+          >
+            <Eye size={16} />
+            View Detailed Breakdown
+          </button>
         </div>
       </ThemeCard>
     );

@@ -10,6 +10,7 @@ import AssignTask from './pages/AssignTask';
 import AdminPanel from './pages/AdminPanel';
 import ProtectedRoute from './components/ProtectedRoute';
 import Performance from './pages/Performance';
+import DetailedPerformance from './pages/DetailedPerformance';
 import CreateFMS from './pages/CreateFMS';
 import ViewAllFMS from './pages/ViewAllFMS';
 import StartProject from './pages/StartProject';
@@ -59,6 +60,7 @@ function App() {
                   <Route index element={<Navigate to="/dashboard" replace />} />
                   <Route path="dashboard" element={<Dashboard />} />
                   <Route path="performance" element={<ProtectedRoute><Performance /></ProtectedRoute>} />
+                  <Route path="performance/details" element={<ProtectedRoute><DetailedPerformance /></ProtectedRoute>} />
                   <Route path="pending-tasks" element={<ProtectedRoute requiredPermissions={['canViewTasks']}><PendingTasks /></ProtectedRoute>} />
                   <Route path="master-tasks" element={<ProtectedRoute requiredPermissions={['canViewTasks']}><MasterTasks /></ProtectedRoute>} />
                   <Route path="assign-task" element={<ProtectedRoute requiredPermissions={['canAssignTasks']}><AssignTask /></ProtectedRoute>} />

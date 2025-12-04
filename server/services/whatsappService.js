@@ -45,10 +45,24 @@ function formatTaskMessage(template, variables) {
   let message = template;
   
   // Replace template variables {{1}}, {{2}}, etc.
-  Object.keys(variables).forEach((key, index) => {
-    const placeholder = `{{${index + 1}}}`;
-    message = message.replace(new RegExp(placeholder, 'g'), variables[key] || '');
-  });
+  // variables can be an array or object
+  if (Array.isArray(variables)) {
+    // If array, use index directly
+    variables.forEach((value, index) => {
+      const placeholder = `{{${index + 1}}}`;
+      // Escape curly braces in regex
+      const escapedPlaceholder = placeholder.replace(/\{/g, '\\{').replace(/\}/g, '\\}');
+      message = message.replace(new RegExp(escapedPlaceholder, 'g'), value || '');
+    });
+  } else {
+    // If object, use keys in order (for backward compatibility)
+    Object.keys(variables).forEach((key, index) => {
+      const placeholder = `{{${index + 1}}}`;
+      // Escape curly braces in regex
+      const escapedPlaceholder = placeholder.replace(/\{/g, '\\{').replace(/\}/g, '\\}');
+      message = message.replace(new RegExp(escapedPlaceholder, 'g'), variables[key] || '');
+    });
+  }
   
   return message;
 }
@@ -126,9 +140,41 @@ async function sendViaMeta(phoneNumber, message, settings) {
     const apiUrl = `https://graph.facebook.com/v18.0/${phoneNumberId}/messages`;
     console.log('📱 [Meta API] Endpoint:', apiUrl);
 
-    // Format phone number for Meta API (remove + and spaces, keep only digits)
-    // Meta requires phone number in format: country code + number (e.g., 1234567890)
-    const formattedPhone = phoneNumber.replace(/^\+/, '').replace(/\s+/g, '').replace(/[^\d]/g, '');
+    // Format phone number for Meta API
+    // Meta requires phone number in E.164 format without + sign: country code + number (e.g., 919915814908)
+    let formattedPhone = phoneNumber.replace(/\s+/g, '').replace(/[^\d+]/g, '');
+    
+    // Remove leading + if present
+    if (formattedPhone.startsWith('+')) {
+      formattedPhone = formattedPhone.substring(1);
+    }
+    
+    // Check if it's an Indian number and fix country code
+    // Indian numbers: 10 digits starting with 6-9, country code is 91
+    // If number starts with 99, 98, 97, 96, 91, 90, 89, 88, 87, 86, 85, 84, 83, 82, 81, 80, 79, 78, 77, 76, 75, 74, 73, 72, 71, 70, 69, 68, 67, 66, 65, 64, 63, 62, 61, 60
+    // But if it's 11 digits starting with 99, it might be wrong (should be 91)
+    
+    // If 10 digits and starts with 6-9, add India country code (91)
+    if (formattedPhone.length === 10 && /^[6-9]/.test(formattedPhone)) {
+      console.log('📱 [Meta API] ⚠️ Phone number missing country code, adding India (+91)');
+      formattedPhone = '91' + formattedPhone;
+    }
+    // If 11 digits starting with 99 (wrong country code), replace with 91
+    else if (formattedPhone.length === 11 && formattedPhone.startsWith('99')) {
+      console.log('📱 [Meta API] ⚠️ Phone number has wrong country code (99), correcting to India (+91)');
+      formattedPhone = '91' + formattedPhone.substring(2);
+    }
+    // If 11 digits starting with 91, it's already correct
+    else if (formattedPhone.length === 11 && formattedPhone.startsWith('91')) {
+      console.log('📱 [Meta API] ✅ Phone number already has correct India country code');
+    }
+    // If 10 digits, assume it needs country code
+    else if (formattedPhone.length === 10) {
+      console.log('📱 [Meta API] ⚠️ Phone number missing country code, adding India (+91)');
+      formattedPhone = '91' + formattedPhone;
+    }
+    
+    console.log('📱 [Meta API] Original phone:', phoneNumber);
     console.log('📱 [Meta API] Formatted phone:', formattedPhone);
 
     // Meta API request body
@@ -289,18 +335,21 @@ Regards
 
 Task Management System`;
 
-    // Prepare variables
-    const variables = {
-      assignedToName: assignedToUser.username || 'User',
-      taskTitle: task.title || 'New Task',
-      taskType: taskTypeDisplay,
-      assignedByName: assignedByUser.username || 'Admin',
-      dueDate: formattedDueDate
-    };
+    // Prepare variables in the correct order ({{1}}, {{2}}, {{3}}, {{4}}, {{5}})
+    // Order matters: {{1}} = assignedToName, {{2}} = taskTitle, {{3}} = taskType, {{4}} = assignedByName, {{5}} = dueDate
+    const variables = [
+      assignedToUser.username || 'User',           // {{1}}
+      task.title || 'New Task',                    // {{2}}
+      taskTypeDisplay,                              // {{3}}
+      assignedByUser.username || 'Admin',          // {{4}}
+      formattedDueDate                              // {{5}}
+    ];
 
     // Format message
     const message = formatTaskMessage(template, variables);
-    console.log('📱 [WhatsApp] Formatted message preview:', message.substring(0, 100) + '...');
+    console.log('📱 [WhatsApp] Variables array:', variables);
+    console.log('📱 [WhatsApp] Formatted message (first 200 chars):', message.substring(0, 200));
+    console.log('📱 [WhatsApp] Formatted message (full):', message);
 
     // Send WhatsApp message
     console.log('📱 [WhatsApp] Sending message to:', assignedToUser.phoneNumber);

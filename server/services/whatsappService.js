@@ -515,44 +515,25 @@ export async function sendTaskAssignmentNotification(task, assignedToUser, assig
       day: 'numeric'
     });
 
-    // Template message
-    const template = `Hi *{{1}}*
+    // Prepare template parameters
+    // Order: {{1}} = assignedToName, {{2}} = taskTitle, {{3}} = taskType, {{4}} = assignedByName, {{5}} = dueDate
+    const templateParams = {
+      assignedToName: assignedToUser.username || 'User',
+      taskTitle: task.title || 'New Task',
+      taskType: taskTypeDisplay,
+      assignedByName: assignedByUser.username || 'Admin',
+      dueDate: formattedDueDate
+    };
 
-👉A new task has been assigned to you.
+    console.log('📱 [WhatsApp] Template parameters:', templateParams);
 
-*{{2}}*
-
-Task Type: *{{3}}*
-
-Assigned By: *{{4}}*
-
-Due Date: *{{5}}*
-
-Please complete the task on or before the due date.
-
-Regards 
-
-Task Management System`;
-
-    // Prepare variables in the correct order ({{1}}, {{2}}, {{3}}, {{4}}, {{5}})
-    // Order matters: {{1}} = assignedToName, {{2}} = taskTitle, {{3}} = taskType, {{4}} = assignedByName, {{5}} = dueDate
-    const variables = [
-      assignedToUser.username || 'User',           // {{1}}
-      task.title || 'New Task',                    // {{2}}
-      taskTypeDisplay,                              // {{3}}
-      assignedByUser.username || 'Admin',          // {{4}}
-      formattedDueDate                              // {{5}}
-    ];
-
-    // Format message
-    const message = formatTaskMessage(template, variables);
-    console.log('📱 [WhatsApp] Variables array:', variables);
-    console.log('📱 [WhatsApp] Formatted message (first 200 chars):', message.substring(0, 200));
-    console.log('📱 [WhatsApp] Formatted message (full):', message);
-
-    // Send WhatsApp message
-    console.log('📱 [WhatsApp] Sending message to:', assignedToUser.phoneNumber);
-    const result = await sendWhatsAppMessage(assignedToUser.phoneNumber, message);
+    // Send WhatsApp message using template
+    console.log('📱 [WhatsApp] Sending template message to:', assignedToUser.phoneNumber);
+    const result = await sendWhatsAppTemplateMessage(
+      assignedToUser.phoneNumber,
+      templateParams,
+      settings
+    );
     
     if (result.success) {
       console.log('📱 [WhatsApp] ✅ Message sent successfully!', result.messageId || '');

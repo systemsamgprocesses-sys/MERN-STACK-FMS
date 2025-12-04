@@ -259,6 +259,32 @@ app.get('/health', (req, res) => {
   });
 });
 
+// Build version endpoint - serves the current build version
+app.get('/api/version', (req, res) => {
+  try {
+    const versionPath = path.join(__dirname, '..', 'dist', 'version.json');
+    
+    if (fs.existsSync(versionPath)) {
+      const versionData = JSON.parse(fs.readFileSync(versionPath, 'utf8'));
+      res.json(versionData);
+    } else {
+      // Fallback if version file doesn't exist (e.g., in development)
+      res.json({
+        version: 'dev',
+        buildTime: new Date().toISOString(),
+        timestamp: Date.now()
+      });
+    }
+  } catch (error) {
+    console.error('Error reading version file:', error);
+    res.json({
+      version: 'unknown',
+      buildTime: new Date().toISOString(),
+      timestamp: Date.now()
+    });
+  }
+});
+
 // API Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/tasks', taskRoutes);

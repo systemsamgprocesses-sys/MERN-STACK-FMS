@@ -42,21 +42,26 @@ import PendingChecklists from './pages/PendingChecklists';
 import FMSDashboard from './pages/FMSDashboard';
 import SuperAdminManagement from './pages/SuperAdminManagement';
 import Profile from './pages/Profile';
+import UpdateNotification from './components/UpdateNotification';
+import { useVersionCheck } from './hooks/useVersionCheck';
 
-function App() {
+function AppContent() {
+  const { hasUpdate, refreshApp } = useVersionCheck({
+    checkInterval: 60000, // Check every minute
+    enabled: true
+  });
+
   return (
-    <ErrorBoundary>
-      <ThemeProvider>
-        <ApiCacheProvider>
-          <AuthProvider>
-            <Router
-            future={{
-              v7_startTransition: true,
-              v7_relativeSplatPath: true,
-            }}
-          >
-            <div className="min-h-screen" style={{ backgroundColor: 'var(--color-background)', color: 'var(--color-text)' }}>
-              <Routes>
+    <>
+      {hasUpdate && <UpdateNotification onRefresh={refreshApp} />}
+      <Router
+        future={{
+          v7_startTransition: true,
+          v7_relativeSplatPath: true,
+        }}
+      >
+        <div className="min-h-screen" style={{ backgroundColor: 'var(--color-background)', color: 'var(--color-text)' }}>
+          <Routes>
                 <Route path="/login" element={<Login />} />
                 <Route path="/" element={<ProtectedRoute><Layout /></ProtectedRoute>}>
                   <Route index element={<Navigate to="/dashboard" replace />} />
@@ -98,9 +103,20 @@ function App() {
                   <Route path="checklist-categories" element={<ProtectedRoute requireAdmin><CategoryManagement type="checklist" /></ProtectedRoute>} />
                   <Route path="super-admin-management" element={<ProtectedRoute requireSuperAdmin><SuperAdminManagement /></ProtectedRoute>} />
                 </Route>
-              </Routes>
-            </div>
-          </Router>
+          </Routes>
+        </div>
+      </Router>
+    </>
+  );
+}
+
+function App() {
+  return (
+    <ErrorBoundary>
+      <ThemeProvider>
+        <ApiCacheProvider>
+          <AuthProvider>
+            <AppContent />
           </AuthProvider>
         </ApiCacheProvider>
       </ThemeProvider>

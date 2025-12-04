@@ -258,7 +258,12 @@ const taskSchema = new mongoose.Schema({
   },
   // Additional metadata from CSV import
   phoneNumber: String,    // Mobile number of assigned user
-  department: String      // Department from CSV
+  department: String,     // Department from CSV
+  whatsappNotified: {     // WhatsApp notification status
+    type: Boolean,
+    default: false
+  },
+  whatsappNotifiedAt: Date // When WhatsApp was sent
 }, {
   timestamps: true
 });

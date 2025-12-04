@@ -5,6 +5,7 @@ import ScoreLog from '../models/ScoreLog.js';
 import AuditLog from '../models/AuditLog.js';
 import { checkPermission } from '../middleware/permissions.js';
 import { authenticateToken } from '../middleware/auth.js';
+import { sendTaskAssignmentNotification } from '../services/whatsappService.js';
 
 const router = express.Router();
 
@@ -490,6 +491,37 @@ router.post('/create-scheduled', async (req, res) => {
       createdTasks.push(task);
     }
 
+    // Send WhatsApp notification for the first task only (to avoid spam)
+    if (createdTasks.length > 0) {
+      try {
+        const firstTask = createdTasks[0];
+        const assignedToUser = await User.findById(firstTask.assignedTo).select('username email phoneNumber');
+        const assignedByUser = await User.findById(firstTask.assignedBy).select('username email phoneNumber');
+        
+        if (assignedToUser && assignedByUser) {
+          const whatsappResult = await sendTaskAssignmentNotification(
+            firstTask,
+            assignedToUser,
+            assignedByUser
+          );
+          
+          // Update notification status for all tasks in the group
+          if (whatsappResult.success) {
+            await Task.updateMany(
+              { taskGroupId: taskGroupId },
+              { 
+                whatsappNotified: true,
+                whatsappNotifiedAt: new Date()
+              }
+            );
+          }
+        }
+      } catch (whatsappError) {
+        console.error('Error sending WhatsApp notification:', whatsappError);
+        // Don't fail the task creation if WhatsApp fails
+      }
+    }
+
     res.status(201).json({
       message: `Successfully created ${createdTasks.length} tasks`,
       tasksCreated: createdTasks.length,
@@ -529,6 +561,30 @@ router.post('/', async (req, res) => {
     const populatedTask = await Task.findById(task._id)
       .populate('assignedBy', 'username email phoneNumber')
       .populate('assignedTo', 'username email phoneNumber');
+
+    // Send WhatsApp notification
+    try {
+      if (populatedTask.assignedTo && populatedTask.assignedBy) {
+        const whatsappResult = await sendTaskAssignmentNotification(
+          populatedTask,
+          populatedTask.assignedTo,
+          populatedTask.assignedBy
+        );
+        
+        if (whatsappResult.success) {
+          task.whatsappNotified = true;
+          task.whatsappNotifiedAt = new Date();
+          await task.save();
+          
+          // Update populated task
+          populatedTask.whatsappNotified = true;
+          populatedTask.whatsappNotifiedAt = task.whatsappNotifiedAt;
+        }
+      }
+    } catch (whatsappError) {
+      console.error('Error sending WhatsApp notification:', whatsappError);
+      // Don't fail the task creation if WhatsApp fails
+    }
 
     res.status(201).json(populatedTask);
   } catch (error) {

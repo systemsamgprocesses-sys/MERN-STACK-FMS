@@ -59,6 +59,19 @@ const AdminPanel: React.FC = () => {
       mandatoryRemarks: false,
     }
   });
+  const [whatsappSettings, setWhatsappSettings] = useState({
+    enabled: false,
+    provider: 'meta',
+    apiUrl: '',
+    apiKey: '',
+    templateName: 'task_assign',
+    metaPhoneNumberId: '',
+    metaBusinessAccountId: '',
+    metaAccessToken: '',
+    twilioAccountSid: '',
+    twilioAuthToken: '',
+    twilioWhatsAppNumber: ''
+  });
   const [formData, setFormData] = useState({
     username: '',
     email: '',
@@ -189,6 +202,7 @@ const AdminPanel: React.FC = () => {
   useEffect(() => {
     fetchUsers();
     fetchTaskSettings();
+    fetchWhatsAppSettings();
   }, []);
 
   useEffect(() => {
@@ -232,6 +246,22 @@ const AdminPanel: React.FC = () => {
     }
   };
 
+  const fetchWhatsAppSettings = async () => {
+    if (!isSuperAdminUser) return;
+    try {
+      const response = await axios.get(`${address}/api/settings/whatsapp`, {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem('token')}`
+        }
+      });
+      if (response.data) {
+        setWhatsappSettings(response.data);
+      }
+    } catch (error) {
+      console.error('Error fetching WhatsApp settings:', error);
+    }
+  };
+
   const updatePassword = (user: User) => {
     setPasswordUser(user);
     setNewPassword("");
@@ -261,6 +291,21 @@ const AdminPanel: React.FC = () => {
     } catch (error) {
       console.error('Error saving task settings:', error);
       setSettingsMessage({ type: 'error', text: 'Failed to save settings. Please try again.' });
+    }
+  };
+
+  const saveWhatsAppSettings = async () => {
+    if (!isSuperAdminUser) return;
+    try {
+      await axios.post(`${address}/api/settings/whatsapp`, whatsappSettings, {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem('token')}`
+        }
+      });
+      setSettingsMessage({ type: 'success', text: 'WhatsApp settings saved successfully!' });
+    } catch (error: any) {
+      console.error('Error saving WhatsApp settings:', error);
+      setSettingsMessage({ type: 'error', text: error.response?.data?.message || 'Failed to save WhatsApp settings. Please try again.' });
     }
   };
 
@@ -688,16 +733,262 @@ const AdminPanel: React.FC = () => {
         </div>
       </div>
 
-      {/* Save Button */}
-      <div className="flex justify-end">
+      {/* WhatsApp Settings (Super Admin Only) */}
+      {isSuperAdminUser && (
+        <div className="rounded-lg border border-[var(--color-border)] overflow-hidden" style={{ backgroundColor: 'var(--color-background)' }}>
+          <div className="p-4 border-b border-[var(--color-border)]" style={{ backgroundColor: 'var(--color-surface)' }}>
+            <h3 className="text-lg font-semibold flex items-center" style={{ color: 'var(--color-text)' }}>
+              <MessageSquare className="mr-2" size={20} />
+              WhatsApp Notification Settings
+            </h3>
+            <p className="text-sm text-[var(--color-textSecondary)] mt-1">
+              Configure WhatsApp notifications for task assignments (Super Admin Only)
+            </p>
+          </div>
+
+          <div className="p-6 space-y-6">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-3">
+                <MessageSquare size={20} className="text-[var(--color-success)]" />
+                <div>
+                  <label className="text-sm font-medium" style={{ color: 'var(--color-text)' }}>
+                    Enable WhatsApp Notifications
+                  </label>
+                  <p className="text-xs text-[var(--color-textSecondary)]">
+                    Send WhatsApp messages when tasks are assigned
+                  </p>
+                </div>
+              </div>
+              <ToggleSwitch
+                checked={whatsappSettings.enabled}
+                onChange={(value) => setWhatsappSettings(prev => ({ ...prev, enabled: value }))}
+              />
+            </div>
+
+            {whatsappSettings.enabled && (
+              <>
+                <div>
+                  <label className="block text-sm font-medium mb-2" style={{ color: 'var(--color-text)' }}>
+                    Provider
+                  </label>
+                  <select
+                    value={whatsappSettings.provider}
+                    onChange={(e) => setWhatsappSettings(prev => ({ ...prev, provider: e.target.value }))}
+                    className="w-full px-3 py-2 border rounded-lg text-sm"
+                    style={{
+                      backgroundColor: 'var(--color-background)',
+                      borderColor: 'var(--color-border)',
+                      color: 'var(--color-text)'
+                    }}
+                  >
+                    <option value="meta">Meta WhatsApp Business API</option>
+                    <option value="twilio">Twilio</option>
+                    <option value="custom">Custom API</option>
+                  </select>
+                </div>
+
+                {whatsappSettings.provider === 'meta' ? (
+                  <>
+                    <div>
+                      <label className="block text-sm font-medium mb-2" style={{ color: 'var(--color-text)' }}>
+                        Phone Number ID *
+                      </label>
+                      <input
+                        type="text"
+                        value={whatsappSettings.metaPhoneNumberId}
+                        onChange={(e) => setWhatsappSettings(prev => ({ ...prev, metaPhoneNumberId: e.target.value }))}
+                        placeholder="Enter Phone Number ID"
+                        className="w-full px-3 py-2 border rounded-lg text-sm"
+                        style={{
+                          backgroundColor: 'var(--color-background)',
+                          borderColor: 'var(--color-border)',
+                          color: 'var(--color-text)'
+                        }}
+                      />
+                      <p className="text-xs text-[var(--color-textSecondary)] mt-1">
+                        Your WhatsApp Business Phone Number ID from Meta
+                      </p>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium mb-2" style={{ color: 'var(--color-text)' }}>
+                        WhatsApp Business Account ID *
+                      </label>
+                      <input
+                        type="text"
+                        value={whatsappSettings.metaBusinessAccountId}
+                        onChange={(e) => setWhatsappSettings(prev => ({ ...prev, metaBusinessAccountId: e.target.value }))}
+                        placeholder="Enter Business Account ID"
+                        className="w-full px-3 py-2 border rounded-lg text-sm"
+                        style={{
+                          backgroundColor: 'var(--color-background)',
+                          borderColor: 'var(--color-border)',
+                          color: 'var(--color-text)'
+                        }}
+                      />
+                      <p className="text-xs text-[var(--color-textSecondary)] mt-1">
+                        Your WhatsApp Business Account ID from Meta
+                      </p>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium mb-2" style={{ color: 'var(--color-text)' }}>
+                        Permanent Access Token *
+                      </label>
+                      <input
+                        type="password"
+                        value={whatsappSettings.metaAccessToken}
+                        onChange={(e) => setWhatsappSettings(prev => ({ ...prev, metaAccessToken: e.target.value }))}
+                        placeholder="Enter Permanent Access Token"
+                        className="w-full px-3 py-2 border rounded-lg text-sm"
+                        style={{
+                          backgroundColor: 'var(--color-background)',
+                          borderColor: 'var(--color-border)',
+                          color: 'var(--color-text)'
+                        }}
+                      />
+                      <p className="text-xs text-[var(--color-textSecondary)] mt-1">
+                        Your permanent access token from Meta Business Manager
+                      </p>
+                    </div>
+                  </>
+                ) : whatsappSettings.provider === 'custom' ? (
+                  <>
+                    <div>
+                      <label className="block text-sm font-medium mb-2" style={{ color: 'var(--color-text)' }}>
+                        API URL
+                      </label>
+                      <input
+                        type="text"
+                        value={whatsappSettings.apiUrl}
+                        onChange={(e) => setWhatsappSettings(prev => ({ ...prev, apiUrl: e.target.value }))}
+                        placeholder="https://api.example.com/whatsapp/send"
+                        className="w-full px-3 py-2 border rounded-lg text-sm"
+                        style={{
+                          backgroundColor: 'var(--color-background)',
+                          borderColor: 'var(--color-border)',
+                          color: 'var(--color-text)'
+                        }}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium mb-2" style={{ color: 'var(--color-text)' }}>
+                        API Key
+                      </label>
+                      <input
+                        type="password"
+                        value={whatsappSettings.apiKey}
+                        onChange={(e) => setWhatsappSettings(prev => ({ ...prev, apiKey: e.target.value }))}
+                        placeholder="Enter API key"
+                        className="w-full px-3 py-2 border rounded-lg text-sm"
+                        style={{
+                          backgroundColor: 'var(--color-background)',
+                          borderColor: 'var(--color-border)',
+                          color: 'var(--color-text)'
+                        }}
+                      />
+                    </div>
+                  </>
+                ) : whatsappSettings.provider === 'twilio' ? (
+                  <>
+                    <div>
+                      <label className="block text-sm font-medium mb-2" style={{ color: 'var(--color-text)' }}>
+                        Twilio Account SID
+                      </label>
+                      <input
+                        type="text"
+                        value={whatsappSettings.twilioAccountSid}
+                        onChange={(e) => setWhatsappSettings(prev => ({ ...prev, twilioAccountSid: e.target.value }))}
+                        placeholder="ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+                        className="w-full px-3 py-2 border rounded-lg text-sm"
+                        style={{
+                          backgroundColor: 'var(--color-background)',
+                          borderColor: 'var(--color-border)',
+                          color: 'var(--color-text)'
+                        }}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium mb-2" style={{ color: 'var(--color-text)' }}>
+                        Twilio Auth Token
+                      </label>
+                      <input
+                        type="password"
+                        value={whatsappSettings.twilioAuthToken}
+                        onChange={(e) => setWhatsappSettings(prev => ({ ...prev, twilioAuthToken: e.target.value }))}
+                        placeholder="Enter auth token"
+                        className="w-full px-3 py-2 border rounded-lg text-sm"
+                        style={{
+                          backgroundColor: 'var(--color-background)',
+                          borderColor: 'var(--color-border)',
+                          color: 'var(--color-text)'
+                        }}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium mb-2" style={{ color: 'var(--color-text)' }}>
+                        Twilio WhatsApp Number
+                      </label>
+                      <input
+                        type="text"
+                        value={whatsappSettings.twilioWhatsAppNumber}
+                        onChange={(e) => setWhatsappSettings(prev => ({ ...prev, twilioWhatsAppNumber: e.target.value }))}
+                        placeholder="+1234567890"
+                        className="w-full px-3 py-2 border rounded-lg text-sm"
+                        style={{
+                          backgroundColor: 'var(--color-background)',
+                          borderColor: 'var(--color-border)',
+                          color: 'var(--color-text)'
+                        }}
+                      />
+                    </div>
+                  </>
+                ) : null}
+
+                <div>
+                  <label className="block text-sm font-medium mb-2" style={{ color: 'var(--color-text)' }}>
+                    Template Name
+                  </label>
+                  <input
+                    type="text"
+                    value={whatsappSettings.templateName}
+                    onChange={(e) => setWhatsappSettings(prev => ({ ...prev, templateName: e.target.value }))}
+                    placeholder="task_assign"
+                    className="w-full px-3 py-2 border rounded-lg text-sm"
+                    style={{
+                      backgroundColor: 'var(--color-background)',
+                      borderColor: 'var(--color-border)',
+                      color: 'var(--color-text)'
+                    }}
+                  />
+                  <p className="text-xs text-[var(--color-textSecondary)] mt-1">
+                    Template name used for WhatsApp messages (default: task_assign)
+                  </p>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Save Buttons */}
+      <div className="flex justify-end gap-3">
         <button
           onClick={saveTaskSettings}
           className="px-6 py-3 rounded-lg text-white font-medium hover:opacity-90 transition-opacity flex items-center gap-2"
           style={{ backgroundColor: 'var(--color-primary)' }}
         >
           <Save size={18} />
-          Save Settings
+          Save Task Settings
         </button>
+        {isSuperAdminUser && (
+          <button
+            onClick={saveWhatsAppSettings}
+            className="px-6 py-3 rounded-lg text-white font-medium hover:opacity-90 transition-opacity flex items-center gap-2"
+            style={{ backgroundColor: 'var(--color-success)' }}
+          >
+            <Save size={18} />
+            Save WhatsApp Settings
+          </button>
+        )}
       </div>
     </div>
   );

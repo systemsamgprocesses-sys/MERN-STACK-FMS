@@ -31,35 +31,40 @@ export function calculateScore(plannedDate, completedDate, startDate = null) {
   // Calculate planned days from start to planned date
   let plannedDays = 0;
   if (startDay) {
-    // Use Math.round for more accurate day calculation
+    // Use Math.ceil to ensure at least 1 day if dates are different
     const diffMs = plannedDay - startDay;
-    plannedDays = Math.round(diffMs / (1000 * 60 * 60 * 24));
+    const days = diffMs / (1000 * 60 * 60 * 24);
+    // If same day, it's 1 day (not 0)
+    plannedDays = days <= 0 ? 1 : Math.ceil(days);
   } else {
-    // If no start date, planned days is 0
-    plannedDays = 0;
+    // If no start date, we can't calculate planned days from start
+    // But we can calculate it as the difference between planned and a reference point
+    // For now, set to 1 as a default to avoid 0/0
+    plannedDays = 1;
   }
 
   // Calculate actual days from start to completed date
   let actualDays = 0;
   if (startDay) {
-    // Use Math.round for more accurate day calculation
+    // Use Math.ceil to ensure at least 1 day if dates are different
     const diffMs = completedDay - startDay;
-    actualDays = Math.round(diffMs / (1000 * 60 * 60 * 24));
+    const days = diffMs / (1000 * 60 * 60 * 24);
+    // If same day, it's 1 day (not 0)
+    actualDays = days <= 0 ? 1 : Math.ceil(days);
   } else {
-    // If no start date, actual days is the difference between completed and planned
+    // If no start date, calculate days between planned and completed
     const diffMs = completedDay - plannedDay;
-    actualDays = Math.round(diffMs / (1000 * 60 * 60 * 24));
+    const days = diffMs / (1000 * 60 * 60 * 24);
+    // If same day or completed before planned, it's 1 day
+    actualDays = days <= 0 ? 1 : Math.ceil(days);
+    // If no start date, planned days should match the actual days calculation logic
+    // Use 1 as minimum to show meaningful data
+    plannedDays = 1;
   }
 
-  // If planned and completed are on the same day, ensure they're treated as equal
-  if (plannedDay.getTime() === completedDay.getTime()) {
-    // Same day - ensure actualDays equals plannedDays if both are calculated from start
-    if (startDay) {
-      actualDays = plannedDays;
-    } else {
-      actualDays = 0;
-    }
-  }
+  // Ensure both are at least 1 to avoid 0/0 display
+  if (plannedDays === 0) plannedDays = 1;
+  if (actualDays === 0) actualDays = 1;
 
   // Calculate score based on whether task was completed on time
   let score = 1.0;

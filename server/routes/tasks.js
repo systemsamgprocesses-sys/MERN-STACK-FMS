@@ -681,61 +681,94 @@ router.post('/:id/complete', async (req, res) => {
     }
 
     const completionDate = new Date(task.completedAt);
-    const actualDays = Math.ceil((completionDate - creationDate) / (1000 * 60 * 60 * 24));
+    
+    // Normalize dates to start of day for accurate comparison
+    const completionDay = new Date(completionDate.getFullYear(), completionDate.getMonth(), completionDate.getDate());
+    const targetDay = targetDate ? new Date(new Date(targetDate).getFullYear(), new Date(targetDate).getMonth(), new Date(targetDate).getDate()) : null;
+    const creationDay = creationDate ? new Date(creationDate.getFullYear(), creationDate.getMonth(), creationDate.getDate()) : null;
+    
+    // Determine if on time by comparing dates directly (not score)
+    const wasOnTime = targetDay ? completionDay <= targetDay : true;
+    
+    // Calculate actual days from creation to completion
+    let actualDays = 0;
+    if (creationDay) {
+      const diffMs = completionDay - creationDay;
+      const days = diffMs / (1000 * 60 * 60 * 24);
+      // Ensure at least 1 day if dates are same or very close
+      actualDays = days <= 0 ? 1 : Math.ceil(days);
+    } else {
+      // If no creation date, use 1 as default
+      actualDays = 1;
+    }
     task.actualCompletionDays = actualDays;
 
     // Calculate score based on planned days
-    if (targetDate) {
-      let plannedDays = Math.ceil((targetDate - creationDate) / (1000 * 60 * 60 * 24));
-
-      // Check if there are approved objections that don't impact score
-      const approvedObjections = task.objections?.filter(obj =>
-        ['approved', 'resolved'].includes(obj.status) && obj.type === 'date_change'
-      ) || [];
-
-      const scoreImpactingObjection = approvedObjections.find(obj => obj.impactScore);
-
-      if (scoreImpactingObjection) {
-        // Use extended date for scoring
-        const extendedDate = new Date(task.dueDate);
-        const extendedDays = Math.ceil((extendedDate - creationDate) / (1000 * 60 * 60 * 24));
-        task.completionScore = plannedDays / extendedDays;
-        task.scoreImpacted = true;
-      } else {
-        // Full marks if completed within target date
-        if (actualDays <= plannedDays) {
-          task.completionScore = 1.0;
-        } else {
-          task.completionScore = plannedDays / actualDays;
-        }
-        task.scoreImpacted = false;
-      }
+    let plannedDays = 0;
+    if (targetDate && creationDay) {
+      const diffMs = targetDay - creationDay;
+      const days = diffMs / (1000 * 60 * 60 * 24);
+      // Ensure at least 1 day if dates are same or very close
+      plannedDays = days <= 0 ? 1 : Math.ceil(days);
     } else {
-      task.completionScore = 1.0; // Default full score if no due date
+      // If no target date or creation date, use 1 as default
+      plannedDays = 1;
     }
 
-    console.log(`Task ${task._id} completed with score: ${task.completionScore}`);
+    // Check if there are approved objections that don't impact score
+    const approvedObjections = task.objections?.filter(obj =>
+      ['approved', 'resolved'].includes(obj.status) && obj.type === 'date_change'
+    ) || [];
+
+    const scoreImpactingObjection = approvedObjections.find(obj => obj.impactScore);
+
+    if (scoreImpactingObjection) {
+      // Use extended date for scoring
+      const extendedDate = new Date(task.dueDate);
+      const extendedDay = new Date(extendedDate.getFullYear(), extendedDate.getMonth(), extendedDate.getDate());
+      if (creationDay) {
+        const diffMs = extendedDay - creationDay;
+        const days = diffMs / (1000 * 60 * 60 * 24);
+        const extendedDays = days <= 0 ? 1 : Math.ceil(days);
+        task.completionScore = plannedDays / extendedDays;
+      } else {
+        task.completionScore = 1.0;
+      }
+      task.scoreImpacted = true;
+    } else {
+      // Full marks if completed on or before target date
+      if (wasOnTime) {
+        task.completionScore = 1.0;
+      } else {
+        // Late: score = plannedDays / actualDays
+        task.completionScore = plannedDays / actualDays;
+      }
+      task.scoreImpacted = false;
+    }
+
+    console.log(`Task ${task._id} completed with score: ${task.completionScore}, wasOnTime: ${wasOnTime}`);
 
     await task.save();
 
     // Log the score
     try {
-      const plannedDays = Math.ceil((targetDate - creationDate) / (1000 * 60 * 60 * 24));
-
       const scoreLog = new ScoreLog({
+        entityType: 'task',
         taskId: task._id,
         userId: task.assignedTo,
-        taskTitle: task.title,
+        entityTitle: task.title,
         taskType: task.taskType,
         taskCategory: task.taskCategory || 'regular',
         score: task.completionScore,
         scorePercentage: task.completionScore * 100,
+        plannedDate: targetDate || task.dueDate,
+        completedDate: task.completedAt,
         plannedDays: plannedDays,
         actualDays: actualDays,
-        startDate: task.taskCategory === 'date-range' ? task.startDate : undefined,
+        startDate: task.taskCategory === 'date-range' ? task.startDate : (creationDate || undefined),
         endDate: task.taskCategory === 'date-range' ? task.endDate : undefined,
         completedAt: task.completedAt,
-        wasOnTime: task.completionScore >= 1.0,
+        wasOnTime: wasOnTime, // Use date comparison, not score
         scoreImpacted: task.scoreImpacted,
         impactReason: task.scoreImpacted ? 'Date extension with score impact' : null
       });

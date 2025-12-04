@@ -411,6 +411,18 @@ router.post('/', authenticateToken, async (req, res) => {
       });
     }
 
+    // Handle FMS configuration if provided
+    if (templateData.fmsConfiguration && templateData.fmsConfiguration.enabled && templateData.fmsConfiguration.fmsId) {
+      const FMS = (await import('../models/FMS.js')).default;
+      const fms = await FMS.findById(templateData.fmsConfiguration.fmsId);
+      if (!fms) {
+        return res.status(404).json({
+          error: 'FMS template not found'
+        });
+      }
+      templateData.fmsConfiguration.fmsName = fms.fmsName;
+    }
+
     // Create template
     const template = new ChecklistTemplate(templateData);
     await template.save();

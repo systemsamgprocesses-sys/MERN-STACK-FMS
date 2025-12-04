@@ -258,6 +258,12 @@ router.patch('/:id/items/:itemIndex', authenticateToken, async (req, res) => {
         if (actionTaken) {
           occurrence.items[itemIndex].actionTaken = actionTaken;
         }
+      } else if (status === 'pending') {
+        // Reset to pending - clear all status-related fields
+        occurrence.items[itemIndex].checked = false;
+        occurrence.items[itemIndex].checkedAt = null;
+        occurrence.items[itemIndex].notDoneReason = undefined;
+        occurrence.items[itemIndex].actionTaken = undefined;
       }
     }
 

@@ -30,6 +30,7 @@ const ChecklistTemplateForm: React.FC = () => {
     weeklyDays: [] as number[],
     monthlyDates: [] as number[],
     excludeSunday: false,
+    fmsId: '',
   });
 
   const [items, setItems] = useState<ChecklistItem[]>([
@@ -38,6 +39,7 @@ const ChecklistTemplateForm: React.FC = () => {
 
   const [users, setUsers] = useState<User[]>([]);
   const [categories, setCategories] = useState<string[]>([]);
+  const [fmsList, setFmsList] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
@@ -45,6 +47,7 @@ const ChecklistTemplateForm: React.FC = () => {
   useEffect(() => {
     fetchUsers();
     fetchCategories();
+    fetchFMSList();
   }, []);
 
   const fetchUsers = async () => {
@@ -76,6 +79,25 @@ const ChecklistTemplateForm: React.FC = () => {
       console.error('Error fetching categories:', error);
       // Use default category if fetch fails
       setCategories(['General']);
+    }
+  };
+
+  const fetchFMSList = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const params = {
+        userId: user?.id,
+        isAdmin: (user?.role === 'admin' || user?.role === 'superadmin') ? 'true' : 'false'
+      };
+      const response = await axios.get(`${address}/api/fms`, {
+        headers: { Authorization: `Bearer ${token}` },
+        params
+      });
+      if (response.data.success && Array.isArray(response.data.fmsList)) {
+        setFmsList(response.data.fmsList);
+      }
+    } catch (error) {
+      console.error('Error fetching FMS list:', error);
     }
   };
 
@@ -164,7 +186,7 @@ const ChecklistTemplateForm: React.FC = () => {
     try {
       setLoading(true);
 
-      const payload = {
+      const payload: any = {
         name: formData.name,
         category: formData.category,
         items: items,
@@ -179,6 +201,15 @@ const ChecklistTemplateForm: React.FC = () => {
         monthlyDates: formData.frequency === 'monthly' ? formData.monthlyDates : undefined,
         excludeSunday: formData.excludeSunday,
       };
+
+      // Add FMS configuration if FMS is selected
+      if (formData.fmsId) {
+        payload.fmsConfiguration = {
+          enabled: true,
+          fmsId: formData.fmsId,
+          triggerOnSubmission: true
+        };
+      }
 
       console.log('Payload being sent:', payload);
 
@@ -368,6 +399,39 @@ const ChecklistTemplateForm: React.FC = () => {
                 )}
               </div>
             ))}
+          </div>
+        </div>
+
+        {/* FMS Configuration */}
+        <div className="p-6 rounded-lg shadow-md" style={{ backgroundColor: 'var(--color-surface)' }}>
+          <h2 className="text-xl font-semibold mb-4" style={{ color: 'var(--color-text)' }}>
+            FMS Trigger (Optional)
+          </h2>
+          <p className="text-sm mb-4" style={{ color: 'var(--color-textSecondary)' }}>
+            Select an FMS template to automatically trigger when this checklist is submitted.
+          </p>
+          <div>
+            <label className="block text-sm font-medium mb-1" style={{ color: 'var(--color-text)' }}>
+              FMS Template
+            </label>
+            <select
+              name="fmsId"
+              value={formData.fmsId}
+              onChange={handleInputChange}
+              className="w-full px-3 py-2 rounded border"
+              style={{
+                backgroundColor: 'var(--color-background)',
+                color: 'var(--color-text)',
+                borderColor: 'var(--color-border)'
+              }}
+            >
+              <option value="">None - No FMS will be triggered</option>
+              {fmsList.map(fms => (
+                <option key={fms._id} value={fms._id}>
+                  {fms.fmsId} - {fms.fmsName}
+                </option>
+              ))}
+            </select>
           </div>
         </div>
 

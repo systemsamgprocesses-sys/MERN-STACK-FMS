@@ -84,20 +84,22 @@ const ChecklistOccurrenceDetail: React.FC = () => {
     }
   };
 
-  const handleItemDone = async (itemIndex: number) => {
+  const handleItemDone = async (itemIndex: number, isCurrentlyDone: boolean) => {
     if (!occurrence) return;
 
     try {
       setSaving(true);
       const token = localStorage.getItem('token');
+      // If already done, toggle to pending (uncheck). Otherwise, mark as done.
+      const newStatus = isCurrentlyDone ? 'pending' : 'done';
       const response = await axios.patch(
         `${address}/api/checklist-occurrences/${id}/items/${itemIndex}`,
-        { status: 'done' },
+        { status: newStatus },
         { headers: { Authorization: `Bearer ${token}` } }
       );
       
       setOccurrence(response.data);
-      setSuccess('Item marked as done');
+      setSuccess(isCurrentlyDone ? 'Item unchecked' : 'Item marked as done');
       setTimeout(() => setSuccess(''), 2000);
     } catch (error) {
       console.error('Error updating item:', error);
@@ -107,8 +109,33 @@ const ChecklistOccurrenceDetail: React.FC = () => {
     }
   };
 
-  const handleItemNotDone = (itemIndex: number) => {
+  const handleItemNotDone = async (itemIndex: number, isCurrentlyNotDone: boolean) => {
     if (!occurrence) return;
+    
+    // If already not done, toggle to pending (uncheck)
+    if (isCurrentlyNotDone) {
+      try {
+        setSaving(true);
+        const token = localStorage.getItem('token');
+        const response = await axios.patch(
+          `${address}/api/checklist-occurrences/${id}/items/${itemIndex}`,
+          { status: 'pending' },
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+        
+        setOccurrence(response.data);
+        setSuccess('Item unchecked');
+        setTimeout(() => setSuccess(''), 2000);
+      } catch (error) {
+        console.error('Error updating item:', error);
+        setError('Failed to update item');
+      } finally {
+        setSaving(false);
+      }
+      return;
+    }
+    
+    // Otherwise, show modal to mark as not done
     const item = occurrence.items[itemIndex];
     setNotDoneData({
       itemIndex,
@@ -376,146 +403,168 @@ const ChecklistOccurrenceDetail: React.FC = () => {
         </div>
       </div>
 
-      {/* Checklist Items */}
-      <div className="space-y-4 mb-6">
-        {occurrence.items.map((item, index) => {
-          const isDone = item.status === 'done' || (item.checked && item.status !== 'not-done');
-          const isNotDone = item.status === 'not-done';
-          
-          return (
-            <div
-              key={index}
-              className="p-4 rounded-lg border-2 transition-all"
-              style={{
-                backgroundColor: 'var(--color-surface)',
-                borderColor: isDone 
-                  ? 'var(--color-success)' 
-                  : isNotDone 
-                    ? 'var(--color-danger)' 
-                    : 'var(--color-border)'
-              }}
-            >
-              <div className="flex items-start gap-3">
-                <div className="flex-1">
-                  <div className="flex items-center gap-3 mb-2">
-                    <span
-                      className="font-bold text-lg px-3 py-1 rounded"
-                      style={{
-                        backgroundColor: isDone 
-                          ? 'var(--color-success)' 
-                          : isNotDone 
-                            ? 'var(--color-danger)' 
-                            : 'var(--color-primary)',
-                        color: 'white'
-                      }}
-                    >
-                      {item.label}
-                    </span>
-                    {item.description && (
-                      <span style={{ color: 'var(--color-text)' }}>
-                        {item.description}
-                      </span>
-                    )}
-                    {isDone && (
-                      <span className="text-xs px-2 py-1 rounded" style={{ backgroundColor: 'var(--color-success-light)', color: 'var(--color-success)' }}>
-                        Done
-                      </span>
-                    )}
-                    {isNotDone && (
-                      <span className="text-xs px-2 py-1 rounded" style={{ backgroundColor: 'var(--color-danger-light)', color: 'var(--color-danger)' }}>
-                        Not Done
-                      </span>
-                    )}
-                  </div>
-
-                  {isNotDone && item.notDoneReason && (
-                    <div className="mt-2 p-3 rounded" style={{ backgroundColor: 'var(--color-danger-light)' }}>
-                      <p className="text-sm font-semibold mb-1" style={{ color: 'var(--color-danger)' }}>
-                        Reason:
-                      </p>
-                      <p className="text-sm" style={{ color: 'var(--color-text)' }}>
-                        {item.notDoneReason}
-                      </p>
-                      {item.actionTaken && item.actionTaken.type !== 'none' && (
-                        <div className="mt-2">
-                          <p className="text-sm font-semibold mb-1" style={{ color: 'var(--color-danger)' }}>
-                            Action Taken: {item.actionTaken.type === 'complaint' ? 'Complaint Raised' : 'Task Created'}
-                          </p>
-                          {item.actionTaken.description && (
-                            <p className="text-sm" style={{ color: 'var(--color-text)' }}>
-                              {item.actionTaken.description}
-                            </p>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  )}
-
-                  <div className="mt-3">
-                    <label className="block text-sm font-medium mb-1" style={{ color: 'var(--color-textSecondary)' }}>
-                      Remarks (optional)
-                    </label>
-                    <div className="flex gap-2">
-                      <input
-                        type="text"
-                        value={item.remarks || ''}
-                        onChange={(e) => handleRemarksChange(index, e.target.value)}
-                        disabled={occurrence.status === 'completed'}
-                        placeholder="Add any notes or remarks..."
-                        className="flex-1 px-3 py-2 rounded border"
+      {/* Checklist Items - Table/Sheet Format */}
+      <div className="mb-6 overflow-x-auto">
+        <div className="rounded-lg border shadow-sm" style={{ backgroundColor: 'var(--color-surface)', borderColor: 'var(--color-border)' }}>
+          <table className="w-full border-collapse" style={{ backgroundColor: 'var(--color-surface)' }}>
+            <thead>
+              <tr style={{ backgroundColor: 'var(--color-background)', borderBottom: '2px solid var(--color-border)' }}>
+                <th className="px-4 py-3 text-left font-semibold text-sm" style={{ color: 'var(--color-text)', minWidth: '60px' }}>Label</th>
+                <th className="px-4 py-3 text-left font-semibold text-sm" style={{ color: 'var(--color-text)' }}>Description</th>
+                <th className="px-4 py-3 text-center font-semibold text-sm" style={{ color: 'var(--color-text)', minWidth: '100px' }}>Done</th>
+                <th className="px-4 py-3 text-center font-semibold text-sm" style={{ color: 'var(--color-text)', minWidth: '120px' }}>Not Done</th>
+                <th className="px-4 py-3 text-left font-semibold text-sm" style={{ color: 'var(--color-text)' }}>Remarks</th>
+                <th className="px-4 py-3 text-left font-semibold text-sm" style={{ color: 'var(--color-text)', minWidth: '150px' }}>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {occurrence.items.map((item, index) => {
+                const isDone = item.status === 'done' || (item.checked && item.status !== 'not-done');
+                const isNotDone = item.status === 'not-done';
+                
+                return (
+                  <tr
+                    key={index}
+                    className="border-b transition-colors hover:opacity-90"
+                    style={{
+                      borderColor: 'var(--color-border)',
+                      backgroundColor: isDone 
+                        ? 'rgba(34, 197, 94, 0.1)' 
+                        : isNotDone 
+                          ? 'rgba(239, 68, 68, 0.1)' 
+                          : 'var(--color-surface)'
+                    }}
+                  >
+                    <td className="px-4 py-3">
+                      <span
+                        className="inline-block font-bold text-lg px-3 py-1 rounded"
                         style={{
-                          backgroundColor: 'var(--color-background)',
-                          color: 'var(--color-text)',
-                          borderColor: 'var(--color-border)'
+                          backgroundColor: isDone 
+                            ? 'var(--color-success)' 
+                            : isNotDone 
+                              ? 'var(--color-danger)' 
+                              : 'var(--color-primary)',
+                          color: 'white'
                         }}
-                      />
-                      {occurrence.status !== 'completed' && (
-                        <button
-                          onClick={() => handleSaveRemarks(index)}
-                          disabled={saving}
-                          className="px-4 py-2 rounded flex items-center gap-2"
-                          style={{ backgroundColor: 'var(--color-primary)', color: 'white' }}
-                        >
-                          <Save className="w-4 h-4" />
-                          Save
-                        </button>
-                      )}
-                    </div>
-                  </div>
-
-                  {occurrence.status !== 'completed' && !isDone && !isNotDone && (
-                    <div className="mt-3 flex gap-2">
-                      <button
-                        onClick={() => handleItemDone(index)}
-                        disabled={saving}
-                        className="px-4 py-2 rounded flex items-center gap-2"
-                        style={{ backgroundColor: 'var(--color-success)', color: 'white' }}
                       >
-                        <CheckCircle2 className="w-4 h-4" />
-                        Mark as Done
-                      </button>
-                      <button
-                        onClick={() => handleItemNotDone(index)}
-                        disabled={saving}
-                        className="px-4 py-2 rounded flex items-center gap-2"
-                        style={{ backgroundColor: 'var(--color-danger)', color: 'white' }}
-                      >
-                        <AlertCircle className="w-4 h-4" />
-                        Mark as Not Done
-                      </button>
-                    </div>
-                  )}
-
-                  {item.checkedAt && (
-                    <p className="text-xs mt-2" style={{ color: 'var(--color-textSecondary)' }}>
-                      Checked at: {new Date(item.checkedAt).toLocaleString()}
-                    </p>
-                  )}
-                </div>
-              </div>
-            </div>
-          );
-        })}
+                        {item.label}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3" style={{ color: 'var(--color-text)' }}>
+                      {item.description || '-'}
+                    </td>
+                    <td className="px-4 py-3 text-center">
+                      <label className="flex items-center justify-center cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={isDone}
+                          onChange={() => {
+                            if (occurrence.status !== 'completed' && !saving) {
+                              handleItemDone(index, isDone);
+                            }
+                          }}
+                          disabled={occurrence.status === 'completed' || saving}
+                          className="w-6 h-6 rounded border-2 cursor-pointer transition-all"
+                          style={{
+                            accentColor: '#22c55e',
+                            borderColor: isDone ? '#22c55e' : 'var(--color-border)',
+                            backgroundColor: isDone ? '#22c55e' : 'transparent',
+                            opacity: (occurrence.status === 'completed' || saving) ? 0.5 : 1,
+                            cursor: (occurrence.status === 'completed' || saving) ? 'not-allowed' : 'pointer'
+                          }}
+                        />
+                      </label>
+                    </td>
+                    <td className="px-4 py-3 text-center">
+                      <label className="flex items-center justify-center cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={isNotDone}
+                          onChange={() => {
+                            if (occurrence.status !== 'completed' && !saving) {
+                              handleItemNotDone(index, isNotDone);
+                            }
+                          }}
+                          disabled={occurrence.status === 'completed' || saving}
+                          className="w-6 h-6 rounded border-2 cursor-pointer transition-all"
+                          style={{
+                            accentColor: '#ef4444',
+                            borderColor: isNotDone ? '#ef4444' : 'var(--color-border)',
+                            backgroundColor: isNotDone ? '#ef4444' : 'transparent',
+                            opacity: (occurrence.status === 'completed' || saving) ? 0.5 : 1,
+                            cursor: (occurrence.status === 'completed' || saving) ? 'not-allowed' : 'pointer'
+                          }}
+                        />
+                      </label>
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="flex gap-2">
+                        <input
+                          type="text"
+                          value={item.remarks || ''}
+                          onChange={(e) => handleRemarksChange(index, e.target.value)}
+                          disabled={occurrence.status === 'completed'}
+                          placeholder="Add remarks..."
+                          className="flex-1 px-2 py-1 text-sm rounded border"
+                          style={{
+                            backgroundColor: 'var(--color-background)',
+                            color: 'var(--color-text)',
+                            borderColor: 'var(--color-border)'
+                          }}
+                        />
+                        {occurrence.status !== 'completed' && (
+                          <button
+                            onClick={() => handleSaveRemarks(index)}
+                            disabled={saving}
+                            className="px-2 py-1 rounded text-xs flex items-center gap-1"
+                            style={{ backgroundColor: 'var(--color-primary)', color: 'white' }}
+                            title="Save remarks"
+                          >
+                            <Save className="w-3 h-3" />
+                          </button>
+                        )}
+                      </div>
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="space-y-1">
+                        {isDone && (
+                          <span className="inline-block text-xs px-2 py-1 rounded" style={{ backgroundColor: 'var(--color-success-light)', color: 'var(--color-success)' }}>
+                            ✓ Done
+                          </span>
+                        )}
+                        {isNotDone && (
+                          <div>
+                            <span className="inline-block text-xs px-2 py-1 rounded mb-1" style={{ backgroundColor: 'var(--color-danger-light)', color: 'var(--color-danger)' }}>
+                              ✗ Not Done
+                            </span>
+                            {item.notDoneReason && (
+                              <div className="text-xs mt-1 p-2 rounded" style={{ backgroundColor: 'rgba(239, 68, 68, 0.1)', color: 'var(--color-text)' }}>
+                                <strong>Reason:</strong> {item.notDoneReason}
+                                {item.actionTaken && item.actionTaken.type !== 'none' && (
+                                  <div className="mt-1">
+                                    <strong>Action:</strong> {item.actionTaken.type === 'complaint' ? 'Complaint Raised' : 'Task Created'}
+                                  </div>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        )}
+                        {!isDone && !isNotDone && (
+                          <span className="text-xs" style={{ color: 'var(--color-textSecondary)' }}>Pending</span>
+                        )}
+                        {item.checkedAt && (
+                          <p className="text-xs mt-1" style={{ color: 'var(--color-textSecondary)' }}>
+                            {new Date(item.checkedAt).toLocaleString()}
+                          </p>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
       </div>
 
       {/* Not Done Modal */}

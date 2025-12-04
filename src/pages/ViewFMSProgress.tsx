@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { CheckSquare, Clock, AlertCircle, Upload, RotateCcw, Printer, ArrowRight, Users } from 'lucide-react';
+import { CheckSquare, Clock, AlertCircle, Upload, RotateCcw, Printer, ArrowRight, Users, X, FileText } from 'lucide-react';
 import axios from 'axios';
 import { address } from '../../utils/ipAddress';
 import { useLocation, useNavigate } from 'react-router-dom';
@@ -450,34 +450,53 @@ const ViewFMSProgress: React.FC = () => {
     };
   }, [projects]);
 
-  const myPendingSteps = useMemo(() => {
+  // Get updatable pending steps - only those where Update button is available
+  const updatablePendingSteps = useMemo(() => {
     if (!user) return [];
     const items: Array<{
       projectId: string;
       projectName: string;
+      project: Project;
       task: any;
+      taskIndex: number;
       isOverdue: boolean;
+      fmsName: string;
     }> = [];
 
     projects.forEach(project => {
       const tasks = normalizeTasks(project.tasks);
-      tasks.forEach(task => {
-        const assignedToUser = task.who?.some((w: any) => (w?._id || w) === user.id);
+      tasks.forEach((task, index) => {
+        // Check if user is assigned to this task
+        const assignedToUser = task.who?.some((w: any) => {
+          const userId = typeof w === 'object' && w !== null ? (w._id || w) : w;
+          return userId?.toString() === user.id?.toString();
+        });
         if (!assignedToUser) return;
+        
+        // Check if task is done
         if (task.status === 'Done') return;
+        
+        // Check if this step can be updated (Update button would be shown)
+        if (!canUpdateStep(index, tasks)) return;
+        
         const isOverdue = task.plannedDueDate && new Date(task.plannedDueDate) < new Date();
         items.push({
           projectId: project.projectId,
           projectName: project.projectName,
+          project,
           task,
-          isOverdue
+          taskIndex: index,
+          isOverdue,
+          fmsName: project.fmsId?.fmsName || 'Unknown FMS'
         });
       });
     });
 
     return items.sort((a, b) => {
+      // Overdue items first
       if (a.isOverdue && !b.isOverdue) return -1;
       if (!a.isOverdue && b.isOverdue) return 1;
+      // Then by due date
       return new Date(a.task.plannedDueDate || a.task.creationDate || 0).getTime() -
         new Date(b.task.plannedDueDate || b.task.creationDate || 0).getTime();
     });
@@ -640,38 +659,101 @@ const ViewFMSProgress: React.FC = () => {
           })}
         </div>
 
-        {/* Pending Steps Snapshot */}
-        {myPendingSteps.length > 0 && (
-          <div className="mb-4 p-3 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-sm">
-            <div className="flex items-center justify-between mb-3">
+        {/* Updatable Pending Steps Overview */}
+        {updatablePendingSteps.length > 0 && (
+          <div className="mb-6 p-5 rounded-2xl border-2 border-[var(--color-primary)]/20 bg-gradient-to-br from-[var(--color-primary)]/5 to-[var(--color-secondary)]/5 shadow-lg">
+            <div className="flex items-center justify-between mb-4">
               <div>
-                <h2 className="text-lg font-bold text-[var(--color-text)]">My Pending Steps</h2>
-                <p className="text-sm text-[var(--color-textSecondary)]">Steps assigned to you that still need attention</p>
+                <h2 className="text-2xl font-bold text-[var(--color-text)] flex items-center gap-2">
+                  <div className="w-2 h-8 bg-[var(--color-primary)] rounded-full"></div>
+                  Updatable Pending Steps
+                </h2>
+                <p className="text-sm text-[var(--color-textSecondary)] mt-1">
+                  Steps ready for update - Click any card to view details and update
+                </p>
               </div>
-              <span className="text-sm font-semibold text-[var(--color-primary)]">{myPendingSteps.length} pending</span>
+              <div className="flex items-center gap-3">
+                <span className="px-4 py-2 rounded-xl bg-[var(--color-primary)] text-white font-bold text-lg shadow-lg">
+                  {updatablePendingSteps.length}
+                </span>
+              </div>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {myPendingSteps.slice(0, 6).map((item, idx) => (
-                <div key={idx} className="p-4 rounded-xl border border-[var(--color-border)] bg-[var(--color-background)]">
-                  <div className="flex items-center justify-between mb-2">
-                    <p className="text-sm font-semibold text-[var(--color-text)] truncate">{item.task.what}</p>
-                    <span
-                      className={`px-2 py-0.5 text-xs rounded-full font-semibold ${
-                        item.isOverdue ? 'bg-red-100 text-red-600' : 'bg-yellow-100 text-yellow-700'
-                      }`}
-                    >
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+              {updatablePendingSteps.map((item, idx) => (
+                <div
+                  key={`${item.projectId}-${item.taskIndex}`}
+                  onClick={() => {
+                    setSelectedProject(item.project);
+                    setSelectedTask({ ...item.task, index: item.taskIndex });
+                    setTaskStatus(item.task.status === 'Awaiting Date' ? 'Pending' : item.task.status);
+                    setTaskPlannedDate(item.task.plannedDueDate ? new Date(item.task.plannedDueDate).toISOString().split('T')[0] : '');
+                  }}
+                  className={`group cursor-pointer p-4 rounded-xl border-2 transition-all duration-300 transform hover:scale-105 hover:shadow-xl ${
+                    item.isOverdue
+                      ? 'border-red-300 bg-gradient-to-br from-red-50 to-red-100/50 dark:from-red-900/20 dark:to-red-800/10'
+                      : 'border-[var(--color-border)] bg-[var(--color-surface)] hover:border-[var(--color-primary)]'
+                  }`}
+                >
+                  <div className="flex items-start justify-between mb-3">
+                    <div className="flex items-center gap-2">
+                      <div className={`w-10 h-10 rounded-lg flex items-center justify-center font-bold text-white ${
+                        item.isOverdue ? 'bg-red-500' : 'bg-[var(--color-primary)]'
+                      }`}>
+                        {item.task.stepNo}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-bold text-[var(--color-text)] line-clamp-2 group-hover:text-[var(--color-primary)] transition-colors">
+                          {item.task.what}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div className="space-y-2 mb-3">
+                    <div className="flex items-center gap-2 text-xs">
+                      <span className="font-semibold text-[var(--color-textSecondary)]">Project:</span>
+                      <span className="text-[var(--color-text)] truncate">{item.projectName}</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-xs">
+                      <span className="font-semibold text-[var(--color-textSecondary)]">FMS:</span>
+                      <span className="text-[var(--color-text)] truncate">{item.fmsName}</span>
+                    </div>
+                    {item.task.plannedDueDate && (
+                      <div className={`flex items-center gap-2 text-xs ${
+                        item.isOverdue ? 'text-red-600 font-semibold' : 'text-[var(--color-textSecondary)]'
+                      }`}>
+                        <Clock size={14} />
+                        <span>Due: {formatDate(item.task.plannedDueDate)}</span>
+                        {item.isOverdue && <span className="ml-1">⚠️</span>}
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="flex items-center justify-between pt-3 border-t border-[var(--color-border)]">
+                    <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
+                      item.isOverdue
+                        ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
+                        : item.task.status === 'In Progress'
+                        ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
+                        : 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400'
+                    }`}>
                       {item.isOverdue ? 'Overdue' : item.task.status}
                     </span>
+                    <button className="px-3 py-1 rounded-lg bg-[var(--color-primary)] text-white text-xs font-semibold hover:opacity-90 transition-opacity flex items-center gap-1">
+                      Update
+                      <ArrowRight size={12} />
+                    </button>
                   </div>
-                  <p className="text-xs text-[var(--color-textSecondary)] truncate mb-1">{item.projectName}</p>
-                  {item.task.plannedDueDate && (
-                    <p className="text-xs text-[var(--color-textSecondary)] flex items-center gap-1">
-                      <Clock size={12} /> Due {formatDate(item.task.plannedDueDate)}
-                    </p>
-                  )}
                 </div>
               ))}
             </div>
+            {updatablePendingSteps.length > 12 && (
+              <div className="mt-4 text-center">
+                <p className="text-sm text-[var(--color-textSecondary)]">
+                  Showing all {updatablePendingSteps.length} updatable steps
+                </p>
+              </div>
+            )}
           </div>
         )}
 
@@ -1262,125 +1344,217 @@ const ViewFMSProgress: React.FC = () => {
           </div>
         )}
 
-        {selectedTask && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-[var(--color-surface)] rounded-lg p-6 max-w-lg w-full mx-4 max-h-[90vh] overflow-y-auto">
-              <h3 className="text-xl font-bold text-[var(--color-text)] mb-4">
-                Update Task: {selectedTask.what}
-              </h3>
-              
-              <div className="space-y-4">
-                {selectedTask.requiresChecklist && selectedTask.checklistItems?.length > 0 && (
-                  <div>
-                    <label className="block text-sm font-medium text-[var(--color-text)] mb-2">
-                      Checklist (Required) *
-                    </label>
-                    <div className="space-y-2 p-3 rounded-lg bg-[var(--color-background)]">
-                      {selectedTask.checklistItems.map((item: any, idx: number) => (
-                        <div key={idx} className="flex items-center space-x-2">
-                          <input
-                            type="checkbox"
-                            checked={item.completed}
-                            onChange={(e) => {
-                              const updatedItems = [...selectedTask.checklistItems];
-                              updatedItems[idx].completed = e.target.checked;
-                              setSelectedTask({
-                                ...selectedTask,
-                                checklistItems: updatedItems
-                              });
-                            }}
-                            className="w-4 h-4"
-                          />
-                          <span className={`text-sm ${item.completed ? 'line-through text-[var(--color-textSecondary)]' : 'text-[var(--color-text)]'}`}>
-                            {item.text}
-                          </span>
-                        </div>
-                      ))}
+        {selectedTask && selectedProject && (
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+            <div className="bg-[var(--color-surface)] rounded-2xl shadow-2xl max-w-3xl w-full max-h-[95vh] overflow-hidden flex flex-col">
+              {/* Modal Header */}
+              <div className="bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-secondary)] p-6 text-white">
+                <div className="flex items-start justify-between mb-2">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-3 mb-2">
+                      <div className="w-12 h-12 rounded-xl bg-white/20 flex items-center justify-center font-bold text-xl backdrop-blur-sm">
+                        {selectedTask.stepNo}
+                      </div>
+                      <div>
+                        <h3 className="text-2xl font-bold mb-1">{selectedTask.what}</h3>
+                        <p className="text-sm text-white/80">{selectedProject.projectName}</p>
+                      </div>
                     </div>
+                    {selectedTask.how && (
+                      <p className="text-sm text-white/90 mt-2 ml-16">{selectedTask.how}</p>
+                    )}
                   </div>
-                )}
-
-                <div>
-                  <label className="block text-sm font-medium text-[var(--color-text)] mb-2">Status</label>
-                  <select
-                    value={taskStatus}
-                    onChange={(e) => setTaskStatus(e.target.value)}
-                    className="w-full px-4 py-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] text-[var(--color-text)]"
-                  >
-                    <option value="Pending">Pending</option>
-                    <option value="In Progress">In Progress</option>
-                    <option value="Done">Done</option>
-                  </select>
-                </div>
-
-                {shouldShowPlannedDateInput && (
-                  <div>
-                    <label className="block text-sm font-medium text-[var(--color-text)] mb-2">
-                      Planned Date <span className="text-[var(--color-error)]">*</span>
-                    </label>
-                    <input
-                      type="date"
-                      value={taskPlannedDate}
-                      onChange={(e) => setTaskPlannedDate(e.target.value)}
-                      className="w-full px-4 py-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] text-[var(--color-text)]"
-                      min={new Date().toISOString().split('T')[0]}
-                    />
-                    <p className="text-xs text-[var(--color-textSecondary)] mt-1">
-                      Select the target date for this step. Sundays will automatically shift to Monday.
-                    </p>
-                  </div>
-                )}
-
-                <div>
-                  <label className="block text-sm font-medium text-[var(--color-text)] mb-2">Notes</label>
-                  <textarea
-                    value={taskNotes}
-                    onChange={(e) => setTaskNotes(e.target.value)}
-                    className="w-full px-4 py-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] text-[var(--color-text)]"
-                    rows={3}
-                    placeholder="Add notes..."
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-[var(--color-text)] mb-2">
-                    Attachments (Max 3 files, 2MB each)
-                  </label>
-                  {selectedTask.requireAttachments && (
-                    <p className="text-xs mb-2" style={{ color: selectedTask.mandatoryAttachments ? 'var(--color-error)' : 'var(--color-textSecondary)' }}>
-                      {selectedTask.mandatoryAttachments
-                        ? 'Attachments are required to complete this step.'
-                        : 'Attachments are recommended for this step.'}
-                    </p>
-                  )}
-                  <input
-                    type="file"
-                    multiple
-                    accept=".jpg,.jpeg,.png,.pdf,.docx,.xlsx"
-                    onChange={(e) => {
-                      const selectedFiles = e.target.files ? Array.from(e.target.files) : [];
-                      if (selectedFiles.length > 3) {
-                        alert('Maximum 3 files allowed');
-                        return;
-                      }
-                      const oversized = selectedFiles.find(f => f.size > 2 * 1024 * 1024);
-                      if (oversized) {
-                        alert('Each file must be under 2MB');
-                        return;
-                      }
-                      setFiles(selectedFiles);
+                  <button
+                    onClick={() => {
+                      setSelectedTask(null);
+                      setTaskStatus('');
+                      setTaskNotes('');
+                      setFiles([]);
+                      setTaskPlannedDate('');
                     }}
-                    className="w-full"
-                  />
-                  {files.length > 0 && (
-                    <div className="mt-2 text-xs text-[var(--color-textSecondary)]">
-                      {files.length} file(s) selected
-                    </div>
+                    className="p-2 rounded-lg hover:bg-white/20 transition-colors"
+                  >
+                    <X size={20} />
+                  </button>
+                </div>
+                
+                {/* Task Info Bar */}
+                <div className="flex items-center gap-4 mt-4 pt-4 border-t border-white/20">
+                  <div className="flex items-center gap-2">
+                    <Users size={16} />
+                    <span className="text-sm">
+                      {selectedTask.who?.filter((w: any) => w).map((w: any) => {
+                        if (typeof w === 'object' && w !== null) {
+                          return w.username || w.name || w.email || 'Unknown';
+                        }
+                        return typeof w === 'string' ? w : 'Unknown';
+                      }).join(', ')}
+                    </span>
+                  </div>
+                  {selectedTask.plannedDueDate && (
+                    <>
+                      <span className="text-white/40">•</span>
+                      <div className="flex items-center gap-2">
+                        <Clock size={16} />
+                        <span className="text-sm">Due: {formatDate(selectedTask.plannedDueDate)}</span>
+                      </div>
+                    </>
                   )}
+                  <span className={`ml-auto px-3 py-1 rounded-full text-xs font-semibold ${
+                    selectedTask.status === 'Done' ? 'bg-green-500/30 text-white' :
+                    selectedTask.status === 'In Progress' ? 'bg-blue-500/30 text-white' :
+                    'bg-yellow-500/30 text-white'
+                  }`}>
+                    {selectedTask.status}
+                  </span>
                 </div>
               </div>
 
-              <div className="flex items-center justify-end space-x-3 mt-6">
+              {/* Modal Body */}
+              <div className="flex-1 overflow-y-auto p-6">
+                <div className="space-y-5">
+                  {/* Checklist Section */}
+                  {selectedTask.requiresChecklist && selectedTask.checklistItems?.length > 0 && (
+                    <div className="p-4 rounded-xl border-2 border-[var(--color-primary)]/20 bg-[var(--color-background)]">
+                      <label className="block text-sm font-bold text-[var(--color-text)] mb-3 flex items-center gap-2">
+                        <CheckSquare size={18} className="text-[var(--color-primary)]" />
+                        Checklist (Required) *
+                      </label>
+                      <div className="space-y-3">
+                        {selectedTask.checklistItems.map((item: any, idx: number) => (
+                          <div key={idx} className="flex items-start space-x-3 p-2 rounded-lg hover:bg-[var(--color-surface)] transition-colors">
+                            <input
+                              type="checkbox"
+                              checked={item.completed}
+                              onChange={(e) => {
+                                const updatedItems = [...selectedTask.checklistItems];
+                                updatedItems[idx].completed = e.target.checked;
+                                setSelectedTask({
+                                  ...selectedTask,
+                                  checklistItems: updatedItems
+                                });
+                              }}
+                              className="w-5 h-5 mt-0.5 rounded border-2 border-[var(--color-border)] text-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]"
+                            />
+                            <span className={`text-sm flex-1 ${item.completed ? 'line-through text-[var(--color-textSecondary)]' : 'text-[var(--color-text)] font-medium'}`}>
+                              {item.text}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Status Section */}
+                  <div>
+                    <label className="block text-sm font-bold text-[var(--color-text)] mb-2 flex items-center gap-2">
+                      <RotateCcw size={16} className="text-[var(--color-primary)]" />
+                      Status
+                    </label>
+                    <select
+                      value={taskStatus}
+                      onChange={(e) => setTaskStatus(e.target.value)}
+                      className="w-full px-4 py-3 rounded-xl border-2 border-[var(--color-border)] bg-[var(--color-background)] text-[var(--color-text)] font-medium focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/20 transition-all"
+                    >
+                      <option value="Pending">Pending</option>
+                      <option value="In Progress">In Progress</option>
+                      <option value="Done">Done</option>
+                    </select>
+                  </div>
+
+                  {/* Planned Date Section */}
+                  {shouldShowPlannedDateInput && (
+                    <div>
+                      <label className="block text-sm font-bold text-[var(--color-text)] mb-2 flex items-center gap-2">
+                        <Clock size={16} className="text-[var(--color-primary)]" />
+                        Planned Date <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="date"
+                        value={taskPlannedDate}
+                        onChange={(e) => setTaskPlannedDate(e.target.value)}
+                        className="w-full px-4 py-3 rounded-xl border-2 border-[var(--color-border)] bg-[var(--color-background)] text-[var(--color-text)] font-medium focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/20 transition-all"
+                        min={new Date().toISOString().split('T')[0]}
+                      />
+                      <p className="text-xs text-[var(--color-textSecondary)] mt-2 flex items-center gap-1">
+                        <AlertCircle size={12} />
+                        Select the target date for this step. Sundays will automatically shift to Monday.
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Notes Section */}
+                  <div>
+                    <label className="block text-sm font-bold text-[var(--color-text)] mb-2 flex items-center gap-2">
+                      <FileText size={16} className="text-[var(--color-primary)]" />
+                      Notes
+                    </label>
+                    <textarea
+                      value={taskNotes}
+                      onChange={(e) => setTaskNotes(e.target.value)}
+                      className="w-full px-4 py-3 rounded-xl border-2 border-[var(--color-border)] bg-[var(--color-background)] text-[var(--color-text)] resize-none focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/20 transition-all"
+                      rows={4}
+                      placeholder="Add your notes, updates, or remarks here..."
+                    />
+                  </div>
+
+                  {/* Attachments Section */}
+                  <div>
+                    <label className="block text-sm font-bold text-[var(--color-text)] mb-2 flex items-center gap-2">
+                      <Upload size={16} className="text-[var(--color-primary)]" />
+                      Attachments (Max 3 files, 2MB each)
+                    </label>
+                    {selectedTask.requireAttachments && (
+                      <div className={`mb-3 p-3 rounded-lg border-2 ${
+                        selectedTask.mandatoryAttachments 
+                          ? 'border-red-300 bg-red-50 dark:bg-red-900/20' 
+                          : 'border-yellow-300 bg-yellow-50 dark:bg-yellow-900/20'
+                      }`}>
+                        <p className={`text-xs font-medium flex items-center gap-2 ${
+                          selectedTask.mandatoryAttachments ? 'text-red-700 dark:text-red-400' : 'text-yellow-700 dark:text-yellow-400'
+                        }`}>
+                          <AlertCircle size={14} />
+                          {selectedTask.mandatoryAttachments
+                            ? 'Attachments are required to complete this step.'
+                            : 'Attachments are recommended for this step.'}
+                        </p>
+                      </div>
+                    )}
+                    <div className="border-2 border-dashed border-[var(--color-border)] rounded-xl p-4 hover:border-[var(--color-primary)] transition-colors">
+                      <input
+                        type="file"
+                        multiple
+                        accept=".jpg,.jpeg,.png,.pdf,.docx,.xlsx"
+                        onChange={(e) => {
+                          const selectedFiles = e.target.files ? Array.from(e.target.files) : [];
+                          if (selectedFiles.length > 3) {
+                            alert('Maximum 3 files allowed');
+                            return;
+                          }
+                          const oversized = selectedFiles.find(f => f.size > 2 * 1024 * 1024);
+                          if (oversized) {
+                            alert('Each file must be under 2MB');
+                            return;
+                          }
+                          setFiles(selectedFiles);
+                        }}
+                        className="w-full text-sm text-[var(--color-textSecondary)] file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-[var(--color-primary)] file:text-white hover:file:opacity-90 cursor-pointer"
+                      />
+                      {files.length > 0 && (
+                        <div className="mt-3 p-2 rounded-lg bg-[var(--color-primary)]/10 border border-[var(--color-primary)]/20">
+                          <p className="text-sm font-semibold text-[var(--color-primary)] flex items-center gap-2">
+                            <Upload size={14} />
+                            {files.length} file(s) selected
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Modal Footer */}
+              <div className="border-t border-[var(--color-border)] p-6 bg-[var(--color-background)] flex items-center justify-end gap-3">
                 <button
                   onClick={() => {
                     setSelectedTask(null);
@@ -1389,14 +1563,15 @@ const ViewFMSProgress: React.FC = () => {
                     setFiles([]);
                     setTaskPlannedDate('');
                   }}
-                  className="px-4 py-2 border border-[var(--color-border)] text-[var(--color-text)] rounded-lg hover:bg-[var(--color-background)]"
+                  className="px-6 py-3 border-2 border-[var(--color-border)] text-[var(--color-text)] rounded-xl hover:bg-[var(--color-surface)] font-semibold transition-all"
                 >
                   Cancel
                 </button>
                 <button
                   onClick={handleTaskUpdate}
-                  className="px-4 py-2 bg-[var(--color-primary)] text-white rounded-lg hover:opacity-90"
+                  className="px-6 py-3 bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-secondary)] text-white rounded-xl hover:opacity-90 font-semibold shadow-lg transition-all flex items-center gap-2"
                 >
+                  <CheckSquare size={18} />
                   Save Changes
                 </button>
               </div>

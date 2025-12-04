@@ -499,11 +499,14 @@ router.post('/create-scheduled', async (req, res) => {
         const assignedByUser = await User.findById(firstTask.assignedBy).select('username email phoneNumber');
         
         if (assignedToUser && assignedByUser) {
+          console.log('📱 [Scheduled Task Route] Attempting to send WhatsApp notification for task group:', taskGroupId);
           const whatsappResult = await sendTaskAssignmentNotification(
             firstTask,
             assignedToUser,
             assignedByUser
           );
+          
+          console.log('📱 [Scheduled Task Route] WhatsApp result:', whatsappResult);
           
           // Update notification status for all tasks in the group
           if (whatsappResult.success) {
@@ -514,10 +517,16 @@ router.post('/create-scheduled', async (req, res) => {
                 whatsappNotifiedAt: new Date()
               }
             );
+            console.log('📱 [Scheduled Task Route] ✅ WhatsApp notification sent and tasks updated');
+          } else {
+            console.log('📱 [Scheduled Task Route] ❌ WhatsApp notification failed:', whatsappResult.error);
           }
+        } else {
+          console.log('📱 [Scheduled Task Route] ⚠️ Cannot send WhatsApp - missing assignedTo or assignedBy');
         }
       } catch (whatsappError) {
-        console.error('Error sending WhatsApp notification:', whatsappError);
+        console.error('📱 [Scheduled Task Route] ❌ Exception sending WhatsApp notification:', whatsappError);
+        console.error('📱 [Scheduled Task Route] Error stack:', whatsappError.stack);
         // Don't fail the task creation if WhatsApp fails
       }
     }
@@ -565,11 +574,14 @@ router.post('/', async (req, res) => {
     // Send WhatsApp notification
     try {
       if (populatedTask.assignedTo && populatedTask.assignedBy) {
+        console.log('📱 [Task Route] Attempting to send WhatsApp notification for task:', populatedTask._id);
         const whatsappResult = await sendTaskAssignmentNotification(
           populatedTask,
           populatedTask.assignedTo,
           populatedTask.assignedBy
         );
+        
+        console.log('📱 [Task Route] WhatsApp result:', whatsappResult);
         
         if (whatsappResult.success) {
           task.whatsappNotified = true;
@@ -579,10 +591,16 @@ router.post('/', async (req, res) => {
           // Update populated task
           populatedTask.whatsappNotified = true;
           populatedTask.whatsappNotifiedAt = task.whatsappNotifiedAt;
+          console.log('📱 [Task Route] ✅ WhatsApp notification sent and task updated');
+        } else {
+          console.log('📱 [Task Route] ❌ WhatsApp notification failed:', whatsappResult.error);
         }
+      } else {
+        console.log('📱 [Task Route] ⚠️ Cannot send WhatsApp - missing assignedTo or assignedBy');
       }
     } catch (whatsappError) {
-      console.error('Error sending WhatsApp notification:', whatsappError);
+      console.error('📱 [Task Route] ❌ Exception sending WhatsApp notification:', whatsappError);
+      console.error('📱 [Task Route] Error stack:', whatsappError.stack);
       // Don't fail the task creation if WhatsApp fails
     }
 

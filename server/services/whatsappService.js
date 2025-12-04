@@ -61,39 +61,45 @@ async function sendWhatsAppMessage(phoneNumber, message) {
     const settings = await getWhatsAppSettings();
     
     if (!settings.enabled) {
-      console.log('WhatsApp notifications are disabled');
+      console.log('📱 [WhatsApp] Notifications are disabled');
       return { success: false, error: 'WhatsApp notifications are disabled' };
     }
 
     if (!phoneNumber) {
+      console.log('📱 [WhatsApp] ❌ Phone number is missing');
       return { success: false, error: 'Phone number is required' };
     }
 
     // Clean phone number (remove spaces, ensure it starts with country code)
     const cleanPhone = phoneNumber.replace(/\s+/g, '').replace(/^\+?/, '+');
+    console.log('📱 [WhatsApp] Cleaned phone number:', cleanPhone);
 
     // Use Meta API if configured
     if (settings.provider === 'meta') {
+      console.log('📱 [WhatsApp] Using Meta API provider');
       return await sendViaMeta(cleanPhone, message, settings);
     }
 
     // Use Twilio if configured
     if (settings.provider === 'twilio') {
+      console.log('📱 [WhatsApp] Using Twilio provider');
       return await sendViaTwilio(cleanPhone, message, settings);
     }
     
     // Use custom API if configured
     if (settings.provider === 'custom' && settings.apiUrl) {
+      console.log('📱 [WhatsApp] Using Custom API provider');
       return await sendViaCustomAPI(cleanPhone, message, settings);
     }
 
     // Fallback: Log message (for development/testing)
-    console.log('WhatsApp message (not sent - no provider configured):');
-    console.log(`To: ${cleanPhone}`);
-    console.log(`Message: ${message}`);
+    console.log('📱 [WhatsApp] ⚠️ No provider configured - message logged only:');
+    console.log(`📱 [WhatsApp] To: ${cleanPhone}`);
+    console.log(`📱 [WhatsApp] Message: ${message.substring(0, 100)}...`);
     return { success: true, message: 'Message logged (no provider configured)' };
   } catch (error) {
-    console.error('Error sending WhatsApp message:', error);
+    console.error('📱 [WhatsApp] ❌ Error sending WhatsApp message:', error);
+    console.error('📱 [WhatsApp] Error details:', error.message);
     return { success: false, error: error.message };
   }
 }
@@ -106,16 +112,24 @@ async function sendViaMeta(phoneNumber, message, settings) {
     const phoneNumberId = process.env.META_PHONE_NUMBER_ID || settings.metaPhoneNumberId;
     const accessToken = process.env.META_ACCESS_TOKEN || settings.metaAccessToken;
 
+    console.log('📱 [Meta API] Phone Number ID:', phoneNumberId ? `${phoneNumberId.substring(0, 10)}...` : 'NOT SET');
+    console.log('📱 [Meta API] Access Token:', accessToken ? 'SET' : 'NOT SET');
+
     if (!phoneNumberId || !accessToken) {
-      throw new Error('Meta WhatsApp credentials not configured. Please provide Phone Number ID and Access Token.');
+      const missingFields = [];
+      if (!phoneNumberId) missingFields.push('Phone Number ID');
+      if (!accessToken) missingFields.push('Access Token');
+      throw new Error(`Meta WhatsApp credentials not configured. Missing: ${missingFields.join(', ')}`);
     }
 
     // Meta API endpoint
     const apiUrl = `https://graph.facebook.com/v18.0/${phoneNumberId}/messages`;
+    console.log('📱 [Meta API] Endpoint:', apiUrl);
 
     // Format phone number for Meta API (remove + and spaces, keep only digits)
     // Meta requires phone number in format: country code + number (e.g., 1234567890)
     const formattedPhone = phoneNumber.replace(/^\+/, '').replace(/\s+/g, '').replace(/[^\d]/g, '');
+    console.log('📱 [Meta API] Formatted phone:', formattedPhone);
 
     // Meta API request body
     const requestBody = {
@@ -127,6 +141,7 @@ async function sendViaMeta(phoneNumber, message, settings) {
       }
     };
 
+    console.log('📱 [Meta API] Sending request to Meta...');
     const response = await axios.post(apiUrl, requestBody, {
       headers: {
         'Authorization': `Bearer ${accessToken}`,
@@ -135,9 +150,16 @@ async function sendViaMeta(phoneNumber, message, settings) {
       timeout: 15000 // 15 second timeout
     });
 
+    console.log('📱 [Meta API] ✅ Response received:', response.status, response.statusText);
+    console.log('📱 [Meta API] Message ID:', response.data.messages?.[0]?.id || 'N/A');
+    
     return { success: true, messageId: response.data.messages?.[0]?.id || 'sent' };
   } catch (error) {
-    console.error('Meta WhatsApp API error:', error.response?.data || error.message);
+    console.error('📱 [Meta API] ❌ Error:', error.message);
+    if (error.response) {
+      console.error('📱 [Meta API] Response status:', error.response.status);
+      console.error('📱 [Meta API] Response data:', JSON.stringify(error.response.data, null, 2));
+    }
     const errorMessage = error.response?.data?.error?.message || error.message;
     return { success: false, error: errorMessage };
   }
@@ -208,15 +230,24 @@ async function sendViaCustomAPI(phoneNumber, message, settings) {
  */
 export async function sendTaskAssignmentNotification(task, assignedToUser, assignedByUser) {
   try {
+    console.log('📱 [WhatsApp] Starting task assignment notification...');
+    console.log('📱 [WhatsApp] Task:', task.title);
+    console.log('📱 [WhatsApp] Assigned To:', assignedToUser.username, 'Phone:', assignedToUser.phoneNumber);
+    console.log('📱 [WhatsApp] Assigned By:', assignedByUser.username);
+    
     // Get WhatsApp settings
     const settings = await getWhatsAppSettings();
+    console.log('📱 [WhatsApp] Settings enabled:', settings.enabled);
+    console.log('📱 [WhatsApp] Provider:', settings.provider);
     
     if (!settings.enabled) {
+      console.log('📱 [WhatsApp] ❌ Notifications are disabled in settings');
       return { success: false, error: 'WhatsApp notifications are disabled' };
     }
 
     // Check if user has phone number
     if (!assignedToUser.phoneNumber) {
+      console.log('📱 [WhatsApp] ❌ User does not have a phone number');
       return { success: false, error: 'User does not have a phone number' };
     }
 
@@ -269,13 +300,22 @@ Task Management System`;
 
     // Format message
     const message = formatTaskMessage(template, variables);
+    console.log('📱 [WhatsApp] Formatted message preview:', message.substring(0, 100) + '...');
 
     // Send WhatsApp message
+    console.log('📱 [WhatsApp] Sending message to:', assignedToUser.phoneNumber);
     const result = await sendWhatsAppMessage(assignedToUser.phoneNumber, message);
+    
+    if (result.success) {
+      console.log('📱 [WhatsApp] ✅ Message sent successfully!', result.messageId || '');
+    } else {
+      console.log('📱 [WhatsApp] ❌ Failed to send message:', result.error);
+    }
 
     return result;
   } catch (error) {
-    console.error('Error sending task assignment notification:', error);
+    console.error('📱 [WhatsApp] ❌ Error sending task assignment notification:', error);
+    console.error('📱 [WhatsApp] Error stack:', error.stack);
     return { success: false, error: error.message };
   }
 }

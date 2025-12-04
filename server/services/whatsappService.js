@@ -68,6 +68,41 @@ function formatTaskMessage(template, variables) {
 }
 
 /**
+ * Send WhatsApp template message using Meta API
+ */
+async function sendWhatsAppTemplateMessage(phoneNumber, templateParams, settings) {
+  try {
+    const settingsData = await getWhatsAppSettings();
+    
+    if (!settingsData.enabled) {
+      console.log('📱 [WhatsApp] Notifications are disabled');
+      return { success: false, error: 'WhatsApp notifications are disabled' };
+    }
+
+    if (!phoneNumber) {
+      console.log('📱 [WhatsApp] ❌ Phone number is missing');
+      return { success: false, error: 'Phone number is required' };
+    }
+
+    // Only Meta API supports templates
+    if (settingsData.provider !== 'meta') {
+      console.log('📱 [WhatsApp] ⚠️ Templates only supported with Meta API');
+      return { success: false, error: 'Templates only supported with Meta API' };
+    }
+
+    // Clean phone number (remove spaces, ensure it starts with country code)
+    const cleanPhone = phoneNumber.replace(/\s+/g, '').replace(/^\+?/, '+');
+    console.log('📱 [WhatsApp] Cleaned phone number:', cleanPhone);
+
+    return await sendViaMetaTemplate(cleanPhone, templateParams, settingsData);
+  } catch (error) {
+    console.error('📱 [WhatsApp] ❌ Error sending WhatsApp template message:', error);
+    console.error('📱 [WhatsApp] Error details:', error.message);
+    return { success: false, error: error.message };
+  }
+}
+
+/**
  * Send WhatsApp message using configured provider
  */
 async function sendWhatsAppMessage(phoneNumber, message) {
@@ -119,7 +154,128 @@ async function sendWhatsAppMessage(phoneNumber, message) {
 }
 
 /**
- * Send via Meta WhatsApp Business API
+ * Send via Meta WhatsApp Business API using Template
+ */
+async function sendViaMetaTemplate(phoneNumber, templateParams, settings) {
+  try {
+    const phoneNumberId = process.env.META_PHONE_NUMBER_ID || settings.metaPhoneNumberId;
+    const accessToken = process.env.META_ACCESS_TOKEN || settings.metaAccessToken;
+    const templateName = settings.templateName || 'task_assign';
+
+    console.log('📱 [Meta API] Phone Number ID:', phoneNumberId ? `${phoneNumberId.substring(0, 10)}...` : 'NOT SET');
+    console.log('📱 [Meta API] Access Token:', accessToken ? 'SET' : 'NOT SET');
+    console.log('📱 [Meta API] Template Name:', templateName);
+
+    if (!phoneNumberId || !accessToken) {
+      const missingFields = [];
+      if (!phoneNumberId) missingFields.push('Phone Number ID');
+      if (!accessToken) missingFields.push('Access Token');
+      throw new Error(`Meta WhatsApp credentials not configured. Missing: ${missingFields.join(', ')}`);
+    }
+
+    // Meta API endpoint
+    const apiUrl = `https://graph.facebook.com/v18.0/${phoneNumberId}/messages`;
+    console.log('📱 [Meta API] Endpoint:', apiUrl);
+
+    // Format phone number for Meta API
+    // Meta requires phone number in E.164 format without + sign: country code + number (e.g., 919915814908)
+    let formattedPhone = phoneNumber.replace(/\s+/g, '').replace(/[^\d+]/g, '');
+    
+    // Remove leading + if present
+    if (formattedPhone.startsWith('+')) {
+      formattedPhone = formattedPhone.substring(1);
+    }
+    
+    // Check if it's an Indian number and fix country code
+    // Indian numbers: 10 digits starting with 6-9, country code is 91
+    if (formattedPhone.length === 10 && /^[6-9]/.test(formattedPhone)) {
+      console.log('📱 [Meta API] ⚠️ Phone number missing country code, adding India (+91)');
+      formattedPhone = '91' + formattedPhone;
+    }
+    // If 11 digits starting with 99 (wrong country code), replace with 91
+    else if (formattedPhone.length === 11 && formattedPhone.startsWith('99')) {
+      console.log('📱 [Meta API] ⚠️ Phone number has wrong country code (99), correcting to India (+91)');
+      formattedPhone = '91' + formattedPhone.substring(2);
+    }
+    // If 11 digits starting with 91, it's already correct
+    else if (formattedPhone.length === 11 && formattedPhone.startsWith('91')) {
+      console.log('📱 [Meta API] ✅ Phone number already has correct India country code');
+    }
+    // If 10 digits, assume it needs country code
+    else if (formattedPhone.length === 10) {
+      console.log('📱 [Meta API] ⚠️ Phone number missing country code, adding India (+91)');
+      formattedPhone = '91' + formattedPhone;
+    }
+    
+    console.log('📱 [Meta API] Original phone:', phoneNumber);
+    console.log('📱 [Meta API] Formatted phone:', formattedPhone);
+
+    // Meta API request body using template
+    const requestBody = {
+      messaging_product: 'whatsapp',
+      to: formattedPhone,
+      type: 'template',
+      template: {
+        name: templateName,
+        language: {
+          code: 'en'
+        },
+        components: [
+          {
+            type: 'body',
+            parameters: [
+              {
+                type: 'text',
+                text: templateParams.assignedToName || 'User'
+              },
+              {
+                type: 'text',
+                text: templateParams.taskTitle || 'New Task'
+              },
+              {
+                type: 'text',
+                text: templateParams.taskType || 'One Time'
+              },
+              {
+                type: 'text',
+                text: templateParams.assignedByName || 'Admin'
+              },
+              {
+                type: 'text',
+                text: templateParams.dueDate || ''
+              }
+            ]
+          }
+        ]
+      }
+    };
+
+    console.log('📱 [Meta API] Sending template request to Meta...');
+    const response = await axios.post(apiUrl, requestBody, {
+      headers: {
+        'Authorization': `Bearer ${accessToken}`,
+        'Content-Type': 'application/json'
+      },
+      timeout: 15000 // 15 second timeout
+    });
+
+    console.log('📱 [Meta API] ✅ Response received:', response.status, response.statusText);
+    console.log('📱 [Meta API] Message ID:', response.data.messages?.[0]?.id || 'N/A');
+    
+    return { success: true, messageId: response.data.messages?.[0]?.id || 'sent' };
+  } catch (error) {
+    console.error('📱 [Meta API] ❌ Error:', error.message);
+    if (error.response) {
+      console.error('📱 [Meta API] Response status:', error.response.status);
+      console.error('📱 [Meta API] Response data:', JSON.stringify(error.response.data, null, 2));
+    }
+    const errorMessage = error.response?.data?.error?.message || error.message;
+    return { success: false, error: errorMessage };
+  }
+}
+
+/**
+ * Send via Meta WhatsApp Business API (legacy - for text messages)
  */
 async function sendViaMeta(phoneNumber, message, settings) {
   try {
@@ -177,15 +333,58 @@ async function sendViaMeta(phoneNumber, message, settings) {
     console.log('📱 [Meta API] Original phone:', phoneNumber);
     console.log('📱 [Meta API] Formatted phone:', formattedPhone);
 
-    // Meta API request body
+    // Get template name from settings
+    const templateName = settings.templateName || 'task_assign';
+    console.log('📱 [Meta API] Using template:', templateName);
+    
+    // Meta API request body using template
+    // Template parameters: {{1}} = assignedToName, {{2}} = taskTitle, {{3}} = taskType, {{4}} = assignedByName, {{5}} = dueDate
     const requestBody = {
       messaging_product: 'whatsapp',
       to: formattedPhone,
-      type: 'text',
-      text: {
-        body: message
+      type: 'template',
+      template: {
+        name: templateName,
+        language: {
+          code: 'en'
+        },
+        components: [
+          {
+            type: 'body',
+            parameters: [
+              {
+                type: 'text',
+                text: assignedToUser.username || 'User'
+              },
+              {
+                type: 'text',
+                text: task.title || 'New Task'
+              },
+              {
+                type: 'text',
+                text: taskTypeDisplay
+              },
+              {
+                type: 'text',
+                text: assignedByUser.username || 'Admin'
+              },
+              {
+                type: 'text',
+                text: formattedDueDate
+              }
+            ]
+          }
+        ]
       }
     };
+    
+    console.log('📱 [Meta API] Template parameters:', {
+      '{{1}}': assignedToUser.username || 'User',
+      '{{2}}': task.title || 'New Task',
+      '{{3}}': taskTypeDisplay,
+      '{{4}}': assignedByUser.username || 'Admin',
+      '{{5}}': formattedDueDate
+    });
 
     console.log('📱 [Meta API] Sending request to Meta...');
     const response = await axios.post(apiUrl, requestBody, {

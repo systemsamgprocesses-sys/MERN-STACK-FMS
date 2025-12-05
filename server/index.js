@@ -243,10 +243,28 @@ const brandAssetsDir = path.join(__dirname, '..', 'assets');
 if (config.nodeEnv === 'production') {
   const distAssetsDir = path.join(__dirname, '..', 'dist', 'assets');
   if (fs.existsSync(distAssetsDir)) {
-    app.use('/assets', express.static(distAssetsDir));
+    app.use('/assets', express.static(distAssetsDir, {
+      setHeaders: (res, filePath) => {
+        // Set correct MIME type for JavaScript module files
+        if (filePath.endsWith('.js') || filePath.endsWith('.mjs')) {
+          res.setHeader('Content-Type', 'application/javascript; charset=utf-8');
+        } else if (filePath.endsWith('.css')) {
+          res.setHeader('Content-Type', 'text/css; charset=utf-8');
+        }
+      }
+    }));
   }
 }
-app.use('/assets', express.static(brandAssetsDir));
+app.use('/assets', express.static(brandAssetsDir, {
+  setHeaders: (res, filePath) => {
+    // Set correct MIME type for JavaScript module files
+    if (filePath.endsWith('.js') || filePath.endsWith('.mjs')) {
+      res.setHeader('Content-Type', 'application/javascript; charset=utf-8');
+    } else if (filePath.endsWith('.css')) {
+      res.setHeader('Content-Type', 'text/css; charset=utf-8');
+    }
+  }
+}));
 
 // Health check endpoint
 app.get('/health', (req, res) => {
@@ -312,9 +330,47 @@ app.use('/api/fms-dashboard', fmsDashboardRoutes);
 // Serve frontend in production
 if (config.nodeEnv === 'production') {
   const distPath = path.join(__dirname, '..', 'dist');
-  app.use(express.static(distPath));
-  app.get('*', (req, res) => {
-    res.sendFile(path.join(distPath, 'index.html'));
+  
+  // Serve static files with proper MIME types - MUST come before catch-all route
+  app.use(express.static(distPath, {
+    setHeaders: (res, filePath) => {
+      // Set correct MIME type for JavaScript module files
+      if (filePath.endsWith('.js') || filePath.endsWith('.mjs')) {
+        res.setHeader('Content-Type', 'application/javascript; charset=utf-8');
+      } else if (filePath.endsWith('.css')) {
+        res.setHeader('Content-Type', 'text/css; charset=utf-8');
+      }
+    },
+    // Don't redirect, just serve the files or call next() if not found
+    redirect: false,
+    // Don't serve index.html for missing files
+    index: false
+  }));
+  
+  // Catch-all handler: serve index.html ONLY for routes without file extensions
+  // This allows SPA routing to work while preserving static file serving
+  app.get('*', (req, res, next) => {
+    // Skip API routes
+    if (req.path.startsWith('/api/')) {
+      return next();
+    }
+    
+    // Skip requests for files with extensions (static assets)
+    // These should have been handled by express.static above
+    const hasFileExtension = /\.(js|mjs|css|png|jpg|jpeg|gif|svg|ico|webp|woff|woff2|ttf|eot|json|map|html)$/i.test(req.path);
+    if (hasFileExtension) {
+      // If we reach here, the file wasn't found by express.static
+      // Return 404 instead of serving index.html
+      return res.status(404).send('File not found');
+    }
+    
+    // For routes without extensions, serve index.html (SPA routing)
+    res.sendFile(path.join(distPath, 'index.html'), (err) => {
+      if (err) {
+        console.error('Error sending index.html:', err);
+        res.status(500).send('Internal Server Error');
+      }
+    });
   });
 }
 

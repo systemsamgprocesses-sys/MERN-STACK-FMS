@@ -117,9 +117,17 @@ router.post('/', async (req, res) => {
 
     const start = new Date(startDate);
     const tasks = fms.steps.map((step, index) => {
-      const assignees = (Array.isArray(step.who) ? step.who : [])
-        .map(normalizeUserId)
-        .filter(Boolean);
+      // Handle both single who (new) and array who (backward compatibility)
+      let assignees = [];
+      if (Array.isArray(step.who)) {
+        assignees = step.who.map(normalizeUserId).filter(Boolean);
+      } else if (step.who) {
+        // Single assignee
+        const normalized = normalizeUserId(step.who);
+        if (normalized) {
+          assignees = [normalized];
+        }
+      }
 
       if (assignees.length === 0) {
         throw createTemplateValidationError(
@@ -151,6 +159,11 @@ router.post('/', async (req, res) => {
           totalHours = (step.whenDays || 0) * 24 + (step.whenHours || 0);
         }
         plannedDueDate = new Date(start.getTime() + totalHours * 60 * 60 * 1000);
+      } else if (step.whenType === 'dependent') {
+        // Dependent steps will be calculated when the previous step completes
+        // For now, set status to 'Awaiting Date' or 'Not Started'
+        status = 'Not Started';
+        // The due date will be calculated when the dependent step is completed
       } else {
         status = 'Awaiting Date';
       }
@@ -160,7 +173,7 @@ router.post('/', async (req, res) => {
       return {
         stepNo: step.stepNo,
         what: step.what,
-        who: assignees,
+        who: assignees[0], // Use first assignee (single doer)
         how: step.how,
         plannedDueDate: normalizedDueDate,
         status,
@@ -322,18 +335,28 @@ router.put('/:projectId/tasks/:taskIndex', async (req, res) => {
 
       if (nextTask.whenType === 'dependent') {
         // For dependent tasks, calculate due date from current completion
-        // Use the NEXT step's when value, not the current step's
         const nextStep = project.fmsId.steps[nextTaskIndex];
         const completionDate = task.actualCompletedOn || task.completedAt || new Date();
         let dueDate = new Date(completionDate);
 
-        if (nextStep.whenUnit === 'days') {
-          dueDate.setDate(dueDate.getDate() + nextStep.when);
-        } else if (nextStep.whenUnit === 'hours') {
-          dueDate.setHours(dueDate.getHours() + nextStep.when);
-        } else if (nextStep.whenUnit === 'days+hours') {
-          const totalHours = (nextStep.whenDays || 0) * 24 + (nextStep.whenHours || 0);
-          dueDate.setHours(dueDate.getHours() + totalHours);
+        // Check if step has specific dependency configuration
+        if (nextStep.dependentOnStep && nextStep.dependentDelay !== undefined && nextStep.dependentDelayUnit) {
+          // Use the configured dependency delay
+          if (nextStep.dependentDelayUnit === 'days') {
+            dueDate.setDate(dueDate.getDate() + nextStep.dependentDelay);
+          } else if (nextStep.dependentDelayUnit === 'hours') {
+            dueDate.setHours(dueDate.getHours() + nextStep.dependentDelay);
+          }
+        } else {
+          // Fallback to old behavior using when value
+          if (nextStep.whenUnit === 'days') {
+            dueDate.setDate(dueDate.getDate() + nextStep.when);
+          } else if (nextStep.whenUnit === 'hours') {
+            dueDate.setHours(dueDate.getHours() + nextStep.when);
+          } else if (nextStep.whenUnit === 'days+hours') {
+            const totalHours = (nextStep.whenDays || 0) * 24 + (nextStep.whenHours || 0);
+            dueDate.setHours(dueDate.getHours() + totalHours);
+          }
         }
 
 
@@ -1018,6 +1041,72 @@ router.patch('/:projectId/tasks/:taskIndex/admin-duedate', authenticateToken, is
     });
   } catch (error) {
     console.error('Error updating FMS task due date:', error);
+    res.status(500).json({ success: false, message: 'Server error', error: error.message });
+  }
+});
+
+// Reassign task in project - Available to assigned user
+router.post('/:projectId/tasks/:taskIndex/reassign', authenticateToken, async (req, res) => {
+  try {
+    const { projectId, taskIndex } = req.params;
+    const { reassignedTo, reason } = req.body;
+    const userId = req.user._id || req.user.id;
+
+    if (!reassignedTo) {
+      return res.status(400).json({ success: false, message: 'New assignee is required' });
+    }
+    if (!reason || !reason.trim()) {
+      return res.status(400).json({ success: false, message: 'Reason for reassignment is required' });
+    }
+
+    const project = await Project.findOne(buildProjectLookupQuery(projectId))
+      .populate('tasks.who', 'username email name');
+    
+    if (!project) {
+      return res.status(404).json({ success: false, message: 'Project not found' });
+    }
+
+    const task = project.tasks[parseInt(taskIndex)];
+    if (!task) {
+      return res.status(404).json({ success: false, message: 'Task not found' });
+    }
+
+    // Check if current user is assigned to this task
+    // Handle both array (backward compatibility) and single who
+    const currentAssigneeId = Array.isArray(task.who) 
+      ? (task.who[0]?._id?.toString() || task.who[0]?.toString())
+      : (task.who?._id?.toString() || task.who?.toString());
+    const userIdStr = userId.toString();
+    
+    if (currentAssigneeId !== userIdStr) {
+      return res.status(403).json({ success: false, message: 'Only the assigned user can reassign this task' });
+    }
+
+    // Check if task is already completed
+    if (task.status === 'Done') {
+      return res.status(400).json({ success: false, message: 'Cannot reassign a completed task' });
+    }
+
+    // Update task assignee
+    task.who = reassignedTo;
+    
+    // Add reassignment note
+    const reassignmentNote = `Reassigned by ${req.user.username || 'User'} on ${new Date().toLocaleString()}. Reason: ${reason.trim()}`;
+    task.notes = task.notes ? `${task.notes}\n\n${reassignmentNote}` : reassignmentNote;
+
+    await project.save();
+
+    const updatedProject = await Project.findOne(buildProjectLookupQuery(projectId))
+      .populate('tasks.who', 'username email name')
+      .populate('fmsId', 'fmsName');
+
+    res.json({ 
+      success: true,
+      message: 'Task reassigned successfully',
+      project: updatedProject 
+    });
+  } catch (error) {
+    console.error('Error reassigning task:', error);
     res.status(500).json({ success: false, message: 'Server error', error: error.message });
   }
 });

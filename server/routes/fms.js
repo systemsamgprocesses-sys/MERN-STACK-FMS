@@ -110,17 +110,35 @@ router.post('/', upload.array('files', 10), async (req, res) => {
       if (!step.what || !step.how) {
         throw new Error(`Step ${index + 1}: Missing required fields (what/how)`);
       }
-      if (!step.who || !Array.isArray(step.who) || step.who.length === 0) {
-        throw new Error(`Step ${index + 1}: At least one assignee is required`);
+      if (!step.who || (typeof step.who === 'string' && step.who.trim() === '')) {
+        throw new Error(`Step ${index + 1}: An assignee is required`);
       }
 
-      // Ensure who array contains valid ObjectIds
-      step.who = step.who.map(id => {
-        if (typeof id === 'string' && id.length === 24) {
-          return id; // MongoDB will handle string to ObjectId conversion
+      // Ensure who is a valid ObjectId (handle both array for backward compatibility and single value)
+      if (Array.isArray(step.who)) {
+        // Backward compatibility: if array, take first element
+        if (step.who.length === 0) {
+          throw new Error(`Step ${index + 1}: An assignee is required`);
         }
+        step.who = step.who[0];
+      }
+      
+      if (typeof step.who === 'string' && step.who.length !== 24) {
         throw new Error(`Step ${index + 1}: Invalid user ID format`);
-      });
+      }
+      
+      // Validate dependent step configuration
+      if (step.dependentOnStep !== undefined && step.dependentOnStep !== null) {
+        if (typeof step.dependentOnStep !== 'number' || step.dependentOnStep < 1 || step.dependentOnStep >= index + 1) {
+          throw new Error(`Step ${index + 1}: Dependent step must be a previous step number`);
+        }
+        if (step.dependentDelay === undefined || step.dependentDelay === null || step.dependentDelay < 0) {
+          throw new Error(`Step ${index + 1}: Dependent delay is required and must be >= 0`);
+        }
+        if (!step.dependentDelayUnit || !['days', 'hours'].includes(step.dependentDelayUnit)) {
+          throw new Error(`Step ${index + 1}: Dependent delay unit must be 'days' or 'hours'`);
+        }
+      }
 
       // Handle triggersFMSId if provided
       if (step.triggersFMSId && typeof step.triggersFMSId === 'string' && step.triggersFMSId.length === 24) {
@@ -389,17 +407,35 @@ router.put('/:id', authenticateToken, isSuperAdmin, upload.array('files', 10), a
         if (!step.what || !step.how) {
           throw new Error(`Step ${index + 1}: Missing required fields (what/how)`);
         }
-        if (!step.who || !Array.isArray(step.who) || step.who.length === 0) {
-          throw new Error(`Step ${index + 1}: At least one assignee is required`);
+        if (!step.who || (typeof step.who === 'string' && step.who.trim() === '')) {
+          throw new Error(`Step ${index + 1}: An assignee is required`);
         }
 
-        // Ensure who array contains valid ObjectIds
-        step.who = step.who.map(id => {
-          if (typeof id === 'string' && id.length === 24) {
-            return id; // MongoDB will handle string to ObjectId conversion
+        // Ensure who is a valid ObjectId (handle both array for backward compatibility and single value)
+        if (Array.isArray(step.who)) {
+          // Backward compatibility: if array, take first element
+          if (step.who.length === 0) {
+            throw new Error(`Step ${index + 1}: An assignee is required`);
           }
+          step.who = step.who[0];
+        }
+        
+        if (typeof step.who === 'string' && step.who.length !== 24) {
           throw new Error(`Step ${index + 1}: Invalid user ID format`);
-        });
+        }
+        
+        // Validate dependent step configuration
+        if (step.dependentOnStep !== undefined && step.dependentOnStep !== null) {
+          if (typeof step.dependentOnStep !== 'number' || step.dependentOnStep < 1 || step.dependentOnStep >= index + 1) {
+            throw new Error(`Step ${index + 1}: Dependent step must be a previous step number`);
+          }
+          if (step.dependentDelay === undefined || step.dependentDelay === null || step.dependentDelay < 0) {
+            throw new Error(`Step ${index + 1}: Dependent delay is required and must be >= 0`);
+          }
+          if (!step.dependentDelayUnit || !['days', 'hours'].includes(step.dependentDelayUnit)) {
+            throw new Error(`Step ${index + 1}: Dependent delay unit must be 'days' or 'hours'`);
+          }
+        }
 
         // Handle triggersFMSId if provided
         if (step.triggersFMSId && typeof step.triggersFMSId === 'string' && step.triggersFMSId.length === 24) {

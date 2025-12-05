@@ -78,6 +78,11 @@ const ViewFMSProgress: React.FC = () => {
   const [completionRemarks, setCompletionRemarks] = useState('');
   const [completingTask, setCompletingTask] = useState(false);
   const [taskFilter, setTaskFilter] = useState<TaskFilter>(initialFilter);
+  const [showReassignModal, setShowReassignModal] = useState(false);
+  const [reassigningTask, setReassigningTask] = useState<{projectId: string, taskIndex: number} | null>(null);
+  const [reassignTo, setReassignTo] = useState('');
+  const [reassignReason, setReassignReason] = useState('');
+  const [reassigning, setReassigning] = useState(false);
 
   useEffect(() => {
     const view = new URLSearchParams(location.search).get('view');
@@ -212,6 +217,50 @@ const ViewFMSProgress: React.FC = () => {
       alert(error.response?.data?.message || 'Failed to complete task');
     } finally {
       setCompletingTask(false);
+    }
+  };
+
+  const handleReassignTask = async () => {
+    if (!reassigningTask || !reassignTo || !reassignReason.trim()) {
+      alert('Please select a new assignee and provide a reason');
+      return;
+    }
+
+    setReassigning(true);
+    try {
+      const token = localStorage.getItem('token');
+      await axios.post(
+        `${address}/api/projects/${reassigningTask.projectId}/tasks/${reassigningTask.taskIndex}/reassign`,
+        {
+          reassignedTo: reassignTo,
+          reason: reassignReason.trim()
+        },
+        {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        }
+      );
+
+      alert('Task reassigned successfully!');
+      setShowReassignModal(false);
+      setReassigningTask(null);
+      setReassignTo('');
+      setReassignReason('');
+      
+      // Refresh projects
+      fetchProjects();
+      if (selectedProject) {
+        const refreshedProject = projects.find(p => p.projectId === selectedProject.projectId);
+        if (refreshedProject) {
+          setSelectedProject(refreshedProject);
+        }
+      }
+    } catch (error: any) {
+      console.error('Error reassigning task:', error);
+      alert(error.response?.data?.message || 'Failed to reassign task');
+    } finally {
+      setReassigning(false);
     }
   };
 
@@ -467,7 +516,9 @@ const ViewFMSProgress: React.FC = () => {
       const tasks = normalizeTasks(project.tasks);
       tasks.forEach((task, index) => {
         // Check if user is assigned to this task
-        const assignedToUser = task.who?.some((w: any) => {
+        // Handle both array (backward compatibility) and single who
+        const whoArray = Array.isArray(task.who) ? task.who : (task.who ? [task.who] : []);
+        const assignedToUser = whoArray.some((w: any) => {
           const userId = typeof w === 'object' && w !== null ? (w._id || w) : w;
           return userId?.toString() === user.id?.toString();
         });
@@ -965,12 +1016,16 @@ const ViewFMSProgress: React.FC = () => {
                               </div>
                               <p className="text-sm text-[var(--color-textSecondary)] mb-3 ml-11">{task.how}</p>
                               <div className="flex items-center space-x-4 text-sm text-[var(--color-textSecondary)] ml-11">
-                                <span className="flex items-center gap-1">👤 {task.who.filter((w: any) => w).map((w: any) => {
-                                  if (typeof w === 'object' && w !== null) {
-                                    return w.username || w.name || w.email || 'Unknown';
-                                  }
-                                  return typeof w === 'string' ? w : 'Unknown';
-                                }).join(', ')}</span>
+                                <span className="flex items-center gap-1">👤 {(() => {
+                                  // Handle both array (backward compatibility) and single who
+                                  const whoArray = Array.isArray(task.who) ? task.who : (task.who ? [task.who] : []);
+                                  return whoArray.filter((w: any) => w).map((w: any) => {
+                                    if (typeof w === 'object' && w !== null) {
+                                      return w.username || w.name || w.email || 'Unknown';
+                                    }
+                                    return typeof w === 'string' ? w : 'Unknown';
+                                  }).join(', ');
+                                })()}</span>
                                 {task.plannedDueDate && (
                                   <>
                                     <span>•</span>
@@ -982,22 +1037,50 @@ const ViewFMSProgress: React.FC = () => {
                               </div>
                             </div>
                             {task.status !== 'Done' && 
-                              task.who.some((w: any) => w._id === user?.id) && 
+                              (() => {
+                                // Handle both array (backward compatibility) and single who
+                                const whoArray = Array.isArray(task.who) ? task.who : (task.who ? [task.who] : []);
+                                return whoArray.some((w: any) => {
+                                  const userId = typeof w === 'object' && w !== null ? (w._id || w) : w;
+                                  return userId?.toString() === user?.id?.toString();
+                                });
+                              })() && 
                               canUpdateStep(index, selectedProject.tasks) && (
-                                <button
-                                  onClick={() => {
-                                    setSelectedTask({ ...task, index });
-                                    setTaskStatus(task.status === 'Awaiting Date' ? 'Pending' : task.status);
-                                    setTaskPlannedDate(task.plannedDueDate ? new Date(task.plannedDueDate).toISOString().split('T')[0] : '');
-                                  }}
-                                  className="px-4 py-2 rounded-lg text-white font-semibold hover:shadow-lg hover:scale-105 transition-all text-sm ml-4 flex-shrink-0"
-                                  style={{ backgroundColor: 'var(--color-primary)' }}
-                                >
-                                  Update
-                                </button>
+                                <div className="flex gap-2 ml-4 flex-shrink-0">
+                                  <button
+                                    onClick={() => {
+                                      setSelectedTask({ ...task, index });
+                                      setTaskStatus(task.status === 'Awaiting Date' ? 'Pending' : task.status);
+                                      setTaskPlannedDate(task.plannedDueDate ? new Date(task.plannedDueDate).toISOString().split('T')[0] : '');
+                                    }}
+                                    className="px-4 py-2 rounded-lg text-white font-semibold hover:shadow-lg hover:scale-105 transition-all text-sm"
+                                    style={{ backgroundColor: 'var(--color-primary)' }}
+                                  >
+                                    Update
+                                  </button>
+                                  <button
+                                    onClick={() => {
+                                      setReassigningTask({ projectId: selectedProject.projectId, taskIndex: index });
+                                      setReassignTo('');
+                                      setReassignReason('');
+                                      setShowReassignModal(true);
+                                    }}
+                                    className="px-4 py-2 rounded-lg text-white font-semibold hover:shadow-lg hover:scale-105 transition-all text-sm"
+                                    style={{ backgroundColor: 'var(--color-accent)' }}
+                                  >
+                                    Reassign
+                                  </button>
+                                </div>
                               )}
                             {task.status !== 'Done' && 
-                              task.who.some((w: any) => w._id === user?.id) && 
+                              (() => {
+                                // Handle both array (backward compatibility) and single who
+                                const whoArray = Array.isArray(task.who) ? task.who : (task.who ? [task.who] : []);
+                                return whoArray.some((w: any) => {
+                                  const userId = typeof w === 'object' && w !== null ? (w._id || w) : w;
+                                  return userId?.toString() === user?.id?.toString();
+                                });
+                              })() && 
                               !canUpdateStep(index, selectedProject.tasks) && (
                                 <div className="px-4 py-2 text-sm text-[var(--color-warning)] bg-[var(--color-warning)]/10 rounded-lg ml-4 flex-shrink-0">
                                   ⚠️ Complete previous step first
@@ -1575,6 +1658,80 @@ const ViewFMSProgress: React.FC = () => {
                   Save Changes
                 </button>
               </div>
+            </div>
+          </div>
+        )}
+
+        {/* Reassignment Modal */}
+        {showReassignModal && reassigningTask && selectedProject && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-[var(--color-surface)] rounded-lg p-6 max-w-lg w-full max-h-[90vh] overflow-y-auto">
+              <h3 className="text-xl font-bold text-[var(--color-text)] mb-4 flex items-center gap-2">
+                <Users size={24} style={{ color: 'var(--color-accent)' }} />
+                Reassign Task
+              </h3>
+              {selectedProject.tasks[reassigningTask.taskIndex] && (
+                <>
+                  <p className="text-sm text-[var(--color-textSecondary)] mb-4">
+                    Step {selectedProject.tasks[reassigningTask.taskIndex].stepNo}: {selectedProject.tasks[reassigningTask.taskIndex].what}
+                  </p>
+                  
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-sm font-medium text-[var(--color-text)] mb-2">
+                        Reassign to *
+                      </label>
+                      <select
+                        value={reassignTo}
+                        onChange={(e) => setReassignTo(e.target.value)}
+                        className="w-full px-4 py-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] text-[var(--color-text)]"
+                      >
+                        <option value="">Select a user</option>
+                        {users.filter(u => u._id !== user?.id && u.isActive).map((u: any) => (
+                          <option key={u._id} value={u._id}>
+                            {u.username} {u.email ? `(${u.email})` : ''}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-[var(--color-text)] mb-2">
+                        Reason for Reassignment *
+                      </label>
+                      <textarea
+                        value={reassignReason}
+                        onChange={(e) => setReassignReason(e.target.value)}
+                        placeholder="Explain why you're reassigning this task..."
+                        rows={4}
+                        className="w-full px-4 py-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] text-[var(--color-text)]"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-end gap-3 mt-6 pt-4 border-t border-[var(--color-border)]">
+                    <button
+                      onClick={() => {
+                        setShowReassignModal(false);
+                        setReassigningTask(null);
+                        setReassignTo('');
+                        setReassignReason('');
+                      }}
+                      className="px-6 py-2 border-2 border-[var(--color-border)] text-[var(--color-text)] rounded-xl hover:bg-[var(--color-surface)] font-semibold transition-all"
+                      disabled={reassigning}
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={handleReassignTask}
+                      disabled={reassigning || !reassignTo || !reassignReason.trim()}
+                      className="px-6 py-2 bg-[var(--color-accent)] text-white rounded-xl hover:opacity-90 font-semibold shadow-lg transition-all flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {reassigning ? 'Reassigning...' : 'Reassign Task'}
+                    </button>
+                  </div>
+                </>
+              )}
             </div>
           </div>
         )}

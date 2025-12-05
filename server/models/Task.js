@@ -111,6 +111,23 @@ const taskSchema = new mongoose.Schema({
     forwardedAt: { type: Date, default: Date.now },
     remarks: String
   }],
+  // Reassignment feature for FMS tasks
+  reassignedTo: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User'
+  },
+  reassignedBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User'
+  },
+  reassignedAt: Date,
+  reassignmentReason: String,
+  reassignmentHistory: [{
+    from: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+    to: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+    reassignedAt: { type: Date, default: Date.now },
+    reason: String
+  }],
   // Date-range task fields
   startDate: Date,
   endDate: Date,

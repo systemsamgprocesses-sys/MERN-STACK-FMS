@@ -41,7 +41,7 @@ const objectionSchema = new mongoose.Schema({
 const projectTaskSchema = new mongoose.Schema({
   stepNo: { type: Number, required: true },
   what: { type: String, required: true },
-  who: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true }],
+  who: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true }, // Changed to single assignee
   how: { type: String, required: true },
   plannedDueDate: { type: Date },
   actualDueDate: { type: Date },

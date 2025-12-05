@@ -1323,4 +1323,74 @@ router.get('/admin/audit-logs', authenticateToken, isSuperAdmin, async (req, res
   }
 });
 
+// Reassign task - Available to assigned user
+router.post('/:id/reassign', authenticateToken, async (req, res) => {
+  try {
+    const { reassignedTo, reason } = req.body;
+    const userId = req.user._id || req.user.id;
+
+    if (!reassignedTo) {
+      return res.status(400).json({ message: 'New assignee is required' });
+    }
+    if (!reason || !reason.trim()) {
+      return res.status(400).json({ message: 'Reason for reassignment is required' });
+    }
+
+    const task = await Task.findById(req.params.id);
+    if (!task) {
+      return res.status(404).json({ message: 'Task not found' });
+    }
+
+    // Check if current user is assigned to this task
+    const currentAssigneeId = task.assignedTo?.toString() || task.assignedTo?._id?.toString();
+    const userIdStr = userId.toString();
+    
+    if (currentAssigneeId !== userIdStr) {
+      return res.status(403).json({ message: 'Only the assigned user can reassign this task' });
+    }
+
+    // Check if task is already completed
+    if (task.status === 'completed') {
+      return res.status(400).json({ message: 'Cannot reassign a completed task' });
+    }
+
+    // Add to reassignment history
+    const reassignmentEntry = {
+      from: task.assignedTo,
+      to: reassignedTo,
+      reassignedAt: new Date(),
+      reason: reason.trim()
+    };
+
+    // Update task
+    task.reassignedTo = reassignedTo;
+    task.reassignedBy = userId;
+    task.reassignedAt = new Date();
+    task.reassignmentReason = reason.trim();
+    task.assignedTo = reassignedTo;
+    
+    // Add to history
+    if (!task.reassignmentHistory) {
+      task.reassignmentHistory = [];
+    }
+    task.reassignmentHistory.push(reassignmentEntry);
+
+    await task.save();
+
+    const populatedTask = await Task.findById(task._id)
+      .populate('assignedBy', 'username email phoneNumber')
+      .populate('assignedTo', 'username email phoneNumber')
+      .populate('reassignedBy', 'username email phoneNumber')
+      .populate('reassignedTo', 'username email phoneNumber');
+
+    res.json({ 
+      message: 'Task reassigned successfully',
+      task: populatedTask 
+    });
+  } catch (error) {
+    console.error('Error reassigning task:', error);
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
 export default router;

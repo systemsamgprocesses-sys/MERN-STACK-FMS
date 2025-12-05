@@ -71,6 +71,14 @@ const userSchema = new mongoose.Schema({
   isActive: {
     type: Boolean,
     default: true
+  },
+  preferences: {
+    sidebar: {
+      sectionOrder: {
+        type: [String],
+        default: []
+      }
+    }
   }
 }, {
   timestamps: true

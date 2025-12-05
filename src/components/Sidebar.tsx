@@ -1,9 +1,26 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { NavLink } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import axios from 'axios';
 import { address } from '../../utils/ipAddress';
 import { useCachedApi } from '../hooks/useCachedApi';
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+} from '@dnd-kit/core';
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 import {
   LayoutDashboard,
   CheckSquare,
@@ -27,7 +44,10 @@ import {
   Calendar,
   ListTodo,
   Star,
-  X
+  X,
+  GripVertical,
+  RotateCcw,
+  Save
 } from 'lucide-react';
 
 // Modern AMG Logo Component with Glassmorphism
@@ -73,6 +93,103 @@ const Tooltip: React.FC<TooltipProps> = ({ children, content, show }) => (
   </div>
 );
 
+// Sortable Section Component
+interface SortableSectionProps {
+  section: string;
+  items: any[];
+  isCollapsed: boolean;
+  counts: any;
+  onClose: () => void;
+}
+
+const SortableSection: React.FC<SortableSectionProps> = ({
+  section,
+  items,
+  isCollapsed,
+  counts,
+  onClose,
+}) => {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: section });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  };
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={`group relative ${isCollapsed ? '' : 'mb-6'}`}
+    >
+      <div className="flex items-center gap-2 mb-2 group/section">
+        {!isCollapsed && (
+          <>
+            <button
+              {...attributes}
+              {...listeners}
+              className="cursor-grab active:cursor-grabbing p-1 rounded hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors opacity-0 group-hover/section:opacity-100"
+              aria-label="Drag to reorder"
+            >
+              <GripVertical size={14} />
+            </button>
+            <h3 className="px-2 text-[10px] font-bold uppercase tracking-wider text-gray-500 flex-1">
+              {section}
+            </h3>
+          </>
+        )}
+      </div>
+      <div className="space-y-1">
+        {items.map((item) => (
+          <Tooltip key={item.path} content={item.label} show={isCollapsed}>
+            <NavLink
+              to={item.path}
+              onClick={onClose}
+              className={({ isActive }) =>
+                `group flex items-center gap-3 rounded-xl text-sm font-medium transition-all duration-200 ${
+                  isCollapsed ? 'justify-center px-0 py-3' : 'px-3 py-2'
+                } ${
+                  isActive
+                    ? 'bg-gradient-to-r from-blue-500 to-purple-600 text-white shadow-lg shadow-blue-500/30'
+                    : 'text-gray-700 hover:bg-gradient-to-r hover:from-gray-100 hover:to-gray-50 hover:text-gray-900'
+                }`
+              }
+            >
+              {({ isActive }) => (
+                <>
+                  <span
+                    className={`flex items-center justify-center ${
+                      isCollapsed ? 'w-6 h-6' : 'w-5 h-5'
+                    } transition-transform duration-200 ${
+                      !isActive && 'group-hover:scale-110'
+                    }`}
+                  >
+                    <item.icon
+                      size={isCollapsed ? 20 : 18}
+                      strokeWidth={isActive ? 2.5 : 2}
+                    />
+                  </span>
+                  {!isCollapsed && (
+                    <span className="flex-1 truncate">{item.label}</span>
+                  )}
+                </>
+              )}
+            </NavLink>
+          </Tooltip>
+        ))}
+      </div>
+    </div>
+  );
+};
+
 interface SidebarProps {
   isOpen: boolean;
   onClose: () => void;
@@ -81,6 +198,9 @@ interface SidebarProps {
 const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
   const { user } = useAuth();
   const [isCollapsed, setIsCollapsed] = useState(false);
+  const [sectionOrder, setSectionOrder] = useState<string[]>([]);
+  const [isSaving, setIsSaving] = useState(false);
+  const [isResetting, setIsResetting] = useState(false);
   const [counts, setCounts] = useState({
     pendingTasks: 0,
     masterTasks: 0,
@@ -139,6 +259,82 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
     { section: 'Admin', icon: Award, label: 'Score Logs', path: '/score-logs', requireSuperAdmin: true },
   ];
 
+  // Get default section order from menu items
+  const getDefaultSectionOrder = useCallback(() => {
+    const sections = new Set(menuItems.map(item => item.section));
+    return Array.from(sections);
+  }, []);
+
+  // Load user preferences
+  useEffect(() => {
+    const loadPreferences = async () => {
+      if (!user?.id) return;
+
+      try {
+        const token = localStorage.getItem('token');
+        const response = await axios.get(
+          `${address}/api/users/me/sidebar-preferences`,
+          {
+            headers: { Authorization: `Bearer ${token}` },
+          }
+        );
+
+        const savedOrder = response.data.sectionOrder;
+        if (savedOrder && savedOrder.length > 0) {
+          setSectionOrder(savedOrder);
+        } else {
+          setSectionOrder(getDefaultSectionOrder());
+        }
+      } catch (error) {
+        console.error('Failed to load sidebar preferences:', error);
+        setSectionOrder(getDefaultSectionOrder());
+      }
+    };
+
+    loadPreferences();
+  }, [user?.id, getDefaultSectionOrder]);
+
+  // Save preferences to backend
+  const savePreferences = useCallback(async (order: string[]) => {
+    if (!user?.id) return;
+
+    setIsSaving(true);
+    try {
+      const token = localStorage.getItem('token');
+      await axios.put(
+        `${address}/api/users/me/sidebar-preferences`,
+        { sectionOrder: order },
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+    } catch (error) {
+      console.error('Failed to save sidebar preferences:', error);
+    } finally {
+      setIsSaving(false);
+    }
+  }, [user?.id]);
+
+  // Reset to default order
+  const resetToDefault = useCallback(async () => {
+    if (!user?.id) return;
+
+    setIsResetting(true);
+    const defaultOrder = getDefaultSectionOrder();
+    setSectionOrder(defaultOrder);
+
+    try {
+      const token = localStorage.getItem('token');
+      await axios.delete(`${address}/api/users/me/sidebar-preferences`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+    } catch (error) {
+      console.error('Failed to reset sidebar preferences:', error);
+    } finally {
+      setIsResetting(false);
+    }
+  }, [user?.id, getDefaultSectionOrder]);
+
   // Build API URLs with memoization
   const countsUrl = useMemo(() => {
     if (!user?.id) return null;
@@ -151,23 +347,26 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
     return `${address}/api/dashboard/counts-optimized?${countsParams}`;
   }, [user?.id, user?.role]);
 
-  const objectionsUrl = useMemo(() => 
-    user?.id ? `${address}/api/objections/pending/${user.id}` : null,
+  const objectionsUrl = useMemo(
+    () => (user?.id ? `${address}/api/objections/pending/${user.id}` : null),
     [user?.id]
   );
 
-  const helpTicketsUrl = useMemo(() => 
-    user?.id ? `${address}/api/help-tickets?userId=${user.id}&role=${user?.role}` : null,
+  const helpTicketsUrl = useMemo(
+    () =>
+      user?.id
+        ? `${address}/api/help-tickets?userId=${user.id}&role=${user?.role}`
+        : null,
     [user?.id, user?.role]
   );
 
-  const myObjectionsUrl = useMemo(() => 
-    user?.id ? `${address}/api/objections/my/${user.id}` : null,
+  const myObjectionsUrl = useMemo(
+    () => (user?.id ? `${address}/api/objections/my/${user.id}` : null),
     [user?.id]
   );
 
-  const complaintsUrl = useMemo(() => 
-    `${address}/api/complaints?scope=assigned`,
+  const complaintsUrl = useMemo(
+    () => `${address}/api/complaints?scope=assigned`,
     []
   );
 
@@ -200,8 +399,8 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
     complaintsUrl,
     {
       headers: {
-        Authorization: `Bearer ${localStorage.getItem('token')}`
-      }
+        Authorization: `Bearer ${localStorage.getItem('token')}`,
+      },
     },
     { ttl: 1 * 60 * 1000, staleWhileRevalidate: true }
   );
@@ -210,22 +409,36 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
   useEffect(() => {
     if (!user?.id) return;
 
-    const objectionsCount = objectionsData ? (
-      (objectionsData.regularTasks?.reduce((acc: number, task: any) => {
-        return acc + (task.objections?.filter((obj: any) => obj.status === 'pending').length || 0);
-      }, 0) || 0) +
-      (objectionsData.fmsTasks?.reduce((acc: number, project: any) => {
-        return acc + (project.tasks?.reduce((taskAcc: number, task: any) => {
-          return taskAcc + (task.objections?.filter((obj: any) => obj.status === 'pending').length || 0);
-        }, 0) || 0);
-      }, 0) || 0)
-    ) : 0;
+    const objectionsCount = objectionsData
+      ? (objectionsData.regularTasks?.reduce((acc: number, task: any) => {
+          return (
+            acc +
+            (task.objections?.filter((obj: any) => obj.status === 'pending')
+              .length || 0)
+          );
+        }, 0) || 0) +
+        (objectionsData.fmsTasks?.reduce((acc: number, project: any) => {
+          return (
+            acc +
+            (project.tasks?.reduce((taskAcc: number, task: any) => {
+              return (
+                taskAcc +
+                (task.objections?.filter((obj: any) => obj.status === 'pending')
+                  .length || 0)
+              );
+            }, 0) || 0)
+          );
+        }, 0) || 0)
+      : 0;
 
     const helpTicketsCount = helpTicketsData ? helpTicketsData.length : 0;
-    const myObjections = myObjectionsData ? 
-      ((myObjectionsData.regular?.length || 0) + (myObjectionsData.fms?.length || 0)) : 0;
-    const complaintsInbox = complaintsData ? 
-      (Array.isArray(complaintsData) ? complaintsData.length : 0) : 0;
+    const myObjections = myObjectionsData
+      ? (myObjectionsData.regular?.length || 0) +
+        (myObjectionsData.fms?.length || 0)
+      : 0;
+    const complaintsInbox = complaintsData
+      ? Array.isArray(complaintsData) ? complaintsData.length : 0
+      : 0;
 
     setCounts({
       pendingTasks: countsData?.pendingTasks || 0,
@@ -237,7 +450,14 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
       helpTickets: helpTicketsCount,
       complaintsInbox,
     });
-  }, [countsData, objectionsData, helpTicketsData, myObjectionsData, complaintsData, user?.id]);
+  }, [
+    countsData,
+    objectionsData,
+    helpTicketsData,
+    myObjectionsData,
+    complaintsData,
+    user?.id,
+  ]);
 
   // Listen for task updates and refresh counts
   useEffect(() => {
@@ -254,15 +474,25 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
     };
   }, [refetchCounts]);
 
-  const filteredMenuItems = menuItems.filter(item => {
+  const filteredMenuItems = menuItems.filter((item) => {
     if (user?.role === 'superadmin') return true;
     if (item.requireSuperAdmin && user?.role !== 'superadmin') return false;
-    if (item.requireAdmin && !['admin', 'superadmin'].includes(user?.role || '')) return false;
+    if (
+      item.requireAdmin &&
+      !['admin', 'superadmin'].includes(user?.role || '')
+    )
+      return false;
     if (item.requireRole && user?.role !== item.requireRole) return false;
     if (item.permission) {
-      const hasPermission = user?.permissions?.[item.permission as keyof typeof user.permissions];
+      const hasPermission =
+        user?.permissions?.[item.permission as keyof typeof user.permissions];
       // Allow PC role to access specific permission items
-      const pcAllowedPermissions = ['canAssignTasks', 'canViewTasks', 'canViewAllChecklists', 'canViewAllTeamTasks'];
+      const pcAllowedPermissions = [
+        'canAssignTasks',
+        'canViewTasks',
+        'canViewAllChecklists',
+        'canViewAllTeamTasks',
+      ];
 
       if (!hasPermission && !['admin', 'superadmin'].includes(user?.role || '')) {
         // PC role gets special access to specific permissions
@@ -282,6 +512,46 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
     return acc;
   }, {} as Record<string, typeof menuItems>);
 
+  // Get ordered sections based on user preferences
+  const orderedSections = useMemo(() => {
+    if (sectionOrder.length === 0) {
+      return Object.keys(groupedMenuItems);
+    }
+
+    // Merge saved order with any new sections
+    const allSections = new Set([
+      ...sectionOrder,
+      ...Object.keys(groupedMenuItems),
+    ]);
+    return Array.from(allSections).filter((section) =>
+      groupedMenuItems[section]
+    );
+  }, [sectionOrder, groupedMenuItems]);
+
+  // Drag and drop sensors
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
+
+  // Handle drag end
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+
+    if (over && active.id !== over.id) {
+      setSectionOrder((items) => {
+        const oldIndex = items.indexOf(active.id as string);
+        const newIndex = items.indexOf(over.id as string);
+        const newOrder = arrayMove(items, oldIndex, newIndex);
+        // Auto-save on drag end
+        savePreferences(newOrder);
+        return newOrder;
+      });
+    }
+  };
+
   const toggleCollapse = () => {
     setIsCollapsed(!isCollapsed);
   };
@@ -298,21 +568,22 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
 
       {/* Sidebar */}
       <aside
-        className={`fixed inset-y-0 left-0 z-30 flex flex-col transition-all duration-300 ease-in-out transform lg:translate-x-0 lg:static ${isOpen ? 'translate-x-0' : '-translate-x-full'
-          }`}
+        className={`fixed inset-y-0 left-0 z-30 flex flex-col transition-all duration-300 ease-in-out transform lg:translate-x-0 lg:static ${
+          isOpen ? 'translate-x-0' : '-translate-x-full'
+        }`}
         style={{
-          width: isCollapsed ? '4.5rem' : '16rem',
-          minWidth: isCollapsed ? '4.5rem' : '16rem',
-          maxWidth: isCollapsed ? '4.5rem' : '16rem',
+          width: isCollapsed ? '4.5rem' : '18rem',
+          minWidth: isCollapsed ? '4.5rem' : '18rem',
+          maxWidth: isCollapsed ? '4.5rem' : '18rem',
         }}
       >
-        {/* Glassmorphism Background */}
-        <div className="absolute inset-0 bg-gradient-to-br from-white/95 via-white/90 to-gray-50/95 backdrop-blur-xl border-r border-gray-200/50 shadow-2xl"></div>
+        {/* Modern Glassmorphism Background with gradient */}
+        <div className="absolute inset-0 bg-gradient-to-br from-white via-blue-50/30 to-purple-50/30 backdrop-blur-xl border-r border-gray-200/60 shadow-2xl"></div>
 
         {/* Content */}
         <div className="relative flex flex-col h-full">
           {/* Header */}
-          <div className="flex items-center justify-between px-4 py-5 border-b border-gray-200/50">
+          <div className="flex items-center justify-between px-4 py-5 border-b border-gray-200/50 bg-white/50 backdrop-blur-sm">
             <AMGLogo isCollapsed={isCollapsed} />
 
             {/* Desktop toggle */}
@@ -334,54 +605,102 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
             </button>
           </div>
 
+          {/* Control Buttons - Only show when not collapsed */}
+          {!isCollapsed && (
+            <div className="px-3 py-2 border-b border-gray-200/50 bg-white/30 backdrop-blur-sm flex gap-2">
+              <button
+                onClick={resetToDefault}
+                disabled={isResetting}
+                className="flex-1 flex items-center justify-center gap-2 px-3 py-2 text-xs font-medium rounded-lg bg-gradient-to-r from-gray-100 to-gray-50 hover:from-gray-200 hover:to-gray-100 text-gray-700 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                title="Reset to default order"
+              >
+                <RotateCcw size={14} />
+                <span>Reset</span>
+              </button>
+              {isSaving && (
+                <div className="flex items-center justify-center px-3 py-2 text-xs text-green-600">
+                  <Save size={14} className="animate-pulse" />
+                </div>
+              )}
+            </div>
+          )}
+
           {/* Navigation */}
           <nav className="flex-1 overflow-y-auto overflow-x-hidden px-3 py-4 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-transparent">
-            {Object.entries(groupedMenuItems).map(([section, items], sectionIndex) => (
-              <div
-                key={section}
-                className={`${sectionIndex > 0 ? 'mt-6' : ''}`}
+            {orderedSections.length > 0 ? (
+              <DndContext
+                sensors={sensors}
+                collisionDetection={closestCenter}
+                onDragEnd={handleDragEnd}
               >
-                {!isCollapsed && (
-                  <h3 className="px-3 mb-2 text-[10px] font-bold uppercase tracking-wider text-gray-500">
-                    {section}
-                  </h3>
-                )}
-                <div className="space-y-1">
-                  {items.map((item) => (
-                    <Tooltip key={item.path} content={item.label} show={isCollapsed}>
-                      <NavLink
-                        to={item.path}
-                        onClick={onClose}
-                        className={({ isActive }) =>
-                          `group flex items-center gap-3 rounded-xl text-sm font-medium transition-all duration-200 ${isCollapsed ? 'justify-center px-0 py-3' : 'px-3 py-2'
-                          } ${isActive
-                            ? 'bg-gradient-to-r from-blue-500 to-purple-600 text-white shadow-lg shadow-blue-500/30'
-                            : 'text-gray-700 hover:bg-gradient-to-r hover:from-gray-100 hover:to-gray-50 hover:text-gray-900'
-                          }`
-                        }
-                      >
-                        {({ isActive }) => (
-                          <>
-                            <span
-                              className={`flex items-center justify-center ${isCollapsed ? 'w-6 h-6' : 'w-5 h-5'
-                                } transition-transform duration-200 ${!isActive && 'group-hover:scale-110'
-                                }`}
-                            >
-                              <item.icon size={isCollapsed ? 20 : 18} strokeWidth={isActive ? 2.5 : 2} />
-                            </span>
-                            {!isCollapsed && (
-                              <span className="flex-1 truncate">{item.label}</span>
-                            )}
-                          </>
-                        )}
-                      </NavLink>
-                    </Tooltip>
+                <SortableContext
+                  items={orderedSections}
+                  strategy={verticalListSortingStrategy}
+                >
+                  {orderedSections.map((section) => (
+                    <SortableSection
+                      key={section}
+                      section={section}
+                      items={groupedMenuItems[section] || []}
+                      isCollapsed={isCollapsed}
+                      counts={counts}
+                      onClose={onClose}
+                    />
                   ))}
+                </SortableContext>
+              </DndContext>
+            ) : (
+              // Fallback if no sections loaded yet
+              Object.entries(groupedMenuItems).map(([section, items]) => (
+                <div key={section} className="mb-6">
+                  {!isCollapsed && (
+                    <h3 className="px-3 mb-2 text-[10px] font-bold uppercase tracking-wider text-gray-500">
+                      {section}
+                    </h3>
+                  )}
+                  <div className="space-y-1">
+                    {items.map((item) => (
+                      <Tooltip key={item.path} content={item.label} show={isCollapsed}>
+                        <NavLink
+                          to={item.path}
+                          onClick={onClose}
+                          className={({ isActive }) =>
+                            `group flex items-center gap-3 rounded-xl text-sm font-medium transition-all duration-200 ${
+                              isCollapsed ? 'justify-center px-0 py-3' : 'px-3 py-2'
+                            } ${
+                              isActive
+                                ? 'bg-gradient-to-r from-blue-500 to-purple-600 text-white shadow-lg shadow-blue-500/30'
+                                : 'text-gray-700 hover:bg-gradient-to-r hover:from-gray-100 hover:to-gray-50 hover:text-gray-900'
+                            }`
+                          }
+                        >
+                          {({ isActive }) => (
+                            <>
+                              <span
+                                className={`flex items-center justify-center ${
+                                  isCollapsed ? 'w-6 h-6' : 'w-5 h-5'
+                                } transition-transform duration-200 ${
+                                  !isActive && 'group-hover:scale-110'
+                                }`}
+                              >
+                                <item.icon
+                                  size={isCollapsed ? 20 : 18}
+                                  strokeWidth={isActive ? 2.5 : 2}
+                                />
+                              </span>
+                              {!isCollapsed && (
+                                <span className="flex-1 truncate">{item.label}</span>
+                              )}
+                            </>
+                          )}
+                        </NavLink>
+                      </Tooltip>
+                    ))}
+                  </div>
                 </div>
-              </div>
-            ))}
+              ))
+            )}
           </nav>
-
         </div>
       </aside>
     </>

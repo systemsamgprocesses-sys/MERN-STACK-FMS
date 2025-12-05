@@ -473,5 +473,69 @@ router.put('/:id/password', authenticateToken, async (req, res) => {
   }
 });
 
+// Get user sidebar preferences
+router.get('/me/sidebar-preferences', authenticateToken, async (req, res) => {
+  try {
+    const user = await User.findById(req.user._id).select('preferences');
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    const sectionOrder = user.preferences?.sidebar?.sectionOrder || [];
+    res.json({ sectionOrder });
+  } catch (error) {
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
+// Save user sidebar preferences
+router.put('/me/sidebar-preferences', authenticateToken, async (req, res) => {
+  try {
+    const { sectionOrder } = req.body;
+
+    if (!Array.isArray(sectionOrder)) {
+      return res.status(400).json({ message: 'sectionOrder must be an array' });
+    }
+
+    const user = await User.findById(req.user._id);
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    if (!user.preferences) {
+      user.preferences = {};
+    }
+    if (!user.preferences.sidebar) {
+      user.preferences.sidebar = {};
+    }
+
+    user.preferences.sidebar.sectionOrder = sectionOrder;
+    await user.save();
+
+    res.json({ message: 'Sidebar preferences saved successfully', sectionOrder });
+  } catch (error) {
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
+// Reset user sidebar preferences to default
+router.delete('/me/sidebar-preferences', authenticateToken, async (req, res) => {
+  try {
+    const user = await User.findById(req.user._id);
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    if (user.preferences?.sidebar) {
+      user.preferences.sidebar.sectionOrder = [];
+    }
+    await user.save();
+
+    res.json({ message: 'Sidebar preferences reset to default', sectionOrder: [] });
+  } catch (error) {
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
 
 export default router;

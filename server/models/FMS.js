@@ -19,13 +19,16 @@ const attachmentSchema = new mongoose.Schema({
 const stepSchema = new mongoose.Schema({
   stepNo: { type: Number, required: true },
   what: { type: String, required: true },
-  who: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true }],
+  who: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
   how: { type: String, required: true },
   when: { type: Number, required: true },
   whenUnit: { type: String, enum: ['days', 'hours', 'days+hours'], required: true },
   whenDays: { type: Number },
   whenHours: { type: Number },
   whenType: { type: String, enum: ['fixed', 'dependent', 'ask-on-completion'], required: true },
+  dependentOnStep: { type: Number }, // Step number this step depends on
+  dependentDelay: { type: Number }, // Delay in days/hours after dependent step
+  dependentDelayUnit: { type: String, enum: ['days', 'hours'] }, // Unit for delay
   requiresChecklist: { type: Boolean, default: false },
   checklistItems: [checklistItemSchema],
   attachments: [attachmentSchema],

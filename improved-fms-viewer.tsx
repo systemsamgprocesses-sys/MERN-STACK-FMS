@@ -1,173 +1,97 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { Plus, ChevronDown, ChevronUp, Eye, Printer, Edit, X, Check, Filter, Search, Calendar, User, Clock, List } from 'lucide-react';
-import axios from 'axios';
-import { address } from '../../utils/ipAddress';
-import { useAuth } from '../contexts/AuthContext';
 
-interface FMSTemplate {
-  _id: string;
-  fmsId: string;
-  fmsName: string;
-  category: string;
-  stepCount: number;
-  createdBy: string;
-  createdOn: string;
-  totalTimeFormatted: string;
-  status?: string;
-  steps: any[];
-}
+// Mock data for demonstration
+const mockFMSList = [
+  {
+    _id: '1',
+    fmsId: 'FMS-001',
+    fmsName: 'Software Development Lifecycle',
+    category: 'Development',
+    stepCount: 5,
+    createdBy: 'John Doe',
+    createdOn: '2024-01-15',
+    totalTimeFormatted: '45 days',
+    status: 'active',
+    steps: [
+      { stepNo: 1, what: 'Requirements Gathering', who: [{ username: 'analyst1' }], how: 'Stakeholder meetings', when: 5, whenUnit: 'days', whenType: 'fixed', whenDays: 5, whenHours: 0 },
+      { stepNo: 2, what: 'Design Phase', who: [{ username: 'designer1' }], how: 'Create mockups', when: 10, whenUnit: 'days', whenType: 'fixed', whenDays: 10, whenHours: 0 },
+      { stepNo: 3, what: 'Development', who: [{ username: 'dev1' }, { username: 'dev2' }], how: 'Code implementation', when: 20, whenUnit: 'days', whenType: 'fixed', whenDays: 20, whenHours: 0 },
+      { stepNo: 4, what: 'Testing', who: [{ username: 'qa1' }], how: 'QA testing', when: 7, whenUnit: 'days', whenType: 'dependent', whenDays: 7, whenHours: 0 },
+      { stepNo: 5, what: 'Deployment', who: [{ username: 'devops1' }], how: 'Deploy to production', whenType: 'ask-on-completion' }
+    ]
+  },
+  {
+    _id: '2',
+    fmsId: 'FMS-002',
+    fmsName: 'Client Onboarding Process',
+    category: 'Sales',
+    stepCount: 4,
+    createdBy: 'Jane Smith',
+    createdOn: '2024-02-20',
+    totalTimeFormatted: '15 days',
+    status: 'active',
+    steps: [
+      { stepNo: 1, what: 'Initial Contact', who: [{ username: 'sales1' }], how: 'Email introduction', when: 2, whenUnit: 'days', whenType: 'fixed', whenDays: 2, whenHours: 0 },
+      { stepNo: 2, what: 'Demo & Presentation', who: [{ username: 'sales1' }], how: 'Live demo', when: 3, whenUnit: 'days', whenType: 'fixed', whenDays: 3, whenHours: 0 },
+      { stepNo: 3, what: 'Contract Negotiation', who: [{ username: 'legal1' }], how: 'Legal review', when: 7, whenUnit: 'days', whenType: 'fixed', whenDays: 7, whenHours: 0 },
+      { stepNo: 4, what: 'Account Setup', who: [{ username: 'support1' }], how: 'Configure account', when: 3, whenUnit: 'days', whenType: 'dependent', whenDays: 3, whenHours: 0 }
+    ]
+  },
+  {
+    _id: '3',
+    fmsId: 'FMS-003',
+    fmsName: 'Product Launch Campaign',
+    category: 'Marketing',
+    stepCount: 6,
+    createdBy: 'Mike Johnson',
+    createdOn: '2024-03-10',
+    totalTimeFormatted: '60 days',
+    status: 'active',
+    steps: [
+      { stepNo: 1, what: 'Market Research', who: [{ username: 'research1' }], how: 'Surveys and analysis', when: 10, whenUnit: 'days', whenType: 'fixed', whenDays: 10, whenHours: 0 },
+      { stepNo: 2, what: 'Strategy Planning', who: [{ username: 'marketing1' }], how: 'Campaign strategy', when: 7, whenUnit: 'days', whenType: 'fixed', whenDays: 7, whenHours: 0 },
+      { stepNo: 3, what: 'Content Creation', who: [{ username: 'content1' }], how: 'Marketing materials', when: 15, whenUnit: 'days', whenType: 'fixed', whenDays: 15, whenHours: 0 },
+      { stepNo: 4, what: 'Review & Approval', who: [{ username: 'manager1' }], how: 'Stakeholder review', when: 5, whenUnit: 'days', whenType: 'dependent', whenDays: 5, whenHours: 0 },
+      { stepNo: 5, what: 'Campaign Launch', who: [{ username: 'marketing1' }], how: 'Multi-channel launch', when: 3, whenUnit: 'days', whenType: 'fixed', whenDays: 3, whenHours: 0 },
+      { stepNo: 6, what: 'Performance Monitoring', who: [{ username: 'analytics1' }], how: 'Track metrics', when: 20, whenUnit: 'days', whenType: 'fixed', whenDays: 20, whenHours: 0 }
+    ]
+  }
+];
 
-interface Category {
-  name: string;
-  count: number;
-}
+const mockCategories = [
+  { name: 'Development', count: 1 },
+  { name: 'Sales', count: 1 },
+  { name: 'Marketing', count: 1 }
+];
 
-const ViewAllFMS: React.FC = () => {
-  const navigate = useNavigate();
-  const { user } = useAuth();
-  const [fmsList, setFmsList] = useState<FMSTemplate[]>([]);
-  const [expandedFMS, setExpandedFMS] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [selectedCategory, setSelectedCategory] = useState<string>('all');
-  const [showCategoryModal, setShowCategoryModal] = useState(false);
-  const [newCategory, setNewCategory] = useState('');
-  const [editingFMS, setEditingFMS] = useState<string | null>(null);
+const FMSTemplateViewer = () => {
+  const [fmsList, setFmsList] = useState(mockFMSList);
+  const [categories, setCategories] = useState(mockCategories);
+  const [expandedFMS, setExpandedFMS] = useState(null);
+  const [selectedCategory, setSelectedCategory] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
-  const [showPreview, setShowPreview] = useState<FMSTemplate | null>(null);
+  const [showCategoryModal, setShowCategoryModal] = useState(false);
+  const [showPreview, setShowPreview] = useState(null);
+  const [editingCategory, setEditingCategory] = useState(null);
+  const [newCategoryName, setNewCategoryName] = useState('');
+  const [userRole] = useState('superadmin'); // Mock user role
 
   // Format assignee names
-  const formatAssignees = useCallback((who: any): string => {
-    if (!Array.isArray(who)) {
-      // Handle single assignee (new format)
-      if (typeof who === 'object' && who !== null) {
-        return who.username || who.name || who.email || 'N/A';
-      }
-      if (typeof who === 'string') {
-        return who;
-      }
-      return 'N/A';
-    }
+  const formatAssignees = useCallback((who) => {
+    if (!Array.isArray(who)) return 'N/A';
     const names = who
-      .map((w: any) => {
-        if (typeof w === 'object' && w !== null) {
-          return w.username || w.name || w.email || '';
-        }
-        if (typeof w === 'string') {
-          return w;
-        }
-        return '';
-      })
+      .map(w => w?.username || w?.name || w?.email || (typeof w === 'string' ? w : ''))
       .filter(Boolean);
     return names.length ? names.join(', ') : 'N/A';
   }, []);
 
   // Get step duration text
-  const getStepDuration = useCallback((step: any) => {
+  const getStepDuration = useCallback((step) => {
     if (step.whenType === 'ask-on-completion') return 'Ask on completion';
     if (step.whenUnit === 'days+hours') return `${step.whenDays || 0}d ${step.whenHours || 0}h`;
     return `${step.when || 0} ${step.whenUnit || 'days'}`;
   }, []);
-
-  useEffect(() => {
-    fetchFMSTemplates();
-  }, [user, selectedCategory]);
-
-  const fetchCategories = async (currentFmsList: FMSTemplate[] = []) => {
-    try {
-      const response = await axios.get(`${address}/api/fms-categories/categories`);
-      if (response.data.success && response.data.categories) {
-        const categoryCounts = currentFmsList.reduce((acc: { [key: string]: number }, fms: FMSTemplate) => {
-          const category = fms.category || 'Uncategorized';
-          acc[category] = (acc[category] || 0) + 1;
-          return acc;
-        }, {});
-
-        const categoriesList = response.data.categories.map((cat: any) => ({
-          name: cat.name,
-          count: categoryCounts[cat.name] || 0
-        })).sort((a: any, b: any) => a.name.localeCompare(b.name));
-
-        setCategories(categoriesList);
-      }
-    } catch (error) {
-      console.error('Error fetching categories:', error);
-      const categoryMap = currentFmsList.reduce((acc: { [key: string]: number }, fms: FMSTemplate) => {
-        const category = fms.category || 'Uncategorized';
-        acc[category] = (acc[category] || 0) + 1;
-        return acc;
-      }, {});
-
-      const categoriesList = Object.entries(categoryMap).map(([name, count]) => ({
-        name,
-        count: count as number
-      })).sort((a, b) => a.name.localeCompare(b.name));
-
-      setCategories(categoriesList);
-    }
-  };
-
-  const fetchFMSTemplates = async () => {
-    try {
-      const params = {
-        userId: user?.id,
-        isAdmin: (user?.role === 'admin' || user?.role === 'superadmin') ? 'true' : 'false',
-        category: selectedCategory !== 'all' ? selectedCategory : undefined
-      };
-      const response = await axios.get(`${address}/api/fms`, { params });
-      if (response.data.success) {
-        const fetchedFmsList = response.data.fmsList || [];
-        setFmsList(fetchedFmsList);
-        await fetchCategories(fetchedFmsList);
-      }
-    } catch (error) {
-      console.error('Error fetching FMS templates:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleCategoryChange = async (fmsId: string, newCategory: string) => {
-    if (user?.role !== 'superadmin') {
-      alert('Only Super Admin can change FMS categories');
-      return;
-    }
-
-    try {
-      await axios.put(`${address}/api/fms-categories/${fmsId}/category`, {
-        category: newCategory,
-        role: user?.role
-      });
-      setEditingFMS(null);
-      await fetchFMSTemplates();
-    } catch (error: any) {
-      console.error('Error updating FMS category:', error);
-      alert(error.response?.data?.message || 'Failed to update category');
-    }
-  };
-
-  const handleAddCategory = async () => {
-    if (!newCategory.trim()) return;
-
-    if (user?.role !== 'superadmin') {
-      alert('Only Super Admin can add categories');
-      return;
-    }
-
-    try {
-      await axios.post(`${address}/api/fms-categories/categories`, {
-        name: newCategory.trim(),
-        role: user?.role
-      });
-      setNewCategory('');
-      setShowCategoryModal(false);
-      await fetchFMSTemplates();
-    } catch (error: any) {
-      console.error('Error adding category:', error);
-      alert(error.response?.data?.message || 'Failed to add category');
-    }
-  };
 
   // Filter and search FMS templates
   const filteredFMS = useMemo(() => {
@@ -183,7 +107,7 @@ const ViewAllFMS: React.FC = () => {
 
   // Group by category
   const groupedFMS = useMemo(() => {
-    const groups: { [key: string]: FMSTemplate[] } = {};
+    const groups = {};
     filteredFMS.forEach(fms => {
       const cat = fms.category || 'Uncategorized';
       if (!groups[cat]) groups[cat] = [];
@@ -193,18 +117,20 @@ const ViewAllFMS: React.FC = () => {
   }, [filteredFMS]);
 
   // Print FMS
-  const handlePrint = useCallback((fms: FMSTemplate) => {
-    const printWindow = window.open('', '', 'height=600,width=1000');
+  const handlePrint = useCallback((fms) => {
+    const printWindow = window.open('', '_blank');
     if (!printWindow) return;
 
-    let stepsHTML = fms.steps.map((step) => `
-      <div style="page-break-inside: avoid; border: 1px solid #ddd; padding: 15px; margin-bottom: 15px; border-radius: 8px;">
-        <h4 style="margin: 0 0 10px 0; color: #333; font-size: 16px;">Step ${step.stepNo}: ${step.what}</h4>
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; font-size: 14px;">
-          <div><strong>Who:</strong> ${formatAssignees(step.who)}</div>
-          <div><strong>How:</strong> ${step.how}</div>
-          <div><strong>Duration:</strong> ${getStepDuration(step)}</div>
-          <div><strong>Type:</strong> ${step.whenType === 'fixed' ? 'Fixed Duration' : step.whenType === 'dependent' ? 'Dependent' : 'Ask On Completion'}</div>
+    const stepsHTML = fms.steps.map((step) => `
+      <div style="page-break-inside: avoid; border: 1px solid #e5e7eb; padding: 16px; margin-bottom: 12px; border-radius: 8px; background: #f9fafb;">
+        <h4 style="margin: 0 0 12px 0; color: #1f2937; font-size: 16px; font-weight: 600;">
+          Step ${step.stepNo}: ${step.what}
+        </h4>
+        <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; font-size: 14px; color: #4b5563;">
+          <div><strong style="color: #1f2937;">Who:</strong> ${formatAssignees(step.who)}</div>
+          <div><strong style="color: #1f2937;">How:</strong> ${step.how}</div>
+          <div><strong style="color: #1f2937;">Duration:</strong> ${getStepDuration(step)}</div>
+          <div><strong style="color: #1f2937;">Type:</strong> ${step.whenType === 'fixed' ? 'Fixed' : step.whenType === 'dependent' ? 'Dependent' : 'Ask On Completion'}</div>
         </div>
       </div>
     `).join('');
@@ -215,30 +141,51 @@ const ViewAllFMS: React.FC = () => {
       <head>
         <title>${fms.fmsName} - Print</title>
         <style>
-          body { font-family: Arial, sans-serif; margin: 20px; background: white; }
-          h1 { color: #2563eb; margin-bottom: 10px; }
-          .header { border-bottom: 3px solid #2563eb; padding-bottom: 15px; margin-bottom: 20px; }
-          .info { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px; font-size: 14px; }
-          .info div { background: #f3f4f6; padding: 10px; border-radius: 5px; }
-          @media print { body { margin: 0; } }
+          * { margin: 0; padding: 0; box-sizing: border-box; }
+          body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; padding: 32px; background: white; color: #1f2937; }
+          .header { border-bottom: 3px solid #3b82f6; padding-bottom: 20px; margin-bottom: 24px; }
+          .header h1 { color: #1f2937; font-size: 32px; margin-bottom: 8px; }
+          .header .fms-id { color: #6b7280; font-size: 14px; font-family: monospace; }
+          .info-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; margin-bottom: 32px; }
+          .info-card { background: #f3f4f6; padding: 16px; border-radius: 8px; border-left: 4px solid #3b82f6; }
+          .info-card label { display: block; font-size: 12px; color: #6b7280; font-weight: 600; margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.5px; }
+          .info-card value { display: block; font-size: 16px; color: #1f2937; font-weight: 600; }
+          .section-title { font-size: 24px; font-weight: 700; color: #1f2937; margin: 32px 0 16px 0; padding-bottom: 12px; border-bottom: 2px solid #e5e7eb; }
+          @media print { 
+            body { padding: 16px; }
+            .no-print { display: none; }
+          }
         </style>
       </head>
       <body>
         <div class="header">
           <h1>${fms.fmsName}</h1>
-          <p style="margin: 5px 0; color: #666;">${fms.fmsId}</p>
+          <div class="fms-id">${fms.fmsId}</div>
         </div>
-        <div class="info">
-          <div><strong>Steps:</strong> ${fms.stepCount}</div>
-          <div><strong>Total Time:</strong> ${fms.totalTimeFormatted}</div>
-          <div><strong>Created By:</strong> ${fms.createdBy}</div>
-          <div><strong>Created On:</strong> ${new Date(fms.createdOn).toLocaleDateString()}</div>
+        
+        <div class="info-grid">
+          <div class="info-card">
+            <label>Total Steps</label>
+            <value>${fms.stepCount}</value>
+          </div>
+          <div class="info-card">
+            <label>Total Duration</label>
+            <value>${fms.totalTimeFormatted}</value>
+          </div>
+          <div class="info-card">
+            <label>Created By</label>
+            <value>${fms.createdBy}</value>
+          </div>
+          <div class="info-card">
+            <label>Created On</label>
+            <value>${new Date(fms.createdOn).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</value>
+          </div>
         </div>
-        <h2 style="color: #333; margin-top: 30px; margin-bottom: 15px;">Steps Details</h2>
+
+        <h2 class="section-title">Workflow Steps</h2>
         ${stepsHTML}
-        <script>
-          window.onload = function() { window.print(); }
-        </script>
+
+        <script>window.onload = () => window.print();</script>
       </body>
       </html>
     `;
@@ -247,13 +194,33 @@ const ViewAllFMS: React.FC = () => {
     printWindow.document.close();
   }, [formatAssignees, getStepDuration]);
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-gray-600">Loading FMS templates...</div>
-      </div>
-    );
-  }
+  // Handle category change
+  const handleCategoryChange = useCallback((fmsId, newCategory) => {
+    if (userRole !== 'superadmin') {
+      alert('Only Super Admin can change categories');
+      return;
+    }
+    
+    setFmsList(prev => prev.map(fms => 
+      fms._id === fmsId ? { ...fms, category: newCategory } : fms
+    ));
+    setEditingCategory(null);
+  }, [userRole]);
+
+  // Add new category
+  const handleAddCategory = useCallback(() => {
+    if (!newCategoryName.trim()) return;
+    
+    const exists = categories.some(cat => cat.name.toLowerCase() === newCategoryName.trim().toLowerCase());
+    if (exists) {
+      alert('Category already exists');
+      return;
+    }
+
+    setCategories(prev => [...prev, { name: newCategoryName.trim(), count: 0 }].sort((a, b) => a.name.localeCompare(b.name)));
+    setNewCategoryName('');
+    setShowCategoryModal(false);
+  }, [newCategoryName, categories]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50 p-4 sm:p-6 lg:p-8">
@@ -266,10 +233,7 @@ const ViewAllFMS: React.FC = () => {
               <p className="text-gray-600">Manage and view your workflow templates</p>
             </div>
             
-            <button
-              onClick={() => navigate('/create-fms')}
-              className="px-6 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-all shadow-lg hover:shadow-xl flex items-center gap-2 font-semibold"
-            >
+            <button className="px-6 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-all shadow-lg hover:shadow-xl flex items-center gap-2 font-semibold">
               <Plus size={20} />
               <span>Create New FMS</span>
             </button>
@@ -307,7 +271,7 @@ const ViewAllFMS: React.FC = () => {
               </div>
 
               {/* Manage Categories (Admin) */}
-              {user?.role === 'superadmin' && (
+              {userRole === 'superadmin' && (
                 <button
                   onClick={() => setShowCategoryModal(true)}
                   className="px-4 py-2.5 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors flex items-center gap-2 font-medium"
@@ -337,10 +301,7 @@ const ViewAllFMS: React.FC = () => {
                 ? 'Try adjusting your filters or search terms' 
                 : 'Get started by creating your first FMS template'}
             </p>
-            <button
-              onClick={() => navigate('/create-fms')}
-              className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-semibold"
-            >
+            <button className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-semibold">
               Create New Template
             </button>
           </div>
@@ -394,7 +355,7 @@ const ViewAllFMS: React.FC = () => {
 
                           {/* Action Buttons */}
                           <div className="flex items-center gap-2 shrink-0">
-                            {user?.role === 'superadmin' && editingFMS === fms._id ? (
+                            {userRole === 'superadmin' && editingCategory === fms._id ? (
                               <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
                                 <select
                                   value={fms.category}
@@ -406,7 +367,7 @@ const ViewAllFMS: React.FC = () => {
                                   ))}
                                 </select>
                                 <button
-                                  onClick={() => setEditingFMS(null)}
+                                  onClick={() => setEditingCategory(null)}
                                   className="p-1.5 hover:bg-gray-100 rounded"
                                 >
                                   <X size={16} />
@@ -414,29 +375,16 @@ const ViewAllFMS: React.FC = () => {
                               </div>
                             ) : (
                               <>
-                                {user?.role === 'superadmin' && (
+                                {userRole === 'superadmin' && (
                                   <button
                                     onClick={(e) => {
                                       e.stopPropagation();
-                                      setEditingFMS(fms._id);
+                                      setEditingCategory(fms._id);
                                     }}
                                     className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
                                     title="Edit Category"
                                   >
                                     <Edit size={18} className="text-gray-600" />
-                                  </button>
-                                )}
-                                {user?.role === 'superadmin' && (
-                                  <button
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      navigate(`/create-fms?edit=${fms._id}`);
-                                    }}
-                                    className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center gap-2"
-                                    title="Edit FMS Template"
-                                  >
-                                    <Edit size={16} />
-                                    <span>Edit</span>
                                   </button>
                                 )}
                                 <button
@@ -460,11 +408,8 @@ const ViewAllFMS: React.FC = () => {
                                   Print
                                 </button>
                                 <button
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    navigate(`/start-project?fmsId=${fms._id}`);
-                                  }}
                                   className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-semibold"
+                                  onClick={(e) => e.stopPropagation()}
                                 >
                                   Start Project
                                 </button>
@@ -549,8 +494,8 @@ const ViewAllFMS: React.FC = () => {
                 <div className="flex gap-2">
                   <input
                     type="text"
-                    value={newCategory}
-                    onChange={(e) => setNewCategory(e.target.value)}
+                    value={newCategoryName}
+                    onChange={(e) => setNewCategoryName(e.target.value)}
                     placeholder="Category name"
                     className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
                     onKeyPress={(e) => e.key === 'Enter' && handleAddCategory()}
@@ -678,4 +623,4 @@ const ViewAllFMS: React.FC = () => {
   );
 };
 
-export default ViewAllFMS;
+export default FMSTemplateViewer;

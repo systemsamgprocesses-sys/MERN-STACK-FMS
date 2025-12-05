@@ -331,6 +331,22 @@ app.use('/api/fms-dashboard', fmsDashboardRoutes);
 if (config.nodeEnv === 'production') {
   const distPath = path.join(__dirname, '..', 'dist');
   
+  // Serve version.json explicitly (before static middleware to ensure it's handled)
+  app.get('/version.json', (req, res) => {
+    const versionPath = path.join(distPath, 'version.json');
+    if (fs.existsSync(versionPath)) {
+      res.setHeader('Content-Type', 'application/json; charset=utf-8');
+      res.sendFile(versionPath);
+    } else {
+      // Return a default version if file doesn't exist
+      res.json({
+        version: 'dev',
+        buildTime: new Date().toISOString(),
+        timestamp: Date.now()
+      });
+    }
+  });
+  
   // Serve static files with proper MIME types - MUST come before catch-all route
   app.use(express.static(distPath, {
     setHeaders: (res, filePath) => {
@@ -339,6 +355,8 @@ if (config.nodeEnv === 'production') {
         res.setHeader('Content-Type', 'application/javascript; charset=utf-8');
       } else if (filePath.endsWith('.css')) {
         res.setHeader('Content-Type', 'text/css; charset=utf-8');
+      } else if (filePath.endsWith('.json')) {
+        res.setHeader('Content-Type', 'application/json; charset=utf-8');
       }
     },
     // Don't redirect, just serve the files or call next() if not found

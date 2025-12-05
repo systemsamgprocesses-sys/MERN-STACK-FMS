@@ -40,7 +40,17 @@ router.get('/stats', authenticateToken, async (req, res) => {
             })
             .populate('tasks.who', 'username department')
             .populate('createdBy', 'username department')
-            .lean();
+            .lean()
+            .then(projs => {
+                // Ensure tasks array exists and handle null/undefined who
+                return projs.map(proj => ({
+                    ...proj,
+                    tasks: (proj.tasks || []).map(task => ({
+                        ...task,
+                        who: task.who || null
+                    }))
+                }));
+            });
 
         // Filter out projects where fmsId is null (due to category filtering)
         projects = projects.filter(p => p.fmsId);
@@ -74,7 +84,7 @@ router.get('/stats', authenticateToken, async (req, res) => {
             const departmentsArray = Array.isArray(departments) ? departments : [departments];
             projects = projects.filter(project => {
                 return project.tasks.some(task =>
-                    task.who.some(user => departmentsArray.includes(user.department))
+                    task.who && task.who.department && departmentsArray.includes(task.who.department)
                 );
             });
         }
@@ -108,7 +118,9 @@ router.get('/stats', authenticateToken, async (req, res) => {
         const now = new Date();
 
         projects.forEach(project => {
-            project.tasks.forEach(task => {
+            // Ensure tasks is an array
+            const tasks = Array.isArray(project.tasks) ? project.tasks : [];
+            tasks.forEach(task => {
                 totalTasks++;
 
                 // Status counts
@@ -125,9 +137,9 @@ router.get('/stats', authenticateToken, async (req, res) => {
                 // Status funnel
                 statusFunnel[task.status] = (statusFunnel[task.status] || 0) + 1;
 
-                // Department stats
-                task.who.forEach(user => {
-                    const dept = user.department || 'Unassigned';
+                // Department stats - who is a single user, not an array
+                if (task.who) {
+                    const dept = task.who.department || 'Unassigned';
                     if (!departmentStats[dept]) {
                         departmentStats[dept] = {
                             total: 0,
@@ -139,8 +151,8 @@ router.get('/stats', authenticateToken, async (req, res) => {
                         };
                     }
                     departmentStats[dept].total++;
-                    departmentStats[dept][task.status]++;
-                });
+                    departmentStats[dept][task.status] = (departmentStats[dept][task.status] || 0) + 1;
+                }
 
                 // Category stats
                 const category = project.fmsId?.category || 'Uncategorized';
@@ -154,16 +166,18 @@ router.get('/stats', authenticateToken, async (req, res) => {
         // Get detailed task list
         const detailedTasks = [];
         projects.forEach(project => {
-            project.tasks.forEach(task => {
+            // Ensure tasks is an array
+            const tasks = Array.isArray(project.tasks) ? project.tasks : [];
+            tasks.forEach(task => {
                 detailedTasks.push({
                     id: task._id,
                     projectId: project.projectId,
                     projectName: project.projectName,
                     title: task.what,
-                    department: task.who.map(u => u.department).filter(Boolean).join(', ') || 'Unassigned',
+                    department: task.who?.department || 'Unassigned',
                     category: project.fmsId?.category || 'Uncategorized',
                     status: task.status,
-                    assignedTo: task.who.map(u => u.username).join(', '),
+                    assignedTo: task.who?.username || 'Unassigned',
                     createdDate: task.creationDate,
                     dueDate: task.plannedDueDate,
                     priority: task.plannedDueDate && new Date(task.plannedDueDate) < now && task.status !== 'Done' ? 'High' : 'Normal'

@@ -485,16 +485,22 @@ router.post('/:id/complete', authenticateToken, async (req, res) => {
 router.get('/person-dashboard', authenticateToken, async (req, res) => {
   try {
     const requestingUser = req.user;
-    const requestingUserId = requestingUser?._id?.toString();
-    const isAdmin = ['admin', 'superadmin', 'pc'].includes(requestingUser?.role);
+    if (!requestingUser || !requestingUser._id) {
+      return res.status(401).json({ error: 'Unauthorized', message: 'User not authenticated' });
+    }
+
+    const requestingUserId = requestingUser._id.toString();
+    const isAdmin = ['admin', 'superadmin', 'pc'].includes(requestingUser?.role || '');
     
     // Get date range for calendar (default to last 6 months and next month)
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const sixMonthsAgo = new Date(today);
     sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+    sixMonthsAgo.setHours(0, 0, 0, 0);
     const nextMonth = new Date(today);
     nextMonth.setMonth(nextMonth.getMonth() + 1);
+    nextMonth.setHours(23, 59, 59, 999);
 
     // Fetch all checklist occurrences with template info
     let query = {
@@ -515,27 +521,57 @@ router.get('/person-dashboard', authenticateToken, async (req, res) => {
         path: 'templateId',
         select: 'name frequency category'
       })
-      .sort({ dueDate: 1 });
+      .sort({ dueDate: 1 })
+      .lean(); // Use lean() for better performance
 
     // Group by user
     const userMap = new Map();
     
     occurrences.forEach(occ => {
-      const userId = occ.assignedTo?._id?.toString() || occ.assignedTo?.toString();
-      const userName = occ.assignedTo?.username || 'Unknown';
+      // Handle assignedTo - could be ObjectId or populated object
+      let userId, userName, userEmail;
+      
+      if (occ.assignedTo) {
+        if (typeof occ.assignedTo === 'object' && occ.assignedTo._id) {
+          userId = occ.assignedTo._id.toString();
+          userName = occ.assignedTo.username || 'Unknown';
+          userEmail = occ.assignedTo.email || '';
+        } else {
+          userId = occ.assignedTo.toString();
+          userName = 'Unknown';
+          userEmail = '';
+        }
+      } else {
+        // Skip if no assignedTo
+        return;
+      }
+      
+      if (!userId) return; // Skip if still no userId
       
       if (!userMap.has(userId)) {
         userMap.set(userId, {
           userId,
           userName,
-          email: occ.assignedTo?.email || '',
+          email: userEmail,
           checklists: [],
           calendar: new Map() // date -> { completed: 0, pending: 0 }
         });
       }
       
       const userData = userMap.get(userId);
-      const dateKey = new Date(occ.dueDate).toISOString().split('T')[0];
+      
+      // Handle dueDate - ensure it's a valid date
+      let dateKey;
+      try {
+        const dueDate = occ.dueDate instanceof Date ? occ.dueDate : new Date(occ.dueDate);
+        if (isNaN(dueDate.getTime())) {
+          return; // Skip invalid dates
+        }
+        dateKey = dueDate.toISOString().split('T')[0];
+      } catch (dateError) {
+        console.error('Invalid date for occurrence:', occ._id, dateError);
+        return; // Skip occurrences with invalid dates
+      }
       
       // Initialize calendar day if not exists
       if (!userData.calendar.has(dateKey)) {
@@ -552,9 +588,9 @@ router.get('/person-dashboard', authenticateToken, async (req, res) => {
       }
       
       // Group checklists by template
-      const templateName = occ.templateId?.name || occ.templateName || 'Unknown';
-      const frequency = occ.templateId?.frequency || 'unknown';
-      const category = occ.templateId?.category || occ.category || 'General';
+      const templateName = (occ.templateId?.name || occ.templateName || 'Unknown').toString();
+      const frequency = (occ.templateId?.frequency || 'unknown').toString();
+      const category = (occ.templateId?.category || occ.category || 'General').toString();
       
       let checklistGroup = userData.checklists.find(
         c => c.templateName === templateName && c.frequency === frequency
@@ -574,10 +610,10 @@ router.get('/person-dashboard', authenticateToken, async (req, res) => {
       }
       
       checklistGroup.occurrences.push({
-        _id: occ._id,
-        dueDate: occ.dueDate,
-        status: occ.status,
-        progressPercentage: occ.progressPercentage
+        _id: occ._id.toString(),
+        dueDate: occ.dueDate instanceof Date ? occ.dueDate.toISOString() : occ.dueDate,
+        status: occ.status || 'pending',
+        progressPercentage: occ.progressPercentage || 0
       });
       
       checklistGroup.totalCount++;
@@ -609,7 +645,12 @@ router.get('/person-dashboard', authenticateToken, async (req, res) => {
     });
   } catch (error) {
     console.error('Error fetching person dashboard:', error);
-    res.status(500).json({ error: 'Server error', message: error.message });
+    console.error('Error stack:', error.stack);
+    res.status(500).json({ 
+      error: 'Server error', 
+      message: error.message,
+      stack: process.env.NODE_ENV !== 'production' ? error.stack : undefined
+    });
   }
 });
 

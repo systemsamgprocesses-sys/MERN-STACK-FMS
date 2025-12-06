@@ -499,7 +499,7 @@ const ViewFMSProgress: React.FC = () => {
     };
   }, [projects]);
 
-  // Get updatable pending steps - only those where Update button is available
+  // Get updatable pending steps - show all pending steps with due dates that can be updated
   const updatablePendingSteps = useMemo(() => {
     if (!user) return [];
     const items: Array<{
@@ -524,13 +524,28 @@ const ViewFMSProgress: React.FC = () => {
         });
         if (!assignedToUser) return;
         
-        // Check if task is done
+        // Check if task is done - skip completed tasks
         if (task.status === 'Done') return;
         
+        // Check if task is pending (Pending, Not Started, Awaiting Date, or In Progress)
+        const status = (task.status || '').toLowerCase();
+        const isPendingStatus = ['pending', 'not started', 'awaiting date', 'in progress'].includes(status);
+        if (!isPendingStatus) return;
+        
+        // Check if task has a due date - this is required to show in dashboard
+        if (!task.plannedDueDate) return;
+        
         // Check if this step can be updated (Update button would be shown)
+        // This means previous step is done OR it's the first step
         if (!canUpdateStep(index, tasks)) return;
         
-        const isOverdue = task.plannedDueDate && new Date(task.plannedDueDate) < new Date();
+        // Calculate if overdue (for sorting purposes)
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const dueDate = new Date(task.plannedDueDate);
+        dueDate.setHours(0, 0, 0, 0);
+        const isOverdue = dueDate < today;
+        
         items.push({
           projectId: project.projectId,
           projectName: project.projectName,
@@ -547,9 +562,10 @@ const ViewFMSProgress: React.FC = () => {
       // Overdue items first
       if (a.isOverdue && !b.isOverdue) return -1;
       if (!a.isOverdue && b.isOverdue) return 1;
-      // Then by due date
-      return new Date(a.task.plannedDueDate || a.task.creationDate || 0).getTime() -
-        new Date(b.task.plannedDueDate || b.task.creationDate || 0).getTime();
+      // Then by due date (earliest first)
+      const aDate = new Date(a.task.plannedDueDate || 0).getTime();
+      const bDate = new Date(b.task.plannedDueDate || 0).getTime();
+      return aDate - bDate;
     });
   }, [projects, user]);
 
@@ -1466,12 +1482,21 @@ const ViewFMSProgress: React.FC = () => {
                   <div className="flex items-center gap-2">
                     <Users size={16} />
                     <span className="text-sm">
-                      {selectedTask.who?.filter((w: any) => w).map((w: any) => {
-                        if (typeof w === 'object' && w !== null) {
-                          return w.username || w.name || w.email || 'Unknown';
-                        }
-                        return typeof w === 'string' ? w : 'Unknown';
-                      }).join(', ')}
+                      {(() => {
+                        // Handle both array (backward compatibility) and single who
+                        const whoArray = Array.isArray(selectedTask.who) 
+                          ? selectedTask.who 
+                          : (selectedTask.who ? [selectedTask.who] : []);
+                        return whoArray
+                          .filter((w: any) => w)
+                          .map((w: any) => {
+                            if (typeof w === 'object' && w !== null) {
+                              return w.username || w.name || w.email || 'Unknown';
+                            }
+                            return typeof w === 'string' ? w : 'Unknown';
+                          })
+                          .join(', ') || 'Unassigned';
+                      })()}
                     </span>
                   </div>
                   {selectedTask.plannedDueDate && (

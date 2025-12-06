@@ -481,6 +481,138 @@ router.post('/:id/complete', authenticateToken, async (req, res) => {
   }
 });
 
+// Get person-wise checklist assignments with calendar data
+router.get('/person-dashboard', authenticateToken, async (req, res) => {
+  try {
+    const requestingUser = req.user;
+    const requestingUserId = requestingUser?._id?.toString();
+    const isAdmin = ['admin', 'superadmin', 'pc'].includes(requestingUser?.role);
+    
+    // Get date range for calendar (default to last 6 months and next month)
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const sixMonthsAgo = new Date(today);
+    sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+    const nextMonth = new Date(today);
+    nextMonth.setMonth(nextMonth.getMonth() + 1);
+
+    // Fetch all checklist occurrences with template info
+    let query = {
+      dueDate: {
+        $gte: sixMonthsAgo,
+        $lte: nextMonth
+      }
+    };
+
+    // Non-admins can only see their own data
+    if (!isAdmin) {
+      query.assignedTo = requestingUserId;
+    }
+
+    const occurrences = await ChecklistOccurrence.find(query)
+      .populate('assignedTo', 'username email')
+      .populate({
+        path: 'templateId',
+        select: 'name frequency category'
+      })
+      .sort({ dueDate: 1 });
+
+    // Group by user
+    const userMap = new Map();
+    
+    occurrences.forEach(occ => {
+      const userId = occ.assignedTo?._id?.toString() || occ.assignedTo?.toString();
+      const userName = occ.assignedTo?.username || 'Unknown';
+      
+      if (!userMap.has(userId)) {
+        userMap.set(userId, {
+          userId,
+          userName,
+          email: occ.assignedTo?.email || '',
+          checklists: [],
+          calendar: new Map() // date -> { completed: 0, pending: 0 }
+        });
+      }
+      
+      const userData = userMap.get(userId);
+      const dateKey = new Date(occ.dueDate).toISOString().split('T')[0];
+      
+      // Initialize calendar day if not exists
+      if (!userData.calendar.has(dateKey)) {
+        userData.calendar.set(dateKey, { completed: 0, pending: 0, total: 0 });
+      }
+      
+      const dayData = userData.calendar.get(dateKey);
+      dayData.total++;
+      
+      if (occ.status === 'completed') {
+        dayData.completed++;
+      } else {
+        dayData.pending++;
+      }
+      
+      // Group checklists by template
+      const templateName = occ.templateId?.name || occ.templateName || 'Unknown';
+      const frequency = occ.templateId?.frequency || 'unknown';
+      const category = occ.templateId?.category || occ.category || 'General';
+      
+      let checklistGroup = userData.checklists.find(
+        c => c.templateName === templateName && c.frequency === frequency
+      );
+      
+      if (!checklistGroup) {
+        checklistGroup = {
+          templateName,
+          frequency,
+          category,
+          occurrences: [],
+          totalCount: 0,
+          completedCount: 0,
+          pendingCount: 0
+        };
+        userData.checklists.push(checklistGroup);
+      }
+      
+      checklistGroup.occurrences.push({
+        _id: occ._id,
+        dueDate: occ.dueDate,
+        status: occ.status,
+        progressPercentage: occ.progressPercentage
+      });
+      
+      checklistGroup.totalCount++;
+      if (occ.status === 'completed') {
+        checklistGroup.completedCount++;
+      } else {
+        checklistGroup.pendingCount++;
+      }
+    });
+    
+    // Convert calendar maps to arrays and sort
+    const result = Array.from(userMap.values()).map(userData => {
+      const calendarArray = Array.from(userData.calendar.entries())
+        .map(([date, data]) => ({ date, ...data }))
+        .sort((a, b) => a.date.localeCompare(b.date));
+      
+      return {
+        ...userData,
+        calendar: calendarArray
+      };
+    });
+
+    res.json({
+      users: result,
+      dateRange: {
+        start: sixMonthsAgo.toISOString().split('T')[0],
+        end: nextMonth.toISOString().split('T')[0]
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching person dashboard:', error);
+    res.status(500).json({ error: 'Server error', message: error.message });
+  }
+});
+
 // Get dashboard statistics
 router.get('/stats/dashboard', authenticateToken, async (req, res) => {
   try {

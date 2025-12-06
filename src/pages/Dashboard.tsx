@@ -615,14 +615,23 @@ const Dashboard: React.FC = () => {
         params.endDate = endDate;
       }
 
-      const response = await axios.get(`${address}/api/dashboard/counts`, { params });
+      const token = localStorage.getItem('token');
+      const response = await axios.get(`${address}/api/dashboard/counts`, { 
+        params,
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
 
       // Cache the response
       setCachedData(cacheKey, response.data);
 
       return response.data;
-    } catch (error) {
-      console.error('Error fetching task counts:', error);
+    } catch (error: any) {
+      // Silently handle 401 errors to prevent UI breaking
+      if (error?.response?.status !== 401) {
+        console.error('Error fetching task counts:', error);
+      }
       return null;
     }
   }, [user, selectedTeamMember, viewMode, generateCacheKey, getCachedData, setCachedData]);

@@ -32,6 +32,7 @@ import {
   ChevronRight,
   Zap,
   User,
+  Users,
   AlertCircle,
   UserCheck,
   Shield,
@@ -223,6 +224,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
     // Checklists Section
     { section: 'Checklists', icon: ListTodo, label: 'Pending Checklists', path: '/pending-checklists', highlight: true },
     { section: 'Checklists', icon: Calendar, label: 'Checklist Calendar', path: '/checklist-calendar', highlight: true },
+    { section: 'Checklists', icon: Users, label: 'Person Dashboard', path: '/checklist-person-dashboard', highlight: true },
     { section: 'Checklists', icon: Settings, label: 'Manage Checklist Categories', path: '/checklist-categories', requireAdmin: true, highlight: true },
 
     // Tasks Section
@@ -373,8 +375,21 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
   // Use cached API hooks
   const { data: countsData, refetch: refetchCounts } = useCachedApi<any>(
     countsUrl,
-    {},
-    { ttl: 1 * 60 * 1000, staleWhileRevalidate: true } // 1 minute cache
+    {
+      headers: {
+        Authorization: `Bearer ${localStorage.getItem('token')}`,
+      },
+    },
+    { 
+      ttl: 1 * 60 * 1000, 
+      staleWhileRevalidate: true,
+      onError: (error: any) => {
+        // Silently handle 401 errors to prevent UI breaking
+        if (error?.response?.status !== 401) {
+          console.error('Error fetching task counts:', error);
+        }
+      }
+    } // 1 minute cache
   );
 
   const { data: objectionsData } = useCachedApi<any>(
